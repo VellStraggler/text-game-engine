@@ -1,5 +1,4 @@
 from tkinter import *
-import time
 def main():
     root = Tk()
     root.geometry("600x700+300+0")
@@ -25,7 +24,7 @@ def main():
     
     def press_save(alltext,textname):
         if textname == 'File Name: ':
-            textname = untitled.txt  
+            textname = 'untitled.txt'  
         with open(textname,"w") as file_name:
             file_name.write(alltext)
 
