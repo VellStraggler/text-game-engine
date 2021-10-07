@@ -1,0 +1,16 @@
+window_resolution = 10,20
+#This makes a square box for some reason
+
+points = 0
+
+#Files
+sprite_sheet = sprites($spritesheet1.txt$)
+map = map($mapfile.txt$)
+
+#Sprites
+player = sprite($playerframe1$)
+player.xy = 3,3
+player.geometry = all
+tree = sprite($tree$)
+tree.on_map = $t$
+tree.geometry = coordinate

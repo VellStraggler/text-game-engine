@@ -1,12 +1,7 @@
 import tkinter as tk
 import random,time
-
-#FILE READ
-def can_be_read(filename):
-    try: file = open(filename,'r')
-    except: return False
-    file.close()
-    return True
+import code_translator as ct
+    #Necessary for two functions: can_be_read() and store_map()
 
 def main():
     map_file_name = input('What is the map_file_name?')
@@ -15,35 +10,24 @@ def main():
     #My_Window = tk.Window()
     
 class MapEditor():
+    #Takes only the addresses of the code and map files
     def __init__(self, code_file_name, map_file_name):
         self.map_file_name = map_file_name
         self.code_file_name = code_file_name
-        if(can_be_read(map_file_name)):
+        if(ct.can_be_read(map_file_name)):
             #store file text in 2D Array
-            self.store_map()
-        if(can_be_read(code_file_name)):
-            self.map_array = self.store_map()
+            self.map_array = ct.store_map(map_file_name)
+        if(ct.can_be_read(code_file_name)):
+            self.code = ct.store_map()
         self.view_bounds = 25
         self.set_map_bounds()
-
-    def store_map(self):
-        map_array = [][]
-        with open(self.map_file_name,'r') as file:
-            currentline = file.readline()
-            y = 0
-            while currentline:
-                for x in range(0,len(currentline)):
-                    map_array[y][x] = currentline[x]
-                y += 1
-                currentline = file.readline()
-        return map_array()
 
 
     def longest_x(self):
         
         return
     def set_map_bounds(self):
-        longest_x()
+        self.longest_x()
 
 #Read input file or last stored file
 #Store input file name in txt
