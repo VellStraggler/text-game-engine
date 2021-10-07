@@ -1,16 +1,16 @@
-import example_map.txt,spriteSheet.txt
-
 window_resolution = 10,20
 #This makes a square box for some reason
 
 points = 0
-sprites()
+
+#Files
+sprite_sheet = sprites($spritesheet1.txt$)
+map = map($mapfile.txt$)
 
 #Sprites
-def sprites():
- player = sprite($playerframe1$)
- player.xy = 3,3
- player.geometry = all
- tree = sprite($tree$)
- tree.on_map = $t$
- tree.geometry = coordinate
+player = sprite($playerframe1$)
+player.xy = 3,3
+player.geometry = all
+tree = sprite($tree$)
+tree.on_map = $t$
+tree.geometry = coordinate
