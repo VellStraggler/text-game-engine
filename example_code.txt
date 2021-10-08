@@ -4,8 +4,8 @@ window_resolution = 10,20
 points = 0
 
 #Files
-sprite_sheet = sprites($spritesheet1.txt$)
-map = map($mapfile.txt$)
+sprite_sheet = sprites($textengine/spritesheet1.txt$)
+map = map($textengine/example_map.txt$)
 
 #Sprites
 player = sprite($playerframe1$)
