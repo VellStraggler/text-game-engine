@@ -2,6 +2,7 @@ window_resolution = 10,20
 #This makes a square box for some reason
 
 points = 0
+timeofday = 4
 
 #Files
 sprite_sheet = sprites($textengine/spritesheet1.txt$)
@@ -11,6 +12,13 @@ map = map($textengine/example_map.txt$)
 player = sprite($playerframe1$)
 player.xy = 3,3
 player.geometry = all
+player.movement = wasd or default
+#default means, up, left, down, right
+
 tree = sprite($tree$)
 tree.on_map = $t$
 tree.geometry = coordinate
+
+if player is near tree,
+player.health = -1
+
