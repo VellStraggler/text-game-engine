@@ -1,41 +1,41 @@
-NOTE: OBJECTS FACE LEFT BY DEFAULT
-$train-car$:
+NOTE$ OBJECTS FACE LEFT BY DEFAULT
+$train-car$
 ////|\\\\
 | [] [] |
 `O-----O'
-$train-engine$:
+$train-engine$
 //\\___][
 |[]|=(=( )
 `(_)--O-l\
-$cottage:
+$cottage$
   ___________ [}
  /UU/ \UUUUUU\{]
 /UU/___\UUUUUU\}
 |  || || [__] |]
 |  ||`||      |}
-$char-1-head:
+$char-1-head$
  {..} 
-$char-1-head-side:
+$char-1-head-side$
  {. } 
-$char-1-head-back:
+$char-1-head-back$
  {  } 
-$char-1-torso:
+$char-1-torso$
   /\  
-$char-1-torso-fight:
+$char-1-torso-fight$
  '/\' 
-$char-1-torso-side:
+$char-1-torso-side$
   |\  
-$char-1-torso-side-fight:
+$char-1-torso-side-fight$
 <=|\  
-$char-1-dead:
+$char-1-dead$
   \/  
  {xx} 
-$tree:
- /\ 
+$tree$
+ /\
 /v \
 /_v\
 _||_
-$castle:
+$castle$
                        |
                       /|\
                      //|\\
@@ -54,44 +54,48 @@ $castle:
  [[ ][]/  \[[ ][ ]]  //_\\  {[[ ][]
  [ ][ ]    [ ][ ][]  ║[ ]║  {[ ][ ]
  [][ ]]____[][ ][ ]__║[ ]║__{[][ ]]
-$waterfall-f1:
+$waterfall-f1$
     _-=-,
    /  __ '-,
   /_ |__\ _ \
  |   ////  / \
 /_\__\\\\_|.__|
-$waterfall-f2:
+$waterfall-f2$
     _-=-,
    /  __ '-,
   /_ |__\ _ \
  |   \\\\  / \
 /_\__////_|.__|
-$giant-head:
+$giant-head$
  ,,,,,
  ). .\
 ( H   ɔ
-$giant-head-pain:
+$giant-head-pain$
  ,,,,,
  )> <\
 ( O   ɔ
-$giant-torso:
+$giant-torso$
  (__\\
   |||'
-$giant-torso-walk:
+$giant-torso-walk$
  (__\\
  //\\'
-$giant-torso-fight:
+$giant-torso-fight$
 /(__\\
   |||'
-$bug:
+$bug$
 ¤
-$slime:
+$slime$
  ___
 /⊙.⦿\
 \_____\
-$large-cat:
+$large-cat$
   /\_/\
   |◮-◮)
 \/_,||
-#DATA:
+$characterx$
+\ /
+ X
+/ \
+$DATA$
 /\,(),ɔc,[],{},`',<>,pq,bd,NИ,Bᗺ,CƆ,cɔ,Kꓘ,Dᗡ,SƧ,sƨ,Pᑫ,yγ,RЯ,rɿ,EƎ,eɘ,ÓÒ,óò,úù,ÚÙ,«»,◭◮

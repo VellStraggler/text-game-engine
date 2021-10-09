@@ -76,11 +76,41 @@ class MapObject():
             for yitem in yrow:
                 print(yitem,end="")
             print()
+    #function that takes a sprite from a spritesobject, as well as the 3 coords, adds it to the final printing
+    #DAVID
+
             
+class SpritesObject():
+    #MATTHEW
+    #one item is a dictionary of all sprites
+    #remove \n from every line
+    #sprite key name stores a 2d array of sprite and 3 lists of xy coords (the bottom center, top left, the bottom right)
+        #e.g. 'character': [[['\\',' ','/'] , [' ','X',' '] , ['/',' ','\\']], [coordinatex,coordinatey], [corner coords...], []]
+    #another item is the reverse data ($DATA$)
+        #when a character turns, function will be called that looks at reverse data and
+        #"is character in any string in the list"
+        #"does it equal the first item? else switch to opposite item"
+    #function to grab coordinates
+    #function to grab sprite corners coordinates (top left, bottom right)
+    #function to grab sprite itself
+    pass
+
+class VarObject():
+    #DAVID
+    #stores a variable and what it equals
+    #it could equal a map, spritelist, sprite, a number
+    #if it is a map,sprites, or sprite, it stores a classobject
+
+class ClassObject():
+    #DAVID
+    #class type: map, sprite, sprites
+    #xy, geometry, movement, collision FOR SPRITE ONLY
 
 def compile(lines):
     #Store variables in a dictionary
     map_array = MapObject()
+    sprite_array = SpritesObject()
+    ()
     print(len(lines))
     for i in range(0,len(lines)):
         words = lines[i].split()
@@ -92,7 +122,10 @@ def compile(lines):
                     #map, sprites, sprite
                     classtype = words[2][:words[2].find("(")]
                     if classtype == "sprite":
+                        #DAVID
                         #Most common occurrence probably
+                        #only do this if sprite sheet is declared
+                        #have this refer to spritesobject
                         print(classtype)
                     elif classtype == "map":
                         #locate map file
@@ -101,6 +134,11 @@ def compile(lines):
                         map_array.set_path(mapname)
                         print(f'Map Found using path: {mapname}')
                     elif classtype == "sprites":
+                        #MATTHEW
+                        #take path, try to read
+                        #if it can be read, iterate through, save everything to sprite_array
+                        #i would put a function call here from the spriteobject class
+                        #this same function will store information in $DATA$ 
                         print(classtype)
                     else: print(f'Error: Class type not recognized: Line {lines[i]}')
                 elif words[0] == 'window_resolution':
