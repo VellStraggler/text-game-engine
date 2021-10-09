@@ -1,9 +1,9 @@
 NOTE: OBJECTS FACE LEFT BY DEFAULT
-$train-car:
+$train-car$:
 ////|\\\\
 | [] [] |
 `O-----O'
-$train-engine:
+$train-engine$:
 //\\___][
 |[]|=(=( )
 `(_)--O-l\
@@ -31,7 +31,7 @@ $char-1-dead:
   \/  
  {xx} 
 $tree:
- /\
+ /\ 
 /v \
 /_v\
 _||_

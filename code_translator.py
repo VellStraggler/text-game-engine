@@ -1,4 +1,3 @@
-import tkinter as tk
 from pynput import keyboard
 import time, threading
 
@@ -7,11 +6,7 @@ def main():
     code_file_name = 'textengine/example_code.txt'
     print(f'Using file path: {code_file_name}')
     #run this input loops until the file is usable
-    '''
-    while not can_be_read(code_file_name):
-        print('Error: Incorrect File Name')
-        code_file_name = input('Enter "example_code.txt": ')
-    '''
+    
     #read code line by line
     lines = store_code(code_file_name)
     
@@ -30,8 +25,10 @@ def main():
             print('Thread two running...')
         def run(self):
             while(True):
+                #This While loop loops through 3 key items: framerate, map_printing, and map_updating
                 map_array.print_all()
                 time.sleep(.5)
+                #update_map()
 
     p_thread = printThread()
     p_thread.start()
@@ -59,7 +56,6 @@ class MapObject():
                 self.map_array.append(xlist)
                 currentline = file.readline()
             
-
     def map_patcher(self):
         #adds spaces until the array is rectangular
         #find longest y:
@@ -74,6 +70,8 @@ class MapObject():
                 row.append(" ")
 
     def print_all(self):
+        for i in range(0,len(self.map_array)):
+            print('\033[A\033[F')
         for yrow in self.map_array:
             for yitem in yrow:
                 print(yitem,end="")
@@ -126,7 +124,8 @@ def on_press(key):
     try: k = key.char
     except: k = key.name #for buttons like "left" or "space"
     if k in ['w', 'a', 's', 'd', 'left', 'right', 'up', 'down']:
-        print('Key pressed: ' + k)
+        #print('Key pressed: ' + k)
+        pass
 
 #FILE READING
 def can_be_read(filename):
