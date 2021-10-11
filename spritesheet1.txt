@@ -1,4 +1,4 @@
-NOTE$ OBJECTS FACE LEFT BY DEFAULT
+#NOTE$ OBJECTS FACE LEFT BY DEFAULT
 $train-car$
 ////|\\\\
 | [] [] |
