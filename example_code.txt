@@ -12,7 +12,7 @@ map = map($textengine/example_map.txt$)
 player = sprite($playerframe1$)
 player.xy = 3,3
 player.geometry = all
-player.movement = wasd or default
+player.movement = true
 #default means, up, left, down, right
 
 tree = sprite($tree$)
