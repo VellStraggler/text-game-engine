@@ -78,48 +78,55 @@ class MapObject():
             for yitem in yrow:
                 print(yitem,end="")
             print()
-    #function that takes a sprite from a spritesobject, as well as the 3 coords, adds it to the final printing
-    #DAVID
-
             
-class SpritesObject():
-    #MATTHEW
-    #one item is a dictionary of all sprites
-    def __init__(self):
-        self.sprites = self.getSprites()
+    def set_x_y(self,x,y,character):
+        self.map_array[x][y] = character
 
-    #remove \n from every line
-    def getSprites(self):
-        pass
-    #sprite key name stores a 2d array of sprite and 3 lists of xy coords (the bottom center, top left, the bottom right)
-        #e.g. 'character': [[['\\',' ','/'] , [' ','X',' '] , ['/',' ','\\']], [coordinatex,coordinatey], [corner coords...], []]
-    #another item is the reverse data ($DATA$)
-        #when a character turns, function will be called that looks at reverse data and
-        #"is character in any string in the list"
-        #"does it equal the first item? else switch to opposite item"
-    #function to grab coordinates
-    #function to grab sprite corners coordinates (top left, bottom right)
-    #function to grab sprite itself
-    pass
+    def add_sprites(self,spritelist):
+    #takes a spritelist, as well as the 3 coords, adds it to the final printing
+    #3 coords are stored within each sprite
+    #spawnpoint is relative to map, other two coords are relative to the sprite
+        for sprite in spritelist:
+            for x in range(sprite.topleft[0],sprite.bottomright[0]+1):
+                for y in range(sprite.topleft[1],sprite.bottomright[1]+1):
+                    self.map_array[x+sprite.origin[0]][y+sprite.origin[1]] = sprite.array[x][y]
 
 class VarObject():
-    #DAVID
-    #stores a variable and what it equals
-    #it could equal a map, spritelist, sprite, a number
-    #if it is a map,sprites, or sprite, it stores a classobject
-    pass
+    def __init__(self,variable, value):
+        #stores a variable and what it equals
+        self.variable = variable
+        self.value = value
+        #This is for any variable that is NOT a class
+        #eg 4, "hello"
 
 class ClassObject():
-    #DAVID
     #class type: map, sprite, sprites
-    #xy, geometry, movement, collision FOR SPRITE ONLY
-    pass
+    #origin, movement FOR SPRITE ONLY
+    def __init__(self,array):
+        self.array = array
+        #the values below will simply not be called if the Classobject is a map or spritesheet
+        self.origin = [0,0] 
+        #self.geometry = "default"
+        self.movement = "none"
+
+    def set_xy(self,coordlist):
+        #list type, ex [3,4]
+        self.xy = coordlist
+
+    def origin(self):
+        #return the bottom center coordinate. If length is not odd, picks the left one
+        return self.array[len(self.array)-1][(len(self.array[len(self.array)-1])-1)/2]
+
+    def topleft(self):
+        #get coordinate values of top left most 
+        pass
+    #sprite_array
 
 def compile(lines):
     #Store variables in a dictionary
     map_array = MapObject()
+    #store VarObject()s
     sprite_array = {}
-    # () 
     print(len(lines))
     for i in range(0,len(lines)):
         words = lines[i].split()
@@ -135,7 +142,8 @@ def compile(lines):
                         #Most common occurrence probably
                         #only do this if sprite sheet is declared
                         #have this refer to spritesobject
-                        print(classtype)
+                        pass
+                        #sprite_array.append()
                     elif classtype == "map":
                         #locate map file
                         mapname = dollar_word(words[2])
@@ -148,8 +156,7 @@ def compile(lines):
                         sprites_path = dollar_word(words[2])
                         #if it can be read, iterate through, save everything to sprite_array
                         sprite_file = store_code(sprites_path)
-                        #i would put a function call here from the spriteobject class
-                        
+                        #i would put a function call here from the spriteobject class                        
                         key = ""
                         # sprite = []
                         for line in sprite_file:
@@ -168,12 +175,18 @@ def compile(lines):
                             else:
 
                                 sprite_array[key].append([char for char in line if char != "\n"])
-
                         #this same function will store information in $DATA$ 
                         print(classtype)
                     else: print(f'Error: Class type not recognized: Line {lines[i]}')
                 elif words[0] == 'window_resolution':
                     print(f'Note: Resolution Found: {words[2]}')
+                #ADDING CLASS DATA
+                #search for a period. This implies changing class data
+                elif words[0].find('.') != -1:
+                    #look at word before '.'
+                    varname = words[0][:words[0].find('.')]
+                    if varname:
+                        pass
                 else:
                     print(f'No Assignment found on line {i}')
             else: print(f'Error: All lines of code should include an "=" assignment')
