@@ -9,14 +9,16 @@ def main():
     
     #read code line by line
     lines = store_code(code_file_name)
-    
     #compile code
     map_array = compile(lines)
+    # print(map_array)
 
     #Start up key listener
     listener = keyboard.Listener(on_press=on_press)
     listener.start()
 
+    # spritesheetFile = 
+    
     #begin the printing loop
     #For now, game will be running within a terminal
     class printThread (threading.Thread):
@@ -31,7 +33,7 @@ def main():
                 #update_map()
 
     p_thread = printThread()
-    p_thread.start()
+    # p_thread.start()
 
 class MapObject():
     def __init__(self):
@@ -83,7 +85,12 @@ class MapObject():
 class SpritesObject():
     #MATTHEW
     #one item is a dictionary of all sprites
+    def __init__(self):
+        self.sprites = self.getSprites()
+
     #remove \n from every line
+    def getSprites(self):
+        pass
     #sprite key name stores a 2d array of sprite and 3 lists of xy coords (the bottom center, top left, the bottom right)
         #e.g. 'character': [[['\\',' ','/'] , [' ','X',' '] , ['/',' ','\\']], [coordinatex,coordinatey], [corner coords...], []]
     #another item is the reverse data ($DATA$)
@@ -100,17 +107,19 @@ class VarObject():
     #stores a variable and what it equals
     #it could equal a map, spritelist, sprite, a number
     #if it is a map,sprites, or sprite, it stores a classobject
+    pass
 
 class ClassObject():
     #DAVID
     #class type: map, sprite, sprites
     #xy, geometry, movement, collision FOR SPRITE ONLY
+    pass
 
 def compile(lines):
     #Store variables in a dictionary
     map_array = MapObject()
-    sprite_array = SpritesObject()
-    ()
+    sprite_array = {}
+    # () 
     print(len(lines))
     for i in range(0,len(lines)):
         words = lines[i].split()
@@ -136,8 +145,30 @@ def compile(lines):
                     elif classtype == "sprites":
                         #MATTHEW
                         #take path, try to read
+                        sprites_path = dollar_word(words[2])
                         #if it can be read, iterate through, save everything to sprite_array
+                        sprite_file = store_code(sprites_path)
                         #i would put a function call here from the spriteobject class
+                        
+                        key = ""
+                        # sprite = []
+                        for line in sprite_file:
+                            # is_sprite = False
+                            if key != "" and line[0] == "$":
+                                print(key)
+                                print(sprite_array[key])
+                            if line[0] == "$":
+                                
+                                # if len(sprite) != 0:
+                                #     sprite_array[key]
+                                # is_sprite = False
+                                key = dollar_word(line)
+                                sprite_array[key] = []
+                                # is_sprite = True
+                            else:
+
+                                sprite_array[key].append([char for char in line if char != "\n"])
+
                         #this same function will store information in $DATA$ 
                         print(classtype)
                     else: print(f'Error: Class type not recognized: Line {lines[i]}')
