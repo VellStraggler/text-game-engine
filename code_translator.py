@@ -9,14 +9,16 @@ def main():
     
     #read code line by line
     lines = store_code(code_file_name)
-    
     #compile code
     map_array = compile(lines)
+    # print(map_array)
 
     #Start up key listener
     listener = keyboard.Listener(on_press=on_press)
     listener.start()
 
+    # spritesheetFile = 
+    
     #begin the printing loop
     #For now, game will be running within a terminal
     class printThread (threading.Thread):
@@ -31,7 +33,7 @@ def main():
                 #update_map()
 
     p_thread = printThread()
-    p_thread.start()
+    # p_thread.start()
 
 class MapObject():
     def __init__(self):
@@ -76,7 +78,7 @@ class MapObject():
             for yitem in yrow:
                 print(yitem,end="")
             print()
-
+            
     def set_x_y(self,x,y,character):
         self.map_array[x][y] = character
 
@@ -119,7 +121,6 @@ class ClassObject():
         #get coordinate values of top left most 
         pass
     #sprite_array
-    
 
 def compile(lines):
     #Store variables in a dictionary
@@ -152,9 +153,29 @@ def compile(lines):
                     elif classtype == "sprites":
                         #MATTHEW
                         #take path, try to read
+                        sprites_path = dollar_word(words[2])
                         #if it can be read, iterate through, save everything to sprite_array
-                        #i would put a function call here from the spriteobject class
-                        #this same function will store information in $DATA$
+                        sprite_file = store_code(sprites_path)
+                        #i would put a function call here from the spriteobject class                        
+                        key = ""
+                        # sprite = []
+                        for line in sprite_file:
+                            # is_sprite = False
+                            if key != "" and line[0] == "$":
+                                print(key)
+                                print(sprite_array[key])
+                            if line[0] == "$":
+                                
+                                # if len(sprite) != 0:
+                                #     sprite_array[key]
+                                # is_sprite = False
+                                key = dollar_word(line)
+                                sprite_array[key] = []
+                                # is_sprite = True
+                            else:
+
+                                sprite_array[key].append([char for char in line if char != "\n"])
+                        #this same function will store information in $DATA$ 
                         print(classtype)
                     else: print(f'Error: Class type not recognized: Line {lines[i]}')
                 elif words[0] == 'window_resolution':
