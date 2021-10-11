@@ -13,5 +13,8 @@ player.xy = 3,3
 player.movement = true
 tree = sprite($tree$)
 tree.on_map = $t$
+tree.xy = 7,6
+brick = sprite($wall$)
+brick.on_map = $w$
 
 

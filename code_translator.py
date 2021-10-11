@@ -4,7 +4,7 @@ import time, threading
 def main():
     #get the name of the code to be used.
     code_file_name = 'textengine/example_code.txt'
-    print(f'Using file path: {code_file_name}')
+    print(many_line)
 
     #read code line by line
     lines = store_code(code_file_name)
@@ -34,6 +34,7 @@ def main():
 
 #helpful in debugging information
 many_space = ' ' * 50
+many_line = '\n' * 50
 
 def grid_patcher(array:list):
     """
@@ -85,7 +86,10 @@ class MapObject():
             print()
             
     def set_x_y(self,x,y,character):
-        self.map_array[x][y] = character
+        try:
+            self.map_array[x][y] = character
+        except:
+            pass
 
     def read_sprites(self,spritedict):
         #looks at map, replaces characters with sprites
@@ -95,6 +99,7 @@ class MapObject():
                     if item.get_map_char() == self.map_array[x][y]:
                         self.add_array(item)
 
+    #NOTE: NOT CALLED
     def add_sprites(self,sprite_list:dict):
         #takes a spritelist, as well as the 3 coords, adds it to the final printing
         #3 coords are stored within each sprite
@@ -102,11 +107,12 @@ class MapObject():
         for sprite in sprite_list:
             self.add_array(sprite)
 
+    #NOTE: NOT CALLED 
     def add_array(self,sprite):
-        for x in range(sprite.topleft[0],sprite.bottomright[0]+1):
-            for y in range(sprite.topleft[1],sprite.bottomright[1]+1):
+        for x in range(sprite.topleft()[0],sprite.bottomright()[0]+1):
+            for y in range(sprite.topleft()[1],sprite.bottomright()[1]+1):
                 try:
-                    self.map_array[x+sprite.origin[0]][y+sprite.origin[1]] = sprite.array[x][y]
+                    self.map_array[x+sprite.origin()[0]][y+sprite.origin()[1]] = sprite.array[x][y]
                 except:
                     print(f'{many_space}Successfully printed NOT out of range.')
 
@@ -129,11 +135,14 @@ class ClassObject():
     def __init__(self,array):
         self.array = array
         #the values below will simply not be called if the Classobject is a map or spritesheet
-        self.origin = [0,0] 
+        self.originx = 6
+        self.originy = 6 
         #self.geometry = "default"
         self.movement = False
         self.on_map = "є"
 
+    def get_array(self):
+        return self.array
     def set_array(self,array:list):
         self.array = array
 
@@ -146,24 +155,40 @@ class ClassObject():
         self.movement = can_move
 
     def origin(self):
-        #return the bottom center coordinate. If length is not odd, picks the left one
-        return self.array[len(self.array)-1][(len(self.array[len(self.array)-1])-1)/2]
-    def set_xy(self,coordlist:list):
-        self.origin = coordlist
+        #return the bottom LEFT coordinate. If length is not odd, picks the left one
+        #return list([len(self.array)-1,int((len(self.array[len(self.array)-1])-1))])
+        return list(self.originx,self.originy)
+    def get_originx(self):
+        return int(self.originx)
+    def get_originy(self):
+        #return int(( len(self.array[len(self.array)-1])-1 ))
+        return int(self.originy)
+    def set_xy(self,x,y):
+        try:
+            self.originx = x
+            self.originy = y
+        except:
+            pass
+    def get_xy(self,x,y):
+        try:
+            return self.array[x][y]
+        except:
+            return ' '
 
     def topleft(self):
-        #get coordinate values of top left most 
-        return self.array[0][0]
+        #get coordinate values, not the character stored in them!
+        return [0,0]
     def bottomright(self):
-        return self.array[len(self.array)-1][len(self.array[len(self.array)-1])-1]
+        return [len(self.array)-1,len(self.array[len(self.array)-1])-1]
 
 def compile(lines:list):
     #Store variables in dictionaries
     map_array = MapObject()
     var_container = {}
     #\/ This CAN contain copies of sprites that are named by the user 
-    sprite_dict = {}
-    sprite_file = ''
+    example_instance = ClassObject([['h','o'],['o','h']])
+    sprite_dict = {'test':example_instance}
+    sprites_file = ''
     #sprite_dict = {'tree':classobjinstance()}
     #classobjinstance.array = []
     for i in range(0,len(lines)):
@@ -178,34 +203,33 @@ def compile(lines:list):
                     if classtype == "sprite":
                         #Most common occurrence probably
                         #only do this if sprite sheet is declared
-                        if len(sprite_file) > 0:
-                            #have this refer to sprite_dict
+                        if len(sprite_dict) > 0:
                             is_in_sprites = False
+                            #tree = sprite($tree$)
                             var_value = dollar_word(words[2])
-                            for key_of_value in sprite_file:
-                                if var_value == key_of_value:
+                            for key in sprite_dict.items():
+                                if var_value == key[0]:
                                     is_in_sprites = True
                             if is_in_sprites:
                                 #add duplicate sprite into dictionary under user-made
-                                #variable name
-                                sprite_file[words[0]] = var_value
+                                #variable name = words[0]
+                                sprite_dict[words[0]] = sprite_dict[var_value]
 
                     elif classtype == "map":
                         #locate map file
                         mapname = dollar_word(words[2])
                         #create Map Object of file
                         map_array.set_path(mapname)
-                        print(f'{many_space}Map Found using path: {mapname}')
 
                     elif classtype == "sprites":
                         #take path, try to read
                         sprites_path = dollar_word(words[2])
                         #if it can be read, iterate through, save everything to sprite_dict
-                        sprite_file = store_code(sprites_path)
+                        sprites_file = store_code(sprites_path)
                         #i would put a function call here from the spriteobject class                        
                         key = ""
                         one_sprite_array = []
-                        for line in sprite_file:
+                        for line in sprites_file:
                             if line[0] == "$":
                                 #turn off sprite-line-reading:
                                 if len(one_sprite_array) != 0:
@@ -226,21 +250,45 @@ def compile(lines:list):
                     attr = words[0][words[0].find('.')+1:]
                     att_value = words[2]
                     for key in sprite_dict.items():
-                        if varname == key:
-                            if attr == 'xy':
-                                key.set_xy(list(att_value))
+                        if varname == key[0]:
+                            if attr == 'xy' and att_value.find(',') != -1:
+                                attx = int(att_value[:att_value.find(',')])
+                                atty = int(att_value[att_value.find(',')+1:])
+                                key[1].set_xy(attx,atty)
+                                print(f'line 258: {attx}, {atty}')
                             elif attr == 'movement':
-                                key.set_movement(att_value == 'true')
+                                key[1].set_movement(att_value == 'true')
                             elif attr == 'on_map':
-                                key.set_map_char(dollar_word(att_value))
+                                key[1].set_map_char(dollar_word(att_value))
                 #BASIC VARIABLE ASSIGNMENT
                 else:
                     var_container[words[0]] = words[2]
             else: print(f'{many_space}Error: All lines of code should include an "=" assignment')
-    print(sprite_dict['waterfall-f2'])
     
     #map_array.read_sprites(sprite_dict)
-    map_array.add_sprites(sprite_dict)
+    
+    #goes through each character in the map
+    for x in range(0,len(map_array.map_array)-1):
+        for y in range(0,len(map_array.map_array[x])-1):
+            for value in sprite_dict.values():
+                #check if a sprite's map character is present on the map
+                if map_array.map_array[x][y] == value.get_map_char():
+                    print(f'x:{x}  y:{y} char:{value.get_map_char()}')
+                    for x in range(value.topleft()[0],value.bottomright()[0]+1):
+                        for y in range(value.topleft()[1],value.bottomright()[1]+1):
+                            map_array.set_x_y(x + value.get_originx(),y + value.get_originy(), value.get_xy(x,y))
+    #map_array.add_sprites(sprite_dict)
+    '''
+    for sprite in sprite_dict.values():
+        if sprite.map
+        for x in range(sprite.topleft()[0],sprite.bottomright()[0]+1):
+            for y in range(sprite.topleft()[1],sprite.bottomright()[1]+1):
+                #try:
+                map_array.set_x_y(x + sprite.originx(),y+sprite.originy(),sprite.get_xy(x,y))
+                #except:
+                    #print(f'{many_space}Successfully printed NOT out of range.')
+                    '''
+    print(many_line)
     return map_array
 
 #simple function to find words between $ signs
