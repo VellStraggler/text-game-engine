@@ -1,4 +1,3 @@
-window_resolution = 10,20
 #This makes a square box for some reason
 
 points = 0
@@ -11,14 +10,11 @@ map = map($textengine/example_map.txt$)
 #Sprites
 player = sprite($playerframe1$)
 player.xy = 3,3
-player.geometry = all
 player.movement = true
-#default means, up, left, down, right
-
 tree = sprite($tree$)
 tree.on_map = $t$
-tree.geometry = coordinate
+tree.xy = 7,6
+brick = sprite($wall$)
+brick.on_map = $w$
 
-if player is near tree,
-player.health = -1
 
