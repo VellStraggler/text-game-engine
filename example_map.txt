@@ -1,7 +1,10 @@
-wwwwwwwwwwww        d
-w          w
-w          w
-www  wwwwwww        t t
-
-        t                                      |
-                        d                      |
+twwwwwwwwww         d
+w         wt                 t
+w     t   w
+wwww  wwwww        t t           t
+     
+         t                                      |
+                    d       t              |
+t
+t
+                        what the heck
