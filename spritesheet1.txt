@@ -8,7 +8,7 @@ $train-engine$
 |[]|=(=( )
 `(_)--O-l\
 $wall$
-[]
+][
 $cottage$
   ___________ [}
  /UU/ \UUUUUU\{]

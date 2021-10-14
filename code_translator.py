@@ -87,15 +87,15 @@ class MapObject():
             
     def set_x_y(self,x,y,character):
         try:
-            self.map_array[x][y] = character
+            self.map_array[y][x] = character
         except:
             pass
 
     def read_sprites(self,spritedict):
         #looks at map, replaces characters with sprites
         for item in spritedict.items():
-            for y in self.map_array:
-                for x in self.map_array:
+            for y in range(len(self.map_array)):
+                for x in range(len(self.map_array[y])):
                     if item.get_map_char() == self.map_array[x][y]:
                         self.add_array(item)
 
@@ -112,7 +112,7 @@ class MapObject():
         for x in range(sprite.topleft()[0],sprite.bottomright()[0]+1):
             for y in range(sprite.topleft()[1],sprite.bottomright()[1]+1):
                 try:
-                    self.map_array[x+sprite.origin()[0]][y+sprite.origin()[1]] = sprite.array[x][y]
+                    self.map_array[y+sprite.origin()[1]][x+sprite.origin()[0]] = sprite.array[y][x]
                 except:
                     print(f'{many_space}Successfully printed NOT out of range.')
 
@@ -135,11 +135,11 @@ class ClassObject():
     def __init__(self,array):
         self.array = array
         #the values below will simply not be called if the Classobject is a map or spritesheet
-        self.originx = 6
-        self.originy = 6 
+        self.originx = 0
+        self.originy = 0
         #self.geometry = "default"
         self.movement = False
-        self.on_map = "є"
+        self.on_map = ""
 
     def get_array(self):
         return self.array
@@ -171,7 +171,7 @@ class ClassObject():
             pass
     def get_xy(self,x,y):
         try:
-            return self.array[x][y]
+            return self.array[y][x]
         except:
             return ' '
 
@@ -255,28 +255,31 @@ def compile(lines:list):
                                 attx = int(att_value[:att_value.find(',')])
                                 atty = int(att_value[att_value.find(',')+1:])
                                 key[1].set_xy(attx,atty)
-                                print(f'line 258: {attx}, {atty}')
                             elif attr == 'movement':
                                 key[1].set_movement(att_value == 'true')
                             elif attr == 'on_map':
                                 key[1].set_map_char(dollar_word(att_value))
+                                print(key[1].get_map_char())
                 #BASIC VARIABLE ASSIGNMENT
                 else:
                     var_container[words[0]] = words[2]
             else: print(f'{many_space}Error: All lines of code should include an "=" assignment')
     
     #map_array.read_sprites(sprite_dict)
-    
+    #filter out any sprites that don't have a mapping character
+    mappable_sprites = []
+    for value in sprite_dict.values():
+        if len(value.get_map_char())>0:
+            mappable_sprites.append(value)
+    for sprite in mappable_sprites:
     #goes through each character in the map
-    for x in range(0,len(map_array.map_array)-1):
-        for y in range(0,len(map_array.map_array[x])-1):
-            for value in sprite_dict.values():
+        for mapx in range(0,len(map_array.map_array)):
+            for mapy in range(0,len(map_array.map_array[mapx])):
                 #check if a sprite's map character is present on the map
-                if map_array.map_array[x][y] == value.get_map_char():
-                    print(f'x:{x}  y:{y} char:{value.get_map_char()}')
-                    for x in range(value.topleft()[0],value.bottomright()[0]+1):
-                        for y in range(value.topleft()[1],value.bottomright()[1]+1):
-                            map_array.set_x_y(x + value.get_originx(),y + value.get_originy(), value.get_xy(x,y))
+                if map_array.map_array[mapx][mapy] == sprite.get_map_char():
+                    for spritey in range(sprite.topleft()[0]+sprite.get_originx(),sprite.bottomright()[0]+1+sprite.get_originx()):
+                        for spritex in range(sprite.topleft()[1]+sprite.get_originy(),sprite.bottomright()[1]+1+sprite.get_originy()):
+                            map_array.set_x_y(mapy,mapx, sprite.get_xy(spritex,spritey))
     #map_array.add_sprites(sprite_dict)
     '''
     for sprite in sprite_dict.values():
@@ -288,7 +291,6 @@ def compile(lines:list):
                 #except:
                     #print(f'{many_space}Successfully printed NOT out of range.')
                     '''
-    print(many_line)
     return map_array
 
 #simple function to find words between $ signs
