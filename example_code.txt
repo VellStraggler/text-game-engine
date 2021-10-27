@@ -9,7 +9,7 @@ map = map($textengine/example_map.txt$)
 
 #Sprites
 player = sprite($playerframe1$)
-player.xy = 3,3
+player.xy = 3,4
 player.movement = true
 tree = sprite($tree$)
 tree.on_map = $t$
