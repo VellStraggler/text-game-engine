@@ -6,28 +6,27 @@ def main():
     code_file_name = 'textengine/example_code.txt'
     print(many_line)
 
-    #read code line by line
+    #read code line by line.
     lines = store_code(code_file_name)
 
-    #compile code and return a map_array for printing
+    #compile code and return a map_array for printing.
     map_array = compile(lines)
 
-    #Start up key listener
+    #Start up key listener.
     listener = keyboard.Listener(on_press=on_press)
     listener.start()
     
-    #begin the printing loop
-    #For now, game will be running within a terminal
+    # Begin the printing loop.
+    # For now, game will be running within a terminal.
     class printThread (threading.Thread):
         def __init__(self):
             threading.Thread.__init__(self)
-            #make sure this works?
         def run(self):
             while(True):
-                #This While loop loops through 3 key items: framerate, map_printing, and map_updating
+                # This while loop loops through 3 key items: framerate, map_printing, and map_updating
                 map_array.print_all()
                 time.sleep(.5)
-                #update_map()
+                # update_map() here
 
     p_thread = printThread()
     p_thread.start()
@@ -39,7 +38,9 @@ many_line = '\n' * 50
 def grid_patcher(array:list):
     """
     TO BE USED ON MAP ARRAYS AND SPRITE ARRAYS.
-    adds spaces until the array is rectangular, then returns the patched list
+    adds spaces until the array is rectangular, then returns the list
+    patched with spaces.
+    This function is called by functions in the MapObject class.
     """
     #find longest y:
     longest_y = 0
@@ -90,8 +91,9 @@ class MapObject():
             self.map_array[y][x] = character
         except:
             pass
+            # For when this point would not print within the map.
 
-    def read_sprites(self,spritedict):
+    def draw_sprites(self,spritedict:dict):
         #looks at map, replaces characters with sprites
         for item in spritedict.items():
             for y in range(len(self.map_array)):
@@ -99,36 +101,21 @@ class MapObject():
                     if item.get_map_char() == self.map_array[x][y]:
                         self.add_array(item)
 
-    #NOTE: NOT CALLED
-    def add_sprites(self,sprite_list:dict):
-        #takes a spritelist, as well as the 3 coords, adds it to the final printing
-        #3 coords are stored within each sprite
-        #spawnpoint is relative to map, other two coords are relative to the sprite
-        for sprite in sprite_list:
-            self.add_array(sprite)
-
-    #NOTE: NOT CALLED 
-    def add_array(self,sprite):
-        for x in range(sprite.topleft()[0],sprite.bottomright()[0]+1):
-            for y in range(sprite.topleft()[1],sprite.bottomright()[1]+1):
-                try:
-                    self.map_array[y+sprite.origin()[1]][x+sprite.origin()[0]] = sprite.array[y][x]
-                except:
-                    print(f'{many_space}Successfully printed NOT out of range.')
-
 class VarObject():
     def __init__(self,variable, value):
-        #stores a variable and what it equals
+        """
+        stores a variable and what it equals
+        """
         self.variable = variable
         self.value = value
         #This is for any variable that is NOT a class
-        #eg 4, "hello"
+        # i.e. var1 = 4, var3 = "hello"
 
 class ClassObject():
     #iterations of this are to be stored in a regular dictionary
     """
-    functions: set_xy(coordlist), set_array(array), set_map_char(char), set_movement(boolean),
-    origin(), topleft(), bottomright()
+    functions: set_xy(x,y), set_origin(x,y), set_array(array), set_map_char(char), set_movement(boolean),
+    originx(), originy(), topleft(), bottomright()
     """
     #class type: map, sprite, sprites
     #origin, movement FOR SPRITE ONLY
@@ -154,31 +141,43 @@ class ClassObject():
     def set_movement(self,can_move:bool):
         self.movement = can_move
 
-    def origin(self):
-        #return the bottom LEFT coordinate. If length is not odd, picks the left one
-        #return list([len(self.array)-1,int((len(self.array[len(self.array)-1])-1))])
-        return list(self.originx,self.originy)
     def get_originx(self):
         return int(self.originx)
     def get_originy(self):
-        #return int(( len(self.array[len(self.array)-1])-1 ))
         return int(self.originy)
-    def set_xy(self,x,y):
+    def set_origin(self,x,y):
+        self.originx = x
+        self.originy = y
+
+    def set_xy_char(self,x,y,newchar):
+        """
+        Change a character at a given coordinate
+        """
         try:
-            self.originx = x
-            self.originy = y
+            self.array[y,x] = newchar
         except:
             pass
-    def get_xy(self,x,y):
+    def get_x_y(self,x:int,y:int):
+        """
+        Returns the character stored here in a sprite array.
+        Not normally used on map array.
+        """
         try:
             return self.array[y][x]
         except:
-            return ' '
+            return " "
 
     def topleft(self):
-        #get coordinate values, not the character stored in them!
+        """
+        Return coordinate values [x,y] of topleft character in sprite.
+        NOT in reference to map coordinates.
+        """
         return [0,0]
     def bottomright(self):
+        """
+        Return coordinate values [x,y] of bottomright character in sprite.
+        NOT in reference to map coordinates.
+        """
         return [len(self.array)-1,len(self.array[len(self.array)-1])-1]
 
 def compile(lines:list):
@@ -189,8 +188,6 @@ def compile(lines:list):
     example_instance = ClassObject([['h','o'],['o','h']])
     sprite_dict = {'test':example_instance}
     sprites_file = ''
-    #sprite_dict = {'tree':classobjinstance()}
-    #classobjinstance.array = []
     for i in range(0,len(lines)):
         words = lines[i].split()
         if len(words) > 1:
@@ -205,7 +202,7 @@ def compile(lines:list):
                         #only do this if sprite sheet is declared
                         if len(sprite_dict) > 0:
                             is_in_sprites = False
-                            #tree = sprite($tree$)
+                            # i.e. tree = sprite($tree$)
                             var_value = dollar_word(words[2])
                             for key in sprite_dict.items():
                                 if var_value == key[0]:
@@ -250,16 +247,21 @@ def compile(lines:list):
                     attr = words[0][words[0].find('.')+1:]
                     att_value = words[2]
                     for key in sprite_dict.items():
+                        # If the key is the same as the variable name, affect that key
                         if varname == key[0]:
                             if attr == 'xy' and att_value.find(',') != -1:
-                                attx = int(att_value[:att_value.find(',')])
-                                atty = int(att_value[att_value.find(',')+1:])
-                                key[1].set_xy(attx,atty)
+                                # i.e. player.xy = 3,4
+                                attx = int(att_value[:att_value.find(',')])  # 3
+                                atty = int(att_value[att_value.find(',')+1:])# 4
+                                # place character on map
+                                key[1].set_origin(attx,atty)
                             elif attr == 'movement':
+                                # i.e. player.movement = true
                                 key[1].set_movement(att_value == 'true')
                             elif attr == 'on_map':
+                                # i.e. tree.on_map = $t$
                                 key[1].set_map_char(dollar_word(att_value))
-                                print(key[1].get_map_char())
+
                 #BASIC VARIABLE ASSIGNMENT
                 else:
                     var_container[words[0]] = words[2]
@@ -269,6 +271,7 @@ def compile(lines:list):
     #filter out any sprites that don't have a mapping character
     mappable_sprites = []
     for value in sprite_dict.values():
+        # Check to see if this sprite has a map character
         if len(value.get_map_char())>0:
             mappable_sprites.append(value)
     for sprite in mappable_sprites:
@@ -277,24 +280,16 @@ def compile(lines:list):
             for mapy in range(0,len(map_array.map_array[mapx])):
                 #check if a sprite's map character is present on the map
                 if map_array.map_array[mapx][mapy] == sprite.get_map_char():
-                    for spritey in range(sprite.topleft()[0]+sprite.get_originx(),sprite.bottomright()[0]+1+sprite.get_originx()):
-                        for spritex in range(sprite.topleft()[1]+sprite.get_originy(),sprite.bottomright()[1]+1+sprite.get_originy()):
-                            map_array.set_x_y(mapy,mapx, sprite.get_xy(spritex,spritey))
-    #map_array.add_sprites(sprite_dict)
-    '''
-    for sprite in sprite_dict.values():
-        if sprite.map
-        for x in range(sprite.topleft()[0],sprite.bottomright()[0]+1):
-            for y in range(sprite.topleft()[1],sprite.bottomright()[1]+1):
-                #try:
-                map_array.set_x_y(x + sprite.originx(),y+sprite.originy(),sprite.get_xy(x,y))
-                #except:
-                    #print(f'{many_space}Successfully printed NOT out of range.')
-                    '''
+                    # If it is, replace an area around that point with the sprite array
+                    for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
+                        for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
+                            map_array.set_x_y(mapy + spritex,mapx + spritey, sprite.get_x_y(spritex,spritey))
+    
+                    
     return map_array
 
-#simple function to find words between $ signs
 def dollar_word(word):
+    """Takes a word and returns what is between dollar signs ($)"""
     word = word[(word.find('$') + 1):]
     return word[:(word.find('$'))]
 
@@ -315,18 +310,21 @@ def on_press(key):
         pass
 
 #FILE READING
-def can_be_read(filename):
-    #boolean function, check if file can be opened
-    try: file = open(filename,'r')
+def can_be_read(filename:str):
+    """Boolean function, check if file can be opened"""
+    try:
+        file = open(filename,'r')
+        file.close()
+        return True
     except: return False
-    file.close()
-    return True
 
-def store_code(code_file_name):
+def store_code(code_file_name:str):
+    """
+    Stores the code line by line from a file.
+    Empty lines and comment lines are skipped.
+    (read-only)
+    """
     lines = []
-    #Storing the code line by line
-    #Empty lines and comment lines are skipped
-    #read-only
     with open(code_file_name, 'r') as code:
         currentline = code.readline()
         while(currentline):
