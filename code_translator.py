@@ -31,7 +31,7 @@ def main():
     p_thread = printThread()
     p_thread.start()
 
-#helpful in debugging information
+# Helpful in debugging information.
 many_space = ' ' * 50
 many_line = '\n' * 50
 
@@ -58,17 +58,20 @@ class MapObject():
     def __init__(self):
         self.map_path = ''
         self.map_array = []
+        # The map_original will always be exactly what is in the map file.
+        self.map_original = []
 
     def set_path(self,map_path):
         self.map_path = map_path
         self.store_map()
         #calls an array OUTSIDE the class
         self.map_array = grid_patcher(self.map_array)
+        self.map_original = self.map_array
 
     def store_map(self):
         #stores text from file as 2D array or list: [[x1,x2,x3],[x1,x2,x3]]
         with open(self.map_path,'r') as file:
-            currentline = file.readline() #a string
+            currentline = file.readline() # a string
             while currentline:
                 xlist = []
                 #remove any newline calls
@@ -78,13 +81,15 @@ class MapObject():
                 self.map_array.append(xlist)
                 currentline = file.readline()
             
-    def print_all(self):
-        for i in range(0,len(self.map_array)):
+    def print_all(self):                     # \/ leaves space for variables
+        for i in range(0,len(self.map_array) + 3):
+            # This will remove the previous printing of the map
             print('\033[A\033[F')
         for yrow in self.map_array:
             for yitem in yrow:
                 print(yitem,end="")
             print()
+        print()
             
     def set_x_y(self,x,y,character):
         try:
@@ -157,7 +162,7 @@ class ClassObject():
             self.array[y,x] = newchar
         except:
             pass
-    def get_x_y(self,x:int,y:int):
+    def char(self,x:int,y:int):
         """
         Returns the character stored here in a sprite array.
         Not normally used on map array.
@@ -185,7 +190,7 @@ def compile(lines:list):
     map_array = MapObject()
     var_container = {}
     #\/ This CAN contain copies of sprites that are named by the user 
-    example_instance = ClassObject([['h','o'],['o','h']])
+    example_instance = ClassObject([['x','y'],['z','a']])
     sprite_dict = {'test':example_instance}
     sprites_file = ''
     for i in range(0,len(lines)):
@@ -197,6 +202,7 @@ def compile(lines:list):
                 if words[2].find(")") == len(words[2])-1:
                     #map, sprites, sprite
                     classtype = words[2][:words[2].find("(")]
+
                     if classtype == "sprite":
                         #Most common occurrence probably
                         #only do this if sprite sheet is declared
@@ -213,17 +219,16 @@ def compile(lines:list):
                                 sprite_dict[words[0]] = sprite_dict[var_value]
 
                     elif classtype == "map":
-                        #locate map file
+                        # Locate map file.
                         mapname = dollar_word(words[2])
                         #create Map Object of file
                         map_array.set_path(mapname)
 
                     elif classtype == "sprites":
-                        #take path, try to read
+                        # Take path, try to read.
                         sprites_path = dollar_word(words[2])
                         #if it can be read, iterate through, save everything to sprite_dict
-                        sprites_file = store_code(sprites_path)
-                        #i would put a function call here from the spriteobject class                        
+                        sprites_file = store_code(sprites_path)                       
                         key = ""
                         one_sprite_array = []
                         for line in sprites_file:
@@ -239,15 +244,16 @@ def compile(lines:list):
                                 one_sprite_array.append([char for char in line if char != "\n"])
                         #this same function will store information in $DATA$ 
                     else: print(f'{many_space}Error: Class type not recognized: Line {lines[i]}')
-                #ADDING CLASS DATA
-                #search for a period. This implies changing class data
+
+                # ADDING CLASS DATA
+                # Search for a period. This implies changing class data.
                 elif words[0].find('.') != -1:
                     #look at word before '.'
                     varname = words[0][:words[0].find('.')]
                     attr = words[0][words[0].find('.')+1:]
                     att_value = words[2]
                     for key in sprite_dict.items():
-                        # If the key is the same as the variable name, affect that key
+                        # If the key is the same as the variable name, affect that key.
                         if varname == key[0]:
                             if attr == 'xy' and att_value.find(',') != -1:
                                 # i.e. player.xy = 3,4
@@ -275,23 +281,31 @@ def compile(lines:list):
         if len(value.get_map_char())>0:
             mappable_sprites.append(value)
     for sprite in mappable_sprites:
-    #goes through each character in the map
-        for mapx in range(0,len(map_array.map_array)):
-            for mapy in range(0,len(map_array.map_array[mapx])):
-                #check if a sprite's map character is present on the map
-                if map_array.map_array[mapx][mapy] == sprite.get_map_char():
-                    # If it is, replace an area around that point with the sprite array
+    # GO through each character in the map, by ROW, then COLUMN
+        for mapy in range(0,len(map_array.map_array)):
+            for mapx in range(0,len(map_array.map_array[mapy])):
+                # Check if a sprite's map character is present on the map.
+                if map_array.map_array[mapy][mapx] == sprite.get_map_char():
+                    map_array.map_array[mapy][mapx] = " "
+                    # If it is, replace an area around that point with the sprite array.
                     for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
+
                         for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
-                            map_array.set_x_y(mapy + spritex,mapx + spritey, sprite.get_x_y(spritex,spritey))
+                            # Only change the character if it has not already been changed
+                            char_to_use = sprite.char(spritex,spritey)
+                            if char_to_use != " " or (sprite.char(spritex-1,spritey) != " " and sprite.char(spritex+1,spritey) != " "):
+                                xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
+                                ypos = mapy + spritey - sprite.bottomright()[0]
+                                if ypos >= 0 and xpos >= 0:
+                                    map_array.set_x_y(xpos, ypos, char_to_use)
     
                     
     return map_array
 
-def dollar_word(word):
+def dollar_word(word:str):
     """Takes a word and returns what is between dollar signs ($)"""
     word = word[(word.find('$') + 1):]
-    return word[:(word.find('$'))]
+    return str(word[:(word.find('$'))])
 
 #KEY LISTENING
 def on_press(key):
@@ -325,7 +339,7 @@ def store_code(code_file_name:str):
     (read-only)
     """
     lines = []
-    with open(code_file_name, 'r') as code:
+    with open(code_file_name, 'r',encoding='utf-8') as code:
         currentline = code.readline()
         while(currentline):
             if len(currentline) > 0:
