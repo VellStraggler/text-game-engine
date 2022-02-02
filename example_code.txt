@@ -15,6 +15,7 @@ player.movement = true
 tree = sprite($tree$)
 tree.on_map = $t$
 tree.xy = 7,6
+
 cottage = sprite($cottage$)
 cottage.on_map = $c$
 brick = sprite($wall$)

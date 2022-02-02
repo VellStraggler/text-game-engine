@@ -1,13 +1,13 @@
 
                          t
-      p
+      p    t
 wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 w                   t
 w           t                     t
-w                          t                                    t       
+w                          t                    t              t       
 w                        t        t
 w                             t
 w                                                  c              t
-w                     c              
-w
+w        t            c              
+w                                       t    t              t
 wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
