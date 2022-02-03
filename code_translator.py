@@ -3,7 +3,7 @@ import time, threading
 
 def main():
     #get the name of the code to be used.
-    code_file_name = 'textengine/example_code.txt'
+    code_file_name = 'example_code.txt'
     print(many_line)
 
     #read code line by line.

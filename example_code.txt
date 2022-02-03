@@ -4,8 +4,8 @@ points = 0
 timeofday = 4
 
 #Files
-sprite_sheet = sprites($textengine/spritesheet1.txt$)
-map = map($textengine/example_map.txt$)
+sprite_sheet = sprites($spritesheet1.txt$)
+map = map($example_map.txt$)
 
 #Sprites
 player = sprite($giant-head$)
