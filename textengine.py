@@ -1,0 +1,263 @@
+from pynput import keyboard
+import time, threading
+#This is a read-only module.
+
+class GameObject():
+    def __init__(self):
+        map = self.Map()
+        sprites = self.Sprites()
+
+    def running():
+        print(many_line)
+
+        #Start up key listener.
+        listener = keyboard.Listener(on_press=on_press)
+        listener.start()
+        
+        # Begin the printing loop.
+        # For now, game will be running within a terminal.
+        class printThread (threading.Thread):
+            def __init__(self):
+                threading.Thread.__init__(self)
+            def run(self):
+                while(True):
+                    # This while loop loops through 3 key items: framerate, map_printing, and map_updating
+                    output_map.print_all()
+                    time.sleep(.5)
+                    # update_map() here
+
+        p_thread = printThread()
+        p_thread.start()
+
+    # Helpful in debugging information.
+    many_space = ' ' * 50
+    many_line = '\n' * 50
+
+    def grid_patcher(array:list):
+        """
+        TO BE USED ON MAP ARRAYS AND SPRITE ARRAYS.
+        adds spaces until the array is rectangular, then returns the list
+        patched with spaces.
+        This function is called by functions in the Map class.
+        """
+        #find longest y:
+        longest_y = 0
+        #the length of output_map is the extent of y
+        for y in range(0,len(array)):
+            if len(array[y]) > longest_y:
+                longest_y = len(array[y])
+        #make all columns the same length
+        for row in array:
+            for s in range(0,longest_y - len(row)):
+                row.append(" ")
+        return array
+
+    class Map():
+
+        """Three arrays are stored in a Map object: the user input map, the output map, and a collision map.
+        you can set the map path on initialization"""
+
+        def __init__(self,map_path = ''):
+            self.map_path = ''
+            # The input_map will always be exactly what is in the map file.
+            self.input_map = []
+            self.output_map = []
+            self.collision_map = []
+
+        def set_path(self,map_path):
+            self.map_path = map_path
+            self.store_map()
+            # Calls an array OUTSIDE the class.
+            self.output_map = grid_patcher(self.output_map)
+            self.input_map = self.output_map
+
+        def store_map(self):
+            """
+            Stores text from file as 2D array or list: [[x1,x2,x3],[x1,x2,x3]]
+            Also makes a copy called input_map.
+            """
+            with open(self.map_path,'r') as file:
+                currentline = file.readline() # a string
+                while currentline:
+                    xlist = []
+                    # Remove any newline calls.
+                    currentline = currentline[:-1]
+                    for char in currentline:
+                        xlist.append(char)
+                    self.output_map.append(xlist)
+                    currentline = file.readline()
+                
+        def print_all(self):                     # \/ leaves space for variables
+            for i in range(0,len(self.output_map) + 3):
+                # This will remove the previous printing of the map.
+                print('\033[A\033[F')
+            for yrow in self.output_map:
+                for yitem in yrow:
+                    print(yitem,end="")
+                print()
+            print()
+                
+        def set_x_y(self,x,y,character):
+            try:
+                self.output_map[y][x] = character
+            except:
+                pass
+                # For when this point would not print within the map.
+
+        def draw_sprites(self,spritedict:dict):
+            #looks at map, replaces characters with sprites
+            for item in spritedict.items():
+                for y in range(len(self.output_map)):
+                    for x in range(len(self.output_map[y])):
+                        if item.get_map_char() == self.output_map[x][y]:
+                            self.add_array(item)
+
+    class Sprites():
+        def __init__(self,sprites_path = ""):
+            self.sprites_path = sprites_path
+            self.sprites = []
+        def get_sprites(self):
+            lines = []
+            with open(self.sprites_path, 'r',encoding='utf-8') as file:
+                currentline = file.readline()
+                while(currentline):
+                    if len(currentline) > 0:
+                        if currentline[0] != '$':
+                            lines.append(currentline)
+                currentline = file.readline()
+        
+        class Sprite():
+            # Replaces ClassObject
+            def __init__(self,array=""):
+                self.array = array
+                self.originx = 0
+                self.originy = 0
+                self.geometry = "default"
+                self.movement = False
+                self.input_char = "" 
+
+            def get_map_char(self):
+                return self.input_char
+            def set_map_char(self,char):
+                self.input_char = char
+
+            def set_movement(self,can_move:bool):
+                self.movement = can_move
+
+            def get_originx(self):
+                return int(self.originx)
+            def get_originy(self):
+                return int(self.originy)
+            def set_origin(self,x,y):
+                self.originx = x
+                self.originy = y
+
+            def set_xy_char(self,x,y,newchar):
+                """
+                Change a character at a given coordinate.
+                """
+                try:
+                    self.array[y,x] = newchar
+                except:
+                    pass
+            def char(self,x:int,y:int):
+                """
+                Returns the character stored here in a sprite array.
+                Not normally used on map array.
+                """
+                try:
+                    return self.array[y][x]
+                except:
+                    return " "
+
+            def topleft(self):
+                """
+                Return coordinate values [x,y] of topleft character in sprite.
+                NOT in reference to map coordinates.
+                """
+                return [0,0]
+            def bottomright(self):
+                """
+                Return coordinate values [x,y] of bottomright character in sprite.
+                NOT in reference to map coordinates.
+                """
+                return [len(self.array)-1,len(self.array[len(self.array)-1])-1]
+
+    def compile(self, lines:list):
+        # Store variables in dictionaries.
+        output_map = self.Map()
+        var_container = {}
+        #\/ This CAN contain copies of sprites that are named by the user 
+        example_instance = self.ClassObject([['x','y'],['z','a']])
+        sprite_dict = {'test':example_instance}
+        sprites_file = ''
+        
+        
+        #output_map.read_sprites(sprite_dict)
+        #filter out any sprites that don't have a mapping character
+        mappable_sprites = []
+        for value in sprite_dict.values():
+            # Check to see if this sprite has a map character
+            if len(value.get_map_char())>0:
+                mappable_sprites.append(value)
+        for sprite in mappable_sprites:
+        # GO through each character in the map, by ROW, then COLUMN
+            for mapy in range(0,len(output_map.output_map)):
+                for mapx in range(0,len(output_map.output_map[mapy])):
+                    # Check if a sprite's map character is present on the map.
+                    if output_map.output_map[mapy][mapx] == sprite.get_map_char():
+                        output_map.output_map[mapy][mapx] = " "
+                        # If it is, replace an area around that point with the sprite array.
+                        for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
+                            for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
+                                # Only change the character if it has not already been changed
+                                char_to_use = sprite.char(spritex,spritey)
+                                if char_to_use != " " or (sprite.char(spritex-1,spritey) != " " and sprite.char(spritex+1,spritey) != " "):
+                                    xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
+                                    ypos = mapy + spritey - sprite.bottomright()[0]
+                                    if ypos >= 0 and xpos >= 0:
+                                        output_map.set_x_y(xpos, ypos, char_to_use)
+        
+        return output_map
+
+    #KEY LISTENING
+    def on_press(key):
+        #must be called AFTER keyboard is 
+        if key == keyboard.Key.esc:
+            return False
+        try: k = key.char
+        except: k = key.name #for buttons like "left" or "space"
+        if k in ['a','left']:
+            pass
+        elif k in ['w','up']:
+            pass
+        elif k in ['s','down']:
+            pass
+        elif k in ['d','right']:
+            pass
+
+    #FILE READING
+    def can_be_read(filename:str):
+        """Boolean function, check if file can be opened"""
+        try:
+            file = open(filename,'r')
+            file.close()
+            return True
+        except: return False
+
+    def store_code(code_file_name:str):
+        """
+        Stores the code line by line from a file.
+        Empty lines and comment lines are skipped.
+        (read-only)
+        """
+        lines = []
+        with open(code_file_name, 'r',encoding='utf-8') as code:
+            currentline = code.readline()
+            while(currentline):
+                if len(currentline) > 0:
+                    if currentline[0] != '#':
+                        lines.append(currentline)
+                currentline = code.readline()
+        return lines
+        #returns a list of strings
