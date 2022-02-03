@@ -1,1 +1,0 @@
-map = map($textengine/example_map.txt$)
