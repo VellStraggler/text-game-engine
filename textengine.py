@@ -1,5 +1,5 @@
 from pynput import keyboard
-import time, threading
+import time
 
 # Helpful in debugging information.
 many_space = ' ' * 50
@@ -66,11 +66,11 @@ class GameObject():
         # Begin the printing loop.
         # For now, game will be running within a terminal.
         while(True):
-            self.map.print_all()
+           self.map.print_all()
 
     def draw_map(self):
         for sprite in self.sprites.sprites:
-            if sprite.input_char != "": # Make sure they have a map character
+            if sprite.input_char != '': # Make sure they have a map character
             # GO through each character in the map by ROW, then COLUMN
                 for mapy in range(0,len(self.map.output_map)):
                     for mapx in range(0,len(self.map.output_map[mapy])):
@@ -86,7 +86,7 @@ class GameObject():
                                         xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
                                         ypos = mapy + spritey - sprite.bottomright()[0]
                                         if ypos >= 0 and xpos >= 0:
-                                            self.map.output_map.set_x_y(xpos, ypos, char_to_use)
+                                            self.map.set_x_y(xpos, ypos, char_to_use)
 
 class Map():
     """Three arrays are stored in a Map object: the user input map, the output map, and a collision map.
@@ -148,20 +148,32 @@ class Sprites():
                     if currentline[0] == '$' and currentline[-1] == currentline[0]: # Begins and ends with "$"
                         if sp_name != "": # If this is not the first sprite name
                             self.sprites.append(self.Sprite(name = sp_name,array = sp_array))
-                            # Adds a newly created sprite with name and array values to the sprites list
+                            # Adds a newly created sprite with name and array values to the sprites list ^
+                            sp_array = []
                         sp_name = currentline[1:-1] # Removes the $'s
                     else:
                         sp_array.append(currentline)
                 currentline = file.readline()[:-1] # Removes the \n
+    def new(self,name = "", input_char = "", coords = [-1,-1], movement = False, geometry = "default"):
+        """Every spritename possible has already been made from the given spritesheet. This just changes
+        data."""
+        assert type(self.sprites) == type(list())
+        for sprite in self.sprites:
+            if sprite.name == name: # Only the sprite name and array cannot change
+                sprite.input_char = input_char
+                sprite.movement = movement
+                sprite.geometry = geometry
+                sprite.set_origin(coords[0],coords[1])
+
     
     class Sprite():
-        def __init__(self,name="", input_char = "", coords = [-1,-1], array = []):
+        def __init__(self,name="", input_char = "", coords = [-1,-1], array = [], movement = False, geometry = "default"):
             self.name = name
             self.array = array # Array will be found from the sprite sheet text doc.
             self.originx = coords[0]
             self.originy = coords[1]
-            self.geometry = "default"
-            self.movement = False
+            self.geometry = geometry
+            self.movement = movement
             self.input_char = input_char 
 
         def set_origin(self,x,y):
