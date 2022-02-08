@@ -7,8 +7,14 @@ g.sprites.path = 'spritesheet1.txt'
 points = 0
 timeofday = 4
 
-player = g.sprites.add('giant-head','p',[3,4])
+player = tx.Sprite('giant-head','p',[3,4])
 player.movement = True
-tree = g.sprites.add('tree','t',[7,6])
-cottage = g.sprites.add('cottage','c')
-brick = g.sprites.add('wall','w')
+g.sprites.add(player)
+tree = tx.Sprite('tree','t',[7,6])
+g.sprites.add(tree)
+cottage = tx.Sprite('cottage','c')
+g.sprites.add(cottage)
+brick = tx.Sprite('wall','w')
+g.sprites.add(brick)
+
+g.run_map()

@@ -23,6 +23,31 @@ def grid_patcher(array:list):
             row.append(" ")
     return array
 
+#KEY LISTENING
+def on_press(key):
+    #must be called AFTER keyboard is 
+    if key == keyboard.Key.esc:
+        return False
+    try: k = key.char
+    except: k = key.name #for buttons like "left" or "space"
+    if k in ['a','left']:
+        pass
+    elif k in ['w','up']:
+        pass
+    elif k in ['s','down']:
+        pass
+    elif k in ['d','right']:
+        pass
+    elif k == 'q':
+        quit()
+
+def can_be_read(filename:str):
+    """Boolean function, check if file can be opened"""
+    try:
+        with open(filename,'r') as file:
+            return True
+    except: return False
+
 class GameObject():
     """Initialization creates a map and a sprite list"""
     def __init__(self):
@@ -30,29 +55,18 @@ class GameObject():
         self.sprites = Sprites()
 
     def run_map(self):
-        print(many_line)
-
         #Start up key listener.
-        listener = keyboard.Listener(on_press=self.on_press)
+        listener = keyboard.Listener(on_press=on_press)
         listener.start()
         
         # Begin the printing loop.
         # For now, game will be running within a terminal.
-        class printThread (threading.Thread):
-            def __init__(self):
-                threading.Thread.__init__(self)
-            def run(self):
-                while(True):
-                    # This while loop loops through 3 key items: framerate, map_printing, and map_updating
-                    map.print_all()
-                    time.sleep(.5)
-                    # update_map() here
-        p_thread = printThread()
-        p_thread.start()
+        while(True):
+            self.map.print_all()
 
 class Map():
     """Three arrays are stored in a Map object: the user input map, the output map, and a collision map.
-    you can set the map path on initialization"""
+    Set the map path upon initialization"""
 
     def __init__(self):
         self.path = ""
@@ -117,8 +131,8 @@ class Sprites():
                     if currentline[0] != '$':
                         lines.append(currentline)
             currentline = file.readline()
-    def add(self,array="",input_char="",coords=[-1,-1]):
-        self.sprites.append(Sprite(array,input_char,coords))
+    def add(self,sprite):
+        self.sprites.append(sprite)
     
 class Sprite():
     def __init__(self,array="", input_char = "", coords = [-1,-1]):
@@ -128,9 +142,6 @@ class Sprite():
         self.geometry = "default"
         self.movement = False
         self.input_char = input_char 
-
-    def set_movement(self,can_move:bool):
-        self.movement = can_move
 
     def set_origin(self,x,y):
         self.originx = x
@@ -192,27 +203,3 @@ class Sprite():
                                         output_map.set_x_y(xpos, ypos, char_to_use)
         
         return output_map
-
-    #KEY LISTENING
-    def on_press(key):
-        #must be called AFTER keyboard is 
-        if key == keyboard.Key.esc:
-            return False
-        try: k = key.char
-        except: k = key.name #for buttons like "left" or "space"
-        if k in ['a','left']:
-            pass
-        elif k in ['w','up']:
-            pass
-        elif k in ['s','down']:
-            pass
-        elif k in ['d','right']:
-            pass
-
-    def can_be_read(filename:str):
-        """Boolean function, check if file can be opened"""
-        try:
-            file = open(filename,'r')
-            file.close()
-            return True
-        except: return False
