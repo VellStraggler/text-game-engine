@@ -1,5 +1,6 @@
-from pynput import keyboard
-import time
+import time, keyboard, os
+
+DIRPATH = os.path.dirname(__file__) #Required to run program in Python3 terminal
 
 # Helpful in debugging information.
 many_space = ' ' * 50
@@ -23,24 +24,6 @@ def grid_patcher(array:list):
             row.append(" ")
     return array
 
-#KEY LISTENING
-def on_press(key):
-    #must be called AFTER keyboard is 
-    if key == keyboard.Key.esc:
-        return False
-    try: k = key.char
-    except: k = key.name #for buttons like "left" or "space"
-    if k in ['a','left']:
-        pass
-    elif k in ['w','up']:
-        pass
-    elif k in ['s','down']:
-        pass
-    elif k in ['d','right']:
-        pass
-    elif k == 'q':
-        quit()
-
 def can_be_read(filename:str):
     """Boolean function, check if file can be opened"""
     try:
@@ -55,23 +38,28 @@ class GameObject():
         self.sprites = Sprites()
 
     def run_map(self):
-        """Combine the map and the sprites, start key listening, and begin the main game loop."""
+        """Combine the map and the sprites and begin the main game loop."""
         assert len(self.sprites.sprites) > 0, "Error: No sprites found."
         self.draw_map()
-
-        #Start up key listener.
-        listener = keyboard.Listener(on_press=on_press)
-        listener.start()
-        
+        quit = False
         # Begin the printing loop.
         # For now, game will be running within a terminal.
-        while(True):
-           self.map.print_all()
+        frames = 0
+        while(not quit):
+            s_time = time.time()
+            self.map.print_all()
+            frames += 1
+            f_time = round(1/(time.time() - s_time),3)
+            print("FPS:",f_time)
+            if keyboard.is_pressed("q"):
+                quit = True
+        print("Game Over.")
+        input("Press ENTER to exit")
 
     def draw_map(self):
         for sprite in self.sprites.sprites:
-            if sprite.input_char != '': # Make sure they have a map character
-            # GO through each character in the map by ROW, then COLUMN
+            if sprite.input_char != '': # Make sure they have a map char
+            # GO through each char in the map by ROW, then COLUMN
                 for mapy in range(0,len(self.map.output_map)):
                     for mapx in range(0,len(self.map.output_map[mapy])):
                         # Check if a sprite's map character is present on the map.
@@ -100,7 +88,6 @@ class Map():
 
     def translate(self):
         self.store_map()
-        # Calls an array OUTSIDE the class.
         self.output_map = grid_patcher(self.input_map)
 
     def store_map(self):
@@ -108,6 +95,7 @@ class Map():
         Stores text from file as 2D array or list: [[x1,x2,x3],[x1,x2,x3]]
         Reads from the preset path, saves to input_map
         """
+        self.path = DIRPATH + "\\" + self.path # Adds parent directory of running program
         with open(self.path,'r') as file:
             currentline = file.readline() # stores first line as string
             while currentline:
@@ -119,8 +107,8 @@ class Map():
                 currentline = file.readline()
             
     def print_all(self):                     # \/ leaves space for variables
-        for i in range(0,len(self.output_map) + 3):
-            print('\033[A\033[F') # This will remove the previous printing of the map.
+        for i in range(len(self.output_map)+4):
+            print('\033[A\033[F') # This moves the cursor up one.
         for yrow in self.output_map:
             for yitem in yrow:
                 # UPDATE: Add check to see if it's any different from the new character
@@ -132,7 +120,7 @@ class Map():
         try:
             self.output_map[y][x] = character
         except:
-            pass # For when this point would not print within the map.
+            pass # For going out of window bounds.
 
 class Sprites():
     def __init__(self):
@@ -141,6 +129,7 @@ class Sprites():
     def get_sprites(self):
         sp_name = ""
         sp_array = []
+        self.path = DIRPATH + "\\" + self.path # Adds parent directory of running program
         with open(self.path, 'r',encoding='utf-8') as file:
             currentline = file.readline()[:-1] # Removes the \n
             while(currentline):

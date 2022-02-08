@@ -1,13 +1,17 @@
+x                                                                                                         x
+                                                 w w w w w w w w w w w w
+   t
 
                          t
       p    t
-wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
-w                   t
-w           t                     t
-w                          t                    t              t       
-w                        t        t
-w                             t
-w                                                  c              t
-w        t            c              
-w                                       t    t              t
-wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+  wwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwwwww
+  w                   t
+  w           t                     t
+  w                          t                    t              t       
+  w                        t        t
+  w                             t      w
+  w                                    w              c              t
+  w        t            c              w
+  w                                    w   t    t              t
+  wwwwwwwwwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwwwwwwwwww
+x                                                                                                         x 
