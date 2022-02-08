@@ -55,6 +55,10 @@ class GameObject():
         self.sprites = Sprites()
 
     def run_map(self):
+        """Combine the map and the sprites, start key listening, and begin the main game loop."""
+        assert len(self.sprites.sprites) > 0, "Error: No sprites found."
+        self.draw_map()
+
         #Start up key listener.
         listener = keyboard.Listener(on_press=on_press)
         listener.start()
@@ -63,6 +67,26 @@ class GameObject():
         # For now, game will be running within a terminal.
         while(True):
             self.map.print_all()
+
+    def draw_map(self):
+        for sprite in self.sprites.sprites:
+            if sprite.input_char != "": # Make sure they have a map character
+            # GO through each character in the map by ROW, then COLUMN
+                for mapy in range(0,len(self.map.output_map)):
+                    for mapx in range(0,len(self.map.output_map[mapy])):
+                        # Check if a sprite's map character is present on the map.
+                        if self.map.output_map[mapy][mapx] == sprite.input_char:
+                            self.map.output_map[mapy][mapx] = " "
+                            # If it is, replace an area around that point with the sprite array.
+                            for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
+                                for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
+                                    # Only change the character if it has not already been changed
+                                    char_to_use = sprite.char(spritex,spritey)
+                                    if char_to_use != " " or (sprite.char(spritex-1,spritey) != " " and sprite.char(spritex+1,spritey) != " "):
+                                        xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
+                                        ypos = mapy + spritey - sprite.bottomright()[0]
+                                        if ypos >= 0 and xpos >= 0:
+                                            self.map.output_map.set_x_y(xpos, ypos, char_to_use)
 
 class Map():
     """Three arrays are stored in a Map object: the user input map, the output map, and a collision map.
@@ -101,7 +125,7 @@ class Map():
             for yitem in yrow:
                 # UPDATE: Add check to see if it's any different from the new character
                 print(yitem,end="")
-            print()
+            print() # Off to next line
         print()
             
     def set_x_y(self,x,y,character):
@@ -110,96 +134,50 @@ class Map():
         except:
             pass # For when this point would not print within the map.
 
-    def draw_sprites(self,spritedict:dict):
-        """looks at map, replaces characters with sprites"""
-        for item in spritedict.items():
-            for y in range(len(self.output_map)):
-                for x in range(len(self.output_map[y])):
-                    if item.input_char == self.output_map[x][y]:
-                        self.add_array(item)
-
 class Sprites():
-    def __init__(self,sprites_path = ""):
-        self.sprites_path = sprites_path
+    def __init__(self):
+        self.path = ""
         self.sprites = []
     def get_sprites(self):
-        lines = []
-        with open(self.sprites_path, 'r',encoding='utf-8') as file:
-            currentline = file.readline()
+        sp_name = ""
+        sp_array = []
+        with open(self.path, 'r',encoding='utf-8') as file:
+            currentline = file.readline()[:-1] # Removes the \n
             while(currentline):
-                if len(currentline) > 0:
-                    if currentline[0] != '$':
-                        lines.append(currentline)
-            currentline = file.readline()
-    def add(self,sprite):
-        self.sprites.append(sprite)
+                if len(currentline) > 0: #No blank lines
+                    if currentline[0] == '$' and currentline[-1] == currentline[0]: # Begins and ends with "$"
+                        if sp_name != "": # If this is not the first sprite name
+                            self.sprites.append(self.Sprite(name = sp_name,array = sp_array))
+                            # Adds a newly created sprite with name and array values to the sprites list
+                        sp_name = currentline[1:-1] # Removes the $'s
+                    else:
+                        sp_array.append(currentline)
+                currentline = file.readline()[:-1] # Removes the \n
     
-class Sprite():
-    def __init__(self,array="", input_char = "", coords = [-1,-1]):
-        self.array = array
-        self.originx = coords[0]
-        self.originy = coords[1]
-        self.geometry = "default"
-        self.movement = False
-        self.input_char = input_char 
+    class Sprite():
+        def __init__(self,name="", input_char = "", coords = [-1,-1], array = []):
+            self.name = name
+            self.array = array # Array will be found from the sprite sheet text doc.
+            self.originx = coords[0]
+            self.originy = coords[1]
+            self.geometry = "default"
+            self.movement = False
+            self.input_char = input_char 
 
-    def set_origin(self,x,y):
-        self.originx = x
-        self.originy = y
-
-    def set_xy_char(self,x,y,newchar):
-        """
-        Change a character at a given coordinate.
-        """
-        try:    self.array[y,x] = newchar
-        except: pass
-    def char(self,x:int,y:int):
-        """
-        Returns the character stored here in a sprite array.
-        """
-        try:    return self.array[y][x]
-        except: return " "
-
-    def topleft(self):
-        """
-        Return coordinate values [x,y] of topleft character in sprite.
-        NOT in reference to map coordinates.
-        """
-        return [0,0]
-    def bottomright(self):
-        """
-        Return coordinate values [x,y] of bottomright character in sprite.
-        NOT in reference to map coordinates.
-        """
-        return [len(self.array)-1,len(self.array[len(self.array)-1])-1]
-
-    def compile(self, lines:list):
-        output_map = self.Map()
-        sprites_file = ""
-        
-        #output_map.read_sprites(sprite_dict)
-        #filter out any sprites that don't have a mapping character
-        mappable_sprites = []
-        for value in self.sprite_dict.values():
-            # Check to see if this sprite has a map character
-            if len(value.input_char)>0:
-                mappable_sprites.append(value)
-        for sprite in mappable_sprites:
-        # GO through each character in the map, by ROW, then COLUMN
-            for mapy in range(0,len(output_map.output_map)):
-                for mapx in range(0,len(output_map.output_map[mapy])):
-                    # Check if a sprite's map character is present on the map.
-                    if output_map.output_map[mapy][mapx] == sprite.input_char:
-                        output_map.output_map[mapy][mapx] = " "
-                        # If it is, replace an area around that point with the sprite array.
-                        for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
-                            for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
-                                # Only change the character if it has not already been changed
-                                char_to_use = sprite.char(spritex,spritey)
-                                if char_to_use != " " or (sprite.char(spritex-1,spritey) != " " and sprite.char(spritex+1,spritey) != " "):
-                                    xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
-                                    ypos = mapy + spritey - sprite.bottomright()[0]
-                                    if ypos >= 0 and xpos >= 0:
-                                        output_map.set_x_y(xpos, ypos, char_to_use)
-        
-        return output_map
+        def set_origin(self,x,y):
+            self.originx = x
+            self.originy = y
+        def set_xy_char(self,x,y,newchar):
+            """Change a character at a given coordinate."""
+            try:    self.array[y,x] = newchar
+            except: pass
+        def char(self,x:int,y:int):
+            """Returns the character stored here in a sprite array."""
+            try:    return self.array[y][x]
+            except: return " "
+        def topleft(self):
+            """Return coordinate values [x,y] of topleft character in sprite."""
+            return [0,0]
+        def bottomright(self):
+            """Return coordinate values [x,y] of bottomright character in sprite."""
+            return [len(self.array)-1,len(self.array[len(self.array)-1])-1]
