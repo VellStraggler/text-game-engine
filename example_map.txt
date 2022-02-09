@@ -3,11 +3,11 @@ x                                                                               
    t
 
                          t
-      p    t
-  wwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwwwww
+         p
+  wwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwww                  wwwwwwwwwwwwwwwwwwwwww
   w                   t
-  w           t                     t
-  w                          t                    t              t       
+  w           t                     t          
+  w                          t                                 t       
   w                        t        t
   w                             t      w
   w                                    w              c              t
