@@ -3,15 +3,17 @@ x                                                                               
    t
 
                          t
-         p
-  wwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwww                  wwwwwwwwwwwwwwwwwwwwww
-  w                   t
-  w           t                     t          
-  w                          t                                 t       
-  w                        t        t
-  w                             t      w
-  w                                    w              c              t
-  w        t            c              w
-  w                                    w   t    t              t
-  wwwwwwwwwwwwwwwwwwwwww  wwwwwwwwwwwwwwwwwwwwwwwwwww
-x                                                                                                         x 
+        
+                                                                  wwwwwwwwwwwwwwwwwwwwwwwwwww
+                                                                  w
+  p                                                                w
+                                                                  w
+                                                                  w
+                                                                  w
+              t
+ 
+                          c
+      t
+ 
+ 
+x                                                                                                         x

@@ -1,6 +1,8 @@
 import time, keyboard, os
 
 DIRPATH = os.path.dirname(__file__) #Required to run program in Python3 terminal
+BLANK = " "
+CLR = "\033[2J"
 
 # Helpful in debugging information.
 many_space = ' ' * 50
@@ -20,10 +22,10 @@ def grid_patcher(array:list):
     for row in array:
         for s in range(0,longest_y - len(row)):
             try: 
-                row.append(" ")
+                row.append(BLANK)
             except:
                 try:
-                    row = row + " "
+                    row = row + BLANK
                 except:
                     print("Error: Row is neither of type list nor string.")
     return array
@@ -51,13 +53,14 @@ class GameObject():
         frames = 0
         f_time = 0
         fpss = []
-        print("\033[2J") # Clear screen once
+        print(CLR) # Clear screen once
         #self.map.print_all()
         while(not self.quit):
             s_time = time.time()
             action = self.movement()
             if action:
-                self.debug_maps() #self.map.print_all()
+                #self.map.print_all()
+                self.debug_maps()
                 frames += 1
                 try: f_time = round(1/(time.time() - s_time),3)
                 except: pass
@@ -74,53 +77,27 @@ class GameObject():
                 print(x,end="")
             print()
         print("output")
-        for y in self.map.output_map:
-            for x in y:
-                print(x,end="")
+        for a in self.map.output_map:
+            for b in a:
+                print(b,end="")
             print()
         print("collision")
-        for y in self.map.collision_map:
-            for x in y:
-                print(x,end="")
+        for c in self.map.collision_map:
+            for d in c:
+                print(d,end="")
             print()
         print()
     def movement(self):
         if keyboard.is_pressed("d"):
-            for sprite in self.sprites.msprites:
-                #if self.map.collision_map[sprite.originy][sprite.originx + sprite.xspeed] == " ":
-                    self.map.set_x_y(sprite.originx,sprite.originy," ","i")
-                    sprite.originx += sprite.xspeed
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i")
-                    self.map.output_map = list(self.map.input_map)
-                    self.set_output_map()
-                    return True
-        elif keyboard.is_pressed("a"):
-            for sprite in self.sprites.msprites:
-                #if self.map.collision_map[sprite.originy][sprite.originx + sprite.xspeed] == " ":
-                    self.map.set_x_y(sprite.originx,sprite.originy," ","i")
-                    sprite.originx -= sprite.xspeed
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i")
-                    self.map.output_map = list(self.map.input_map)
-                    self.set_output_map()
-                    return True
-        elif keyboard.is_pressed("w"):
-            for sprite in self.sprites.msprites:
-                #if self.map.collision_map[sprite.originy][sprite.originx + sprite.xspeed] == " ":
-                    self.map.set_x_y(sprite.originx,sprite.originy," ","i")
-                    sprite.originy -= sprite.yspeed
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i")
-                    self.map.output_map = list(self.map.input_map)
-                    self.set_output_map()
-                    return True
-        elif keyboard.is_pressed("s"):
-            for sprite in self.sprites.msprites:
-                #if self.map.collision_map[sprite.originy][sprite.originx + sprite.xspeed] == " ":
-                    self.map.set_x_y(sprite.originx,sprite.originy," ","i")
-                    sprite.originy += sprite.yspeed
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i")
-                    self.map.output_map = list(self.map.input_map)
-                    self.set_output_map()
-                    return True
+            for i in self.sprites.msprites:
+                sprite = self.sprites.sprites[i]
+                #if self.map.check_x_y(sprite.originx+1,sprite.originy,BLANK,"c"): # Not working because input map is broken.
+                self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
+                sprite.originx += sprite.xspeed # Adjust the sprite's x 1 to the right.
+                self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
+                self.map.in_to_out() # Reset the output map 
+                self.set_output_map() # Remap the sprites
+                return True
         if keyboard.is_pressed("q"):
             self.quit = True
             return True
@@ -129,25 +106,25 @@ class GameObject():
     def set_output_map(self):
         """This is necessary to create the Map's Output Map"""
         for sprite in self.sprites.sprites:
-            sprite.array = grid_patcher(sprite.array)
+            sprite.array = grid_patcher(sprite.array) # Sprites must be rectangular
             if sprite.input_char != '': # Make sure they have a map char
             # GO through each char in the map by ROW, then COLUMN
                 for mapy in range(0,len(self.map.output_map)):
                     for mapx in range(0,len(self.map.output_map[mapy])):
                         # Check if a sprite's map char is present on the map.
-                        if self.map.output_map[mapy][mapx] == sprite.input_char:
-                            sprite.set_origin(mapy,mapx)
-                            self.map.output_map[mapy][mapx] = " "
+                        if self.map.check_x_y(mapx,mapy,sprite.input_char,"o"):
+                            sprite.set_origin(mapx,mapy)
+                            self.map.output_map[mapy][mapx] = BLANK
                             # If it is, replace an area around that point with the sprite array.
                             for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
                                 for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
                                     # Only change the char if it has not already been changed
                                     char_to_use = sprite.char(spritex,spritey)
-                                    if char_to_use != " " or (sprite.char(spritex-1,spritey) != " " and sprite.char(spritex+1,spritey) != " "):
-                                        xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
-                                        ypos = mapy + spritey - sprite.bottomright()[0]
-                                        if ypos >= 0 and xpos >= 0:
-                                            self.map.set_x_y(xpos, ypos, char_to_use)
+                                    # if char_to_use != BLANK or (sprite.char(spritex-1,spritey) != BLANK and sprite.char(spritex+1,spritey) != BLANK):
+                                    xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
+                                    ypos = mapy + spritey - sprite.bottomright()[0]
+                                    if ypos >= 0 and xpos >= 0:
+                                        self.map.set_x_y(xpos, ypos, char_to_use,"o")
         self.map.set_collision(self.sprites)
 
 class Map():
@@ -161,7 +138,8 @@ class Map():
         self.collision_map = [] # same as the input_map, with each char thickened to the width of its sprite
 
     def set_collision(self,sprites):
-        self.collision_map = list(self.output_map)
+        if len(self.collision_map) == 0: 
+            self.in_to_col()
         assert len(self.output_map) > 0, "Error: Output map has not been created"
         for sprite in sprites.sprites:
             if len(sprite.input_char) > 0:
@@ -170,12 +148,33 @@ class Map():
                     for x in range(y):
                         if self.input_map[y][x] == sprite.input_char:
                             for x2 in range(length):
-                                self.set_x_y(x-(length/2)+x2,y,"c")
-
+                                self.set_x_y(x-(length//2)+x2,y,sprite.input_char,"c") # place sprite char on collision map
+                            if self.input_map[y][x] == "p":
+                                print("Perceived Coordinates:",x,y)
+                                print("Actual Coordinates:",sprite.originx,sprite.originy)
 
     def translate(self):
         self.store_map()
-        self.output_map = list(grid_patcher(self.input_map))
+        self.input_map = grid_patcher(self.input_map)
+        self.in_to_out()
+
+    def in_to_out(self):
+        if len(self.output_map) == 0:
+            for y in range(len(self.input_map)):
+                self.output_map.append(self.input_map[y][:])
+        else:
+            assert len(self.input_map[-1]) == len(self.output_map[0]), "Error: maps are not the same sizes"
+            for y in range(len(self.input_map)):
+                self.output_map[y] = self.input_map[y][:]
+    
+    def in_to_col(self):
+        if len(self.collision_map) == 0:
+            for y in range(len(self.input_map)):
+                self.collision_map.append(self.input_map[y][:])
+        else:
+            assert len(self.input_map[-1]) == len(self.collision_map[0]), "Error: maps are not the same sizes"
+            for y in range(len(self.input_map)):
+                self.collision_map[y] = self.input_map[y][:]
 
     def store_map(self):
         """
@@ -214,17 +213,27 @@ class Map():
                 self.input_map[y][x] = char
         except:
             pass # For going out of window bounds.
+    def check_x_y(self,x,y,char,map = "o"):
+        try:
+            if map == "o":
+                return self.output_map[y][x] == char
+            elif map == "c":
+                return self.collision_map[y][x] == char
+            elif map == "i":
+                return self.input_map[y][x] == char
+        except:
+            return False # For going out of window bounds.
 
 class Sprites():
     def __init__(self):
         self.path = ""
         self.sprites = []
-        self.msprites = []
+        self.msprites = [] # a list of indices from sprites
 
     def get_msprites(self):
-        for sprite in self.sprites:
-            if sprite.movement:
-                self.msprites.append(sprite)
+        for i in range(len(self.sprites)):
+            if self.sprites[i].movement:
+                self.msprites.append(i)
 
     def get_sprites(self):
         sp_name = ""
@@ -277,7 +286,7 @@ class Sprites():
         def char(self,x:int,y:int):
             """Returns the char stored here in a sprite array."""
             try:    return self.array[y][x]
-            except: return " "
+            except: return BLANK
         def topleft(self):
             """Return coordinate values [x,y] of topleft char in sprite."""
             return [0,0]
