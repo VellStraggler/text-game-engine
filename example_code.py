@@ -11,7 +11,7 @@ timeofday = 4
 
 g.sprites.new('playerframe1','p',movement = True,geometry = "all")
 g.sprites.new('tree','t')
-g.sprites.new('cottage','c')
+g.sprites.new('cottage','c',geometry = "all")
 g.sprites.new('wall','w')
 
 g.run_map()
