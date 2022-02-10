@@ -53,21 +53,21 @@ class GameObject():
         frames = 0
         f_time = 0
         fpss = []
-        print(CLR) # Clear screen once
-        #self.map.print_all()
+        print(CLR)
+        self.map.print_all()
         while(not self.quit):
             s_time = time.time()
             action = self.movement()
             if action:
-                #self.map.print_all()
-                self.debug_maps()
+                self.map.print_all()
+                #self.debug_maps()
                 frames += 1
                 try: f_time = round(1/(time.time() - s_time),3)
                 except: pass
                 print("FPS:",f_time)
                 fpss.append(f_time)
         total = sum(fpss)/frames
-        print("Game Over. Average FPS: ", total)
+        print(f"Game Over. Average FPS: {total:.3f}")
         input("Press ENTER to exit. ")
 
     def debug_maps(self):
@@ -87,13 +87,44 @@ class GameObject():
                 print(d,end="")
             print()
         print()
+
     def movement(self):
+        if keyboard.is_pressed("a"):
+            for i in self.sprites.msprites:
+                sprite = self.sprites.sprites[i]
+                #if self.map.check_x_y(sprite.originx+1,sprite.originy,BLANK,"c"): # Not working because input map is broken.
+                self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
+                sprite.originx -= sprite.xspeed # Adjust the sprite's x 1 to the left.
+                self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
+                self.map.in_to_out() # Reset the output map 
+                self.set_output_map() # Remap the sprites
+                return True
         if keyboard.is_pressed("d"):
             for i in self.sprites.msprites:
                 sprite = self.sprites.sprites[i]
                 #if self.map.check_x_y(sprite.originx+1,sprite.originy,BLANK,"c"): # Not working because input map is broken.
                 self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
-                sprite.originx += sprite.xspeed # Adjust the sprite's x 1 to the right.
+                sprite.originx += sprite.xspeed
+                self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
+                self.map.in_to_out() # Reset the output map 
+                self.set_output_map() # Remap the sprites
+                return True
+        if keyboard.is_pressed("w"):
+            for i in self.sprites.msprites:
+                sprite = self.sprites.sprites[i]
+                #if self.map.check_x_y(sprite.originx+1,sprite.originy,BLANK,"c"): # Not working because input map is broken.
+                self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
+                sprite.originy -= sprite.yspeed
+                self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
+                self.map.in_to_out() # Reset the output map 
+                self.set_output_map() # Remap the sprites
+                return True
+        if keyboard.is_pressed("s"):
+            for i in self.sprites.msprites:
+                sprite = self.sprites.sprites[i]
+                #if self.map.check_x_y(sprite.originx+1,sprite.originy,BLANK,"c"): # Not working because input map is broken.
+                self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
+                sprite.originy += sprite.yspeed
                 self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
                 self.map.in_to_out() # Reset the output map 
                 self.set_output_map() # Remap the sprites
@@ -149,9 +180,6 @@ class Map():
                         if self.input_map[y][x] == sprite.input_char:
                             for x2 in range(length):
                                 self.set_x_y(x-(length//2)+x2,y,sprite.input_char,"c") # place sprite char on collision map
-                            if self.input_map[y][x] == "p":
-                                print("Perceived Coordinates:",x,y)
-                                print("Actual Coordinates:",sprite.originx,sprite.originy)
 
     def translate(self):
         self.store_map()
