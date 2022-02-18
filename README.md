@@ -1,16 +1,53 @@
-# text_game_engine
+# The TXT Game Engine
+Developer: David Wells
+## Setup:
+There are three main aspects to any videogame made with this engine. The **Sprite file**, the **Map file**, and the **Python Code file**. It is essential that all of these stay in the same folder.
 
-## example_code.txt
-This will have an example of every kind of code we will be translating. It is the reference for code_translater.py
+## 1. The Sprite file
 
-## inputfilename.txt
-This stores one line of text, the name of the code file. The compiler references this to know what file to load, and stores it here on the first load.
+It is horribly simple to create a character or a tree, or a house or celery. The image of any one of these is known as a **sprite**. To store a sprite, create a text file under any name you think would be useful. Here's what goes inside:
 
-## textart.py
-This was a reference for use on the mapeditor, but that no longer has priority.
+        $The name of the sprite goes here$ 
+        The sprite is drawn here
+        $The name of the next sprite or nothing goes here$
 
-## mapeditor
-No longer has priority
+Note the "$" symbols. Any sprite name must be between two of these, and unfortunately, this is the *one* character that you cannot use to draw your sprites. Here is an example Sprite File:
 
-## code_translator.py
-This reads code files, map files, and sprite files, and translates the code and compiles all of it into a working game. 
+        $tree$
+         /\ 
+        /v \
+        /_v\
+         || 
+        $wall$
+        []
+        $$
+## 2. The Map file
+    
+The Map File is even more simplified than the Sprite File. To create one, you just need another text file. Any character put in this file will represent a sprite, meaning that the number of different sprites you can have on one map is limited by the number of characters you can manage to come up with. For regular characters, that puts your limit at about 94. More characters can be found on this website:
+
+https://copypastecharacter.com/all-characters
+    
+    Here is an example map file:
+
+                            w
+            t               w
+                            w              t
+                    t       w
+         t                  w                        t
+                            w       t
+
+There is very little you have to specify to tell the program what these characters are meant to represent. All of that will go into your **code file**. 
+## 3. The Python Code file
+
+So much of the Text Game Engine runs in the background that you need as little as 8 lines to have a map you can move a character on. Here we use 9 (so we can have trees AND walls):
+```python
+import textengine as tx
+g = tx.GameObject()
+g.map.path = 'map.txt'
+g.sprites.path = 'sprites.txt'
+g.map.translate()
+g.sprites.get_sprites()
+g.sprites.new('wall','w')
+g.sprites.new('tree','t')
+g.run_map()
+```

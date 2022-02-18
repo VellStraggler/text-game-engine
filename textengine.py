@@ -1,4 +1,4 @@
-import time, keyboard, os
+import time, keyboard, os, random
 
 DIRPATH = os.path.dirname(__file__) #Required to run program in Python3 terminal
 BLANK = " "
@@ -50,28 +50,30 @@ class GameObject():
     def run_map(self):
         """Combine the map and the sprites and begin the main game loop."""
         assert len(self.sprites.sprites) > 0, "Error: No sprites found."
-        self.set_output_map()
+        self.set_output_map() # Put sprites into the map based on the input map.
         self.sprites.get_msprites() # Compile a list of moveable sprites.
-        # Begin the printing loop.
-        frames = 0
-        f_time = 0
-        fpss = []
+        self.frames = 0
+        self.f_time = 0
+        self.fpss = []
         print(CLR)
         self.map.print_all()
         while(not self.quit):
-            s_time = time.time()
+            self.s_time = time.time()
             action = self.movement()
             if action:
                 self.map.print_all()
                 #self.debug_maps()
-                frames += 1
-                try: f_time = round(1/(time.time() - s_time),3)
-                except: pass
-                print("FPS:",f_time)
-                fpss.append(f_time)
-        total = sum(fpss)/frames
+                self.show_fps()
+        total = sum(self.fpss)/self.frames
         print(f"Game Over. Average FPS: {total:.3f}")
         input("Press ENTER to exit. ")
+
+    def show_fps(self):
+        self.frames += 1
+        try: self.f_time = round(1/(time.time() - self.s_time),3)
+        except: pass
+        print("FPS:",self.f_time)
+        self.fpss.append(self.f_time)
 
     def debug_maps(self):
         print("input")
