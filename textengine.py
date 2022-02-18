@@ -13,14 +13,14 @@ def grid_patcher(array:list):
     Makes arrays rectangular, that is, filled with arrays of all the same length.
     """
     assert len(array) > 0, "Error: Empty array put in"
-    longest_y = 0
+    max_height = 0
     #the length of output_map is the extent of y
     for y in range(0,len(array)):
-        if len(array[y]) > longest_y:
-            longest_y = len(array[y])
+        if len(array[y]) > max_height:
+            max_height = len(array[y])
     #make all columns the same length
     for row in array:
-        for s in range(0,longest_y - len(row)):
+        for s in range(0,max_height - len(row)):
             try: 
                 row.append(BLANK)
             except:
@@ -162,7 +162,11 @@ class GameObject():
         self.map.set_collision(self.sprites)
     
     def can_move(self, sprite, move_x = 0, move_y = 0):
-        # Check if there are any characters in the area that the sprite would take up
+        """Check if there are any characters in the area that the sprite would take up"""
+        for y in range(move_y + sprite.originy - sprite.bottomright()[0],move_y + sprite.originy + 1):
+            for x in range(move_x + sprite.originx - (sprite.bottomright()[1] // 2),move_x + sprite.originx + sprite.bottomright()[1]):
+                if self.map.collision_map[y][x] != BLANK and self.map.collision_map[y][x] != sprite.input_char:
+                    return False
         return True
 
 class Map():
@@ -181,12 +185,13 @@ class Map():
         for sprite in sprites.sprites:
             if len(sprite.input_char) > 0:
                 length = len(sprite.array[0]) # Get the width of a sprite
-                for y in range(len(self.input_map)):
-                    for x in range(y):
+                # ERROR: width is not consistent. Sprites aren't 
+                for y in range(len(self.output_map)):
+                    for x in range(len(self.output_map[y])):
                         if self.input_map[y][x] == sprite.input_char:
                             if sprite.geometry == "line":
                                 for x2 in range(length):
-                                    self.set_x_y(x-(length//2)+x2,y,sprite.input_char,"c") # place sprite char on collision map
+                                    self.set_x_y(x-(length//2)+x2 + 1,y,sprite.input_char,"c") # place sprite char on collision map
                             elif sprite.geometry == "all":
                                 for y2 in range(len(sprite.array)):
                                     for x2 in range(len(sprite.array[0])):

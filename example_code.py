@@ -10,8 +10,8 @@ points = 0
 timeofday = 4
 
 g.sprites.new('playerframe1','p',movement = True,geometry = "all")
-g.sprites.new('tree','t')
+g.sprites.new('tree','t',geometry = "line")
 g.sprites.new('cottage','c',geometry = "all")
-g.sprites.new('wall','w')
+g.sprites.new('wall','w',geometry = "all")
 
 g.run_map()
