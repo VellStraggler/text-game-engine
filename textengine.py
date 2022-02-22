@@ -1,27 +1,36 @@
 import time, keyboard, os, random
 
-DIRPATH = os.path.dirname(__file__) #Required to run program in Python3 terminal
+DIRPATH = os.path.dirname(__file__) # Required to run program in Python3 terminal.
 BLANK = ' '
 SIGN = '$'
 CLR = "\033[2J"
+CUR = '\033[A\033[F' # Move the cursor up by one. Not Windows Terminal compatible.
+W_WID = 110 # <,
+W_HEI = 30 # These are based on the Windows Terminal window at default size.
+INFO_HEI=3
+WGC = 10 # WINDOW GUIDE CUSHION, the breathing room between the sprite the window follows and the edge of the window.
 
 # Helpful in debugging information.
 many_space = ' ' * 50
 many_line = '\n' * 50
 
-def grid_patcher(array:list):
+def grid_patcher(array:list,map=False):
     """
     Makes arrays rectangular, that is, filled with arrays of all the same length.
     """
-    assert len(array) > 0, "Error: Empty array put in"
-    max_height = 0
+    assert len(array) > 0, "Error: Empty array put in."
+    max_length = 0
+    if map:
+        max_length = W_WID
+        while len(array) < W_HEI:
+            array.insert(0,[BLANK])
     #the length of output_map is the extent of y
     for y in range(0,len(array)):
-        if len(array[y]) > max_height:
-            max_height = len(array[y])
+        if len(array[y]) > max_length:
+            max_length = len(array[y])
     #make all columns the same length
     for row in array:
-        for s in range(0,max_height - len(row)):
+        for s in range(0,max_length - len(row)):
             try: 
                 row.append(BLANK)
             except:
@@ -29,24 +38,19 @@ def grid_patcher(array:list):
                     row = row + BLANK
                 except:
                     print("Error: Row is neither of type list nor string.")
+        
     return array
 
-def can_be_read(filename:str):
-    """Boolean function, check if file can be opened"""
-    try:
-        with open(filename,'r') as file:
-            return True
-    except: return False
-
-class GameObject():
+class Game():
     """
-    Initialization creates a map and a sprite list.
-    GameObject functions are those that require the map and the sprites.
+    Creates an empty map and empty sprite list. Fill these using map.set_path(path) 
+    and sprites.get_sprites(path).
     """
     def __init__(self):
         self.map = Map()
         self.sprites = Sprites()
         self.quit = False
+        self.guide = -1 # Index from sprites.msprites of Window Guide
 
     def run_map(self):
         """Combine the map and the sprites and begin the main game loop."""
@@ -65,11 +69,16 @@ class GameObject():
         input("Press ENTER to exit. ")
 
     def game_loop(self):
+        """This is what loops for every game tick. It is run by the run_map method."""
         self.s_time = time.time()
         self.movement()
+        self.follow_sprite()
+        if self.frames % 10 == 0:
+            self.map.w_corner[0] += 1
         self.map.print_all()
-        self.show_fps()
-    def show_fps(self):
+        self.run_fps()
+
+    def run_fps(self):
         self.frames += 1
         try: self.f_time = round(1/(time.time() - self.s_time),3)
         except: pass
@@ -151,6 +160,24 @@ class GameObject():
                     return False
         return True
 
+    def follow_sprite(self,guide_img = ""): # Check this for every game loop
+        """Find the sprite for the window/camera to follow. This sprite must be stored in the mobile sprites list (msprites)"""
+        if guide_img != "":
+            if self.guide == -1:
+                for index in self.sprites.msprites: # Remember, msprites only stores the indices of movable items found in sprites
+                    if self.sprites.sprites[index].img == guide_img: #if the names are the same
+                        self.guide = index
+            if self.map.w_corner[0] > 0 and self.map.w_corner[0] + W_WID < len(self.map.output_map[0]): # X
+                if self.sprites.sprites[self.guide].origin_x - WGC < self.map.w_corner[0]:
+                    self.map.w_corner[0] -= 1
+                elif self.sprites.sprites[self.guide].origin_x + WGC > self.map.w_corner[0] + W_WID:
+                    self.map.w_corner[0] += 1
+            if self.map.w_corner[1] > 0 and self.map.w_corner[1] + W_HEI < len(self.map.output_map): # Y
+                if self.sprites.sprites[self.guide].origin_y - WGC < self.map.w_corner[1]:
+                    self.map.w_corner[1] -= 1
+                elif self.sprites.sprites[self.guide].origin_y + WGC > self.map.w_corner[1] + W_HEI:
+                    self.map.w_corner[1] += 1
+
 class Map():
     """Three arrays are stored in a Map object: the user input map, the output map, and a collision map.
     Set the map path upon initialization"""
@@ -158,8 +185,9 @@ class Map():
     def __init__(self):
         self.path = ""
         self.input_map = [] # The input_map will always be exactly what is in the map file.
-        self.output_map = [] # set using the set_output_map function in the GameObject class.
-        self.collision_map = [] # same as the input_map, with each char thickened to the width of its sprite
+        self.output_map = [] # Set using the set_output_map function in the GameObject class.
+        self.collision_map = [] # Same as the input_map, with each char thickened to the width of its sprite.
+        self.w_corner = [0,0] # These are the map coordinates of the top-left-most item shown in the window. X,Y
 
     def set_collision(self,sprites):
         self.in_to_col()
@@ -182,9 +210,11 @@ class Map():
                                         if ypos >= 0 and xpos >= 0:
                                             self.set_xy(xpos, ypos, sprite.char,"c")
 
-    def translate(self):
+    def set_path(self,path=""):
+        if len(path)>0:
+            self.path = path
         self.store_map()
-        self.input_map = grid_patcher(self.input_map)
+        self.input_map = grid_patcher(self.input_map,True)
         self.in_to_out()
 
     def in_to_out(self):
@@ -221,15 +251,20 @@ class Map():
                 self.input_map.append(xlist) # Add row to the input_map
                 currentline = file.readline()
             
-    def print_all(self):                     # \/ leaves space for variables
-        for i in range(len(self.output_map)+3):
-            print('\033[A\033[F') # This moves the cursor up one. NOT WINDOWS COMPATIBLE
-        for yrow in self.output_map: 
-            """SET THIS TO OUTPUT MAP NORMALLY"""
-            for yitem in yrow:
-                # UPDATE: Add check to see if it's any different from the new char
-                print(yitem,end="")
-            print() # Off to next line
+    def print_all(self):
+        row_and_hei = self.w_corner[1] + W_HEI + 1 - INFO_HEI # Addition is expensive, so we only do two assignments instead.
+        item_and_wid = self.w_corner[0] + W_WID + 1 # <-'
+        print(CUR * W_HEI)
+        for row in range(self.w_corner[1],row_and_hei):
+            # UPDATE: Add check to see if it's any different from the new char
+            [ print(item,end="") for item in self.output_map[row][self.w_corner[0]:item_and_wid] ]
+            ## OLD PRINTING METHOD ## 50% slower
+            #for item in range(self.w_corner[0],item_and_wid):
+            #   try:
+            #       print(self.output_map[row][item],end="")
+            #   except:
+            #       pass # Out of Range
+            print()
         print()
             
     def set_xy(self,x,y,char,map = "o"):
@@ -264,7 +299,9 @@ class Sprites():
             if self.sprites[i].movement:
                 self.msprites.append(i)
 
-    def get_sprites(self):
+    def get_sprites(self,path=""):
+        if len(path)>0:
+            self.path = path
         curr_img = ""
         curr_array = []
         self.path = DIRPATH + "\\" + self.path # Adds parent directory of running program
@@ -296,8 +333,9 @@ class Sprites():
     
     class Sprite():
         """A Sprite is simply just an image."""
-        #You don't need to have the sprite array stored here, just the look-up name.
-        def __init__(self,img="", char = "", coords = [-1,-1], array = [], movement = False, geometry = "none"):
+        # UPDATE: You don't need to have the sprite array stored here, just the look-up name.
+        # UPDATE: This should be retitled as Object.
+        def __init__(self,img="", char = "", coords = [0,0], array = [], movement = False, geometry = "none"):
             self.img = img
             self.array = array # Array will be found from the sprite sheet text doc.
             self.originx = coords[0]
