@@ -39,14 +39,12 @@ https://copypastecharacter.com/all-characters
 There is very little you have to specify to tell the program what these characters are meant to represent. All of that will go into your **code file**. 
 ## 3. The Python Code file
 
-So much of the Text Game Engine runs in the background that you need as little as 8 lines to have a map you can move a character on. Here we use 9 (so we can have trees AND walls):
+So much of the Text Game Engine runs in the background that you need as little as 6 lines to have a map you can move a character on. Here we use 7 (so we can have trees AND walls):
 ```python
 import textengine as tx
 g = tx.GameObject()
-g.map.path = 'map.txt'
-g.sprites.path = 'sprites.txt'
-g.map.translate()
-g.sprites.get_sprites()
+g.map.set_path('map.txt')
+g.sprites.get_sprites('sprites.txt')
 g.sprites.new('wall','w')
 g.sprites.new('tree','t')
 g.run_map()
