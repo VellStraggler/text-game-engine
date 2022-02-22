@@ -1,7 +1,8 @@
 import time, keyboard, os, random
 
 DIRPATH = os.path.dirname(__file__) #Required to run program in Python3 terminal
-BLANK = " "
+BLANK = ' '
+SIGN = '$'
 CLR = "\033[2J"
 
 # Helpful in debugging information.
@@ -58,16 +59,16 @@ class GameObject():
         print(CLR)
         self.map.print_all()
         while(not self.quit):
-            self.s_time = time.time()
-            action = self.movement()
-            if action:
-                self.map.print_all()
-                #self.debug_maps()
-                self.show_fps()
+            self.game_loop()
         total = sum(self.fpss)/self.frames
         print(f"Game Over. Average FPS: {total:.3f}")
         input("Press ENTER to exit. ")
 
+    def game_loop(self):
+        self.s_time = time.time()
+        self.movement()
+        self.map.print_all()
+        self.show_fps()
     def show_fps(self):
         self.frames += 1
         try: self.f_time = round(1/(time.time() - self.s_time),3)
@@ -95,79 +96,58 @@ class GameObject():
 
     def movement(self):
         if keyboard.is_pressed("a"):
-            for i in self.sprites.msprites:
-                sprite = self.sprites.sprites[i]
-                if self.can_move(sprite,move_x=-1):
-                    self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
-                    sprite.originx -= sprite.xspeed # Adjust the sprite's x 1 to the left.
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
-                    self.map.in_to_out() # Reset the output map 
-                    self.set_output_map() # Remap the sprites
-                    return True
+            self.moveplayer(-1)
         if keyboard.is_pressed("d"):
-            for i in self.sprites.msprites:
-                sprite = self.sprites.sprites[i]
-                if self.can_move(sprite,move_x=1):
-                    self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
-                    sprite.originx += sprite.xspeed
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
-                    self.map.in_to_out() # Reset the output map 
-                    self.set_output_map() # Remap the sprites
-                    return True
+            self.moveplayer(1)
         if keyboard.is_pressed("w"):
-            for i in self.sprites.msprites:
-                sprite = self.sprites.sprites[i]
-                if self.can_move(sprite,move_y=-1):
-                    self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
-                    sprite.originy -= sprite.yspeed
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
-                    self.map.in_to_out() # Reset the output map 
-                    self.set_output_map() # Remap the sprites
-                    return True
+            self.moveplayer(0,-1)
         if keyboard.is_pressed("s"):
-            for i in self.sprites.msprites:
-                sprite = self.sprites.sprites[i]
-                if self.can_move(sprite,move_y=1):
-                    self.map.set_x_y(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
-                    sprite.originy += sprite.yspeed
-                    self.map.set_x_y(sprite.originx,sprite.originy,sprite.input_char,"i") # Set the new coord
-                    self.map.in_to_out() # Reset the output map 
-                    self.set_output_map() # Remap the sprites
-                    return True
+            self.moveplayer(0,1)
         if keyboard.is_pressed("q"):
             self.quit = True
-            return True
-        return False
+
+    def moveplayer(self,xdir = 0,ydir = 0):
+        """Moves all user-commanded sprites at their given speeds. xdir and ydir must be -1, 0, or 1."""
+        for i in self.sprites.msprites:
+            sprite = self.sprites.sprites[i]
+            if self.can_move(sprite,move_y=ydir,move_x=xdir):
+                self.map.set_xy(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
+                sprite.originy += sprite.yspeed * ydir
+                sprite.originx += sprite.xspeed * xdir
+                self.map.set_xy(sprite.originx,sprite.originy,sprite.char,"i") # Set the new coord
+                self.map.in_to_out() # Reset the output map 
+                self.set_output_map() # Remap the sprites
 
     def set_output_map(self):
         """This is necessary to create the Map's Output Map"""
         for sprite in self.sprites.sprites:
             sprite.array = grid_patcher(sprite.array) # Sprites must be rectangular
-            if sprite.input_char != '': # Make sure they have a map char
+            if sprite.char != '': # Make sure they have a map char
             # GO through each char in the map by ROW, then COLUMN
                 for mapy in range(0,len(self.map.output_map)):
                     for mapx in range(0,len(self.map.output_map[mapy])):
                         # Check if a sprite's map char is present on the map.
-                        if self.map.check_x_y(mapx,mapy,sprite.input_char,"o"):
+                        if self.map.get_xy(mapx,mapy,sprite.char,"o"):
                             sprite.set_origin(mapx,mapy)
                             self.map.output_map[mapy][mapx] = BLANK
                             # If it is, replace an area around that point with the sprite array.
                             for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
                                 for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
                                     # Only change the char if it has not already been changed
-                                    char_to_use = sprite.char(spritex,spritey)
-                                    # if char_to_use != BLANK or (sprite.char(spritex-1,spritey) != BLANK and sprite.char(spritex+1,spritey) != BLANK):
-                                    xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
-                                    ypos = mapy + spritey - sprite.bottomright()[0]
-                                    if ypos >= 0 and xpos >= 0:
-                                        self.map.set_x_y(xpos, ypos, char_to_use,"o")
+                                    char_to_use = sprite.get_char(spritex,spritey)
+                                    if char_to_use != BLANK or (sprite.get_char(spritex-1,spritey) != BLANK and sprite.get_char(spritex+1,spritey) != BLANK):
+                                        xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
+                                        ypos = mapy + spritey - sprite.bottomright()[0]
+                                        if ypos >= 0 and xpos >= 0:
+                                            self.map.set_xy(xpos, ypos, char_to_use,"o")
         self.map.set_collision(self.sprites)
     
     def can_move(self, sprite, move_x = 0, move_y = 0):
-        """Check if there are any characters in the area that the sprite would take up"""
-        for y in range(move_y + sprite.originy - sprite.bottomright()[0],move_y + sprite.originy + 1):
+        """Check if there are any characters in the area that the sprite would take up."""
+        assert (move_x >= -1 and move_x <= 1 and move_y >= -1 and move_x <= 1), "move_y and move_x can only be -1, 0, or 1."
+        for y in range((move_y*sprite.yspeed) + sprite.originy - sprite.bottomright()[0],(move_y*sprite.yspeed) + sprite.originy + 1):
             for x in range(move_x + sprite.originx - (sprite.bottomright()[1] // 2),move_x + sprite.originx + sprite.bottomright()[1]):
-                if self.map.collision_map[y][x] != BLANK and self.map.collision_map[y][x] != sprite.input_char:
+                if self.map.collision_map[y][x] != BLANK and self.map.collision_map[y][x] != sprite.char:
                     return False
         return True
 
@@ -185,22 +165,22 @@ class Map():
         self.in_to_col()
         assert len(self.output_map) > 0, "Error: Output map has not been created"
         for sprite in sprites.sprites:
-            if len(sprite.input_char) > 0:
+            if len(sprite.char) > 0:
                 length = len(sprite.array[0]) # Get the width of a sprite
                 # ERROR: width is not consistent. Sprites aren't 
                 for y in range(len(self.output_map)):
                     for x in range(len(self.output_map[y])):
-                        if self.input_map[y][x] == sprite.input_char:
+                        if self.input_map[y][x] == sprite.char:
                             if sprite.geometry == "line":
                                 for x2 in range(length):
-                                    self.set_x_y(x-(length//2)+x2 + 1,y,sprite.input_char,"c") # place sprite char on collision map
+                                    self.set_xy(x-(length//2)+x2 + 1,y,sprite.char,"c") # place sprite char on collision map
                             elif sprite.geometry == "all":
                                 for y2 in range(len(sprite.array)):
                                     for x2 in range(len(sprite.array[0])):
                                         xpos = x + x2 - (sprite.bottomright()[1] // 2)
                                         ypos = y + y2 - sprite.bottomright()[0]
                                         if ypos >= 0 and xpos >= 0:
-                                            self.set_x_y(xpos, ypos, sprite.input_char,"c")
+                                            self.set_xy(xpos, ypos, sprite.char,"c")
 
     def translate(self):
         self.store_map()
@@ -252,7 +232,7 @@ class Map():
             print() # Off to next line
         print()
             
-    def set_x_y(self,x,y,char,map = "o"):
+    def set_xy(self,x,y,char,map = "o"):
         try:
             if map == "o":
                 self.output_map[y][x] = char
@@ -262,7 +242,7 @@ class Map():
                 self.input_map[y][x] = char
         except:
             pass # For going out of window bounds.
-    def check_x_y(self,x,y,char,map = "o"):
+    def get_xy(self,x,y,char,map = "o"):
         try:
             if map == "o":
                 return self.output_map[y][x] == char
@@ -285,37 +265,40 @@ class Sprites():
                 self.msprites.append(i)
 
     def get_sprites(self):
-        sp_name = ""
-        sp_array = []
+        curr_img = ""
+        curr_array = []
         self.path = DIRPATH + "\\" + self.path # Adds parent directory of running program
         with open(self.path, 'r',encoding='utf-8') as file:
             currentline = file.readline()[:-1] # Removes the \n
             while(currentline):
                 if len(currentline) > 0: #No blank lines
-                    if currentline[0] == '$' and currentline[-1] == currentline[0]: # Begins and ends with "$"
-                        if sp_name != "": # If this is not the first sprite name
-                            self.sprites.append(self.Sprite(name = sp_name,array = sp_array))
+                    if currentline[0] == SIGN and currentline[-1] == SIGN: # Begins and ends with SIGN
+                        if curr_img != "": # If this is not the first sprite name
+                            self.sprites.append(self.Sprite(img = curr_img,array = curr_array))
                             # Adds a newly created sprite with name and array values to the sprites list ^
-                            sp_array = []
-                        sp_name = currentline[1:-1] # Removes the $'s
+                            curr_array = []
+                        curr_img = currentline[1:-1] # Remove SIGNs
                     else:
-                        sp_array.append(currentline)
+                        curr_array.append(currentline)
                 currentline = file.readline()[:-1] # Removes the \n
-    def new(self,name = "", input_char = "", coords = [-1,-1], movement = False, geometry = "default"):
+                
+    def new(self,img = "", char = "", coords = [-1,-1], movement = False, geometry = "default"):
         """Every spritename possible has already been made from the given spritesheet. This just changes
         data."""
         assert type(self.sprites) == type(list())
         for sprite in self.sprites:
-            if sprite.name == name: # Only the sprite name and array cannot change
-                sprite.input_char = input_char
+            if sprite.img == img: # Only the sprite name and array cannot change
+                sprite.char = char
                 sprite.movement = movement
                 sprite.geometry = geometry
                 sprite.set_origin(coords[0],coords[1])
 
     
     class Sprite():
-        def __init__(self,name="", input_char = "", coords = [-1,-1], array = [], movement = False, geometry = "none"):
-            self.name = name
+        """A Sprite is simply just an image."""
+        #You don't need to have the sprite array stored here, just the look-up name.
+        def __init__(self,img="", char = "", coords = [-1,-1], array = [], movement = False, geometry = "none"):
+            self.img = img
             self.array = array # Array will be found from the sprite sheet text doc.
             self.originx = coords[0]
             self.originy = coords[1]
@@ -323,7 +306,7 @@ class Sprites():
             self.bot_right = [0,0]
             self.geometry = geometry # none, line, or all
             self.movement = movement
-            self.input_char = input_char
+            self.char = char
             self.xspeed = 1
             self.yspeed = 1
 
@@ -334,7 +317,7 @@ class Sprites():
             """Change a char at a given coordinate."""
             try:    self.array[y,x] = newchar
             except: pass
-        def char(self,x:int,y:int):
+        def get_char(self,x:int,y:int):
             """Returns the char stored here in a sprite array."""
             try:    return self.array[y][x]
             except: return BLANK
