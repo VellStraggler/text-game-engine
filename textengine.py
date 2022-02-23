@@ -11,8 +11,8 @@ INFO_HEI=3
 WGC = 10 # WINDOW GUIDE CUSHION, the breathing room between the sprite the window follows and the edge of the window.
 
 # Helpful in debugging information.
-many_space = ' ' * 50
-many_line = '\n' * 50
+SPACES = ' ' * 50
+LINES = '\n' * 50
 
 def grid_patcher(array:list,map=False):
     """
@@ -44,19 +44,18 @@ def grid_patcher(array:list,map=False):
 class Game():
     """
     Creates an empty map and empty sprite list. Fill these using map.set_path(path) 
-    and sprites.get_sprites(path).
+    and objs.get_sprites(path).
     """
     def __init__(self):
         self.map = Map()
-        self.sprites = Sprites()
+        self.objs = Objs()
         self.quit = False
-        self.guide = -1 # Index from sprites.msprites of Window Guide
 
     def run_map(self):
-        """Combine the map and the sprites and begin the main game loop."""
-        assert len(self.sprites.sprites) > 0, "Error: No sprites found."
-        self.set_output_map() # Put sprites into the map based on the input map.
-        self.sprites.get_msprites() # Compile a list of moveable sprites.
+        """Combine the map and the objs and begin the main game loop."""
+        assert len(self.objs.sprites) > 0, "Error: No sprites found."
+        self.set_output_map() # Put objs into the map based on the input map.
+        self.objs.get_mobile_objs() # Compile a list of moveable objs.
         self.frames = 0
         self.f_time = 0
         self.fpss = []
@@ -72,8 +71,7 @@ class Game():
         """This is what loops for every game tick. It is run by the run_map method."""
         self.s_time = time.time()
         self.movement()
-        self.follow_sprite()
-        if self.frames % 10 == 0:
+        if self.frames % 10 == 0 and self.frames < 500:
             self.map.w_corner[0] += 1
         self.map.print_all()
         self.run_fps()
@@ -105,78 +103,87 @@ class Game():
 
     def movement(self):
         if keyboard.is_pressed("a"):
-            self.moveplayer(-1)
+            self.move_player(-1)
         if keyboard.is_pressed("d"):
-            self.moveplayer(1)
+            self.move_player(1)
         if keyboard.is_pressed("w"):
-            self.moveplayer(0,-1)
+            self.move_player(0,-1)
         if keyboard.is_pressed("s"):
-            self.moveplayer(0,1)
+            self.move_player(0,1)
         if keyboard.is_pressed("q"):
             self.quit = True
 
-    def moveplayer(self,xdir = 0,ydir = 0):
+        # UPDATE: Add leftright movement for goombas
+        self.move_lr()
+        self.map.in_to_out() # Reset the output map 
+        self.set_output_map() # Remap the sprites
+
+    def move_player(self,xdir = 0,ydir = 0):
         """Moves all user-commanded sprites at their given speeds. xdir and ydir must be -1, 0, or 1."""
-        for i in self.sprites.msprites:
-            sprite = self.sprites.sprites[i]
-            if self.can_move(sprite,move_y=ydir,move_x=xdir):
-                self.map.set_xy(sprite.originx,sprite.originy,BLANK,"i") # Clear the space the sprite is at
-                sprite.originy += sprite.yspeed * ydir
-                sprite.originx += sprite.xspeed * xdir
-                self.map.set_xy(sprite.originx,sprite.originy,sprite.char,"i") # Set the new coord
-                self.map.in_to_out() # Reset the output map 
-                self.set_output_map() # Remap the sprites
+        for i in self.objs.mobile_objs:
+            if self.objs.objs[i].movement == "user":
+                obj = self.objs.objs[i]
+                if self.can_move(obj,move_y=ydir,move_x=xdir):
+                    self.map.set_xy(obj.originx,obj.originy,BLANK,"i") # Clear the space the sprite is at
+                    obj.originy += obj.yspeed * ydir
+                    obj.originx += obj.xspeed * xdir
+                    self.map.set_xy(obj.originx,obj.originy,obj.char,"i") # Set the new coord
+                    
+    def move_lr(self):
+        for i in self.objs.mobile_objs:
+            if self.objs.objs[i].movement == "leftright":
+                obj = self.objs.objs[i]
+                if obj.facing == "right":
+                    if self.can_move(obj,move_x=1):
+                        self.map.set_xy(obj.originx,obj.originy,BLANK,"i") # Clear the space the sprite is at
+                        obj.originx += obj.xspeed
+                        self.map.set_xy(obj.originx,obj.originy,obj.char,"i") # Set the new coord
+                    else:
+                        obj.facing = "left"
+                elif obj.facing == "left":
+                    if self.can_move(obj,move_x=-1):
+                        self.map.set_xy(obj.originx,obj.originy,BLANK,"i") # Clear the space the sprite is at
+                        obj.originx -= obj.xspeed
+                        self.map.set_xy(obj.originx,obj.originy,obj.char,"i") # Set the new coord
+                    else:
+                        obj.facing = "right"
+
 
     def set_output_map(self):
         """This is necessary to create the Map's Output Map"""
-        for sprite in self.sprites.sprites:
-            sprite.array = grid_patcher(sprite.array) # Sprites must be rectangular
-            if sprite.char != '': # Make sure they have a map char
+        for obj in self.objs.objs:
+            obj.array = grid_patcher(obj.array) # Sprites must be rectangular
+            if obj.char != '': # Make sure they have a map char
             # GO through each char in the map by ROW, then COLUMN
                 for mapy in range(0,len(self.map.output_map)):
                     for mapx in range(0,len(self.map.output_map[mapy])):
-                        # Check if a sprite's map char is present on the map.
-                        if self.map.get_xy(mapx,mapy,sprite.char,"o"):
-                            sprite.set_origin(mapx,mapy)
+                        # Check if a obj's map char is present on the map.
+                        if self.map.get_xy(mapx,mapy,obj.char,"o"):
+                            obj.set_origin(mapx,mapy)
                             self.map.output_map[mapy][mapx] = BLANK
                             # If it is, replace an area around that point with the sprite array.
-                            for spritey in range(sprite.topleft()[0],sprite.bottomright()[0] + 1):
-                                for spritex in range(sprite.topleft()[1],sprite.bottomright()[1] + 1):
+                            for obj_y in range(obj.topleft()[0],obj.bottomright()[0] + 1):
+                                for obj_x in range(obj.topleft()[1],obj.bottomright()[1] + 1):
                                     # Only change the char if it has not already been changed
-                                    char_to_use = sprite.get_char(spritex,spritey)
-                                    if char_to_use != BLANK or (sprite.get_char(spritex-1,spritey) != BLANK and sprite.get_char(spritex+1,spritey) != BLANK):
-                                        xpos = mapx + spritex - (sprite.bottomright()[1] // 2)
-                                        ypos = mapy + spritey - sprite.bottomright()[0]
+                                    char_to_use = obj.get_char(obj_x,obj_y)
+                                    if char_to_use != BLANK or (obj.get_char(obj_x-1,obj_y) != BLANK and obj.get_char(obj_x+1,obj_y) != BLANK):
+                                        xpos = mapx + obj_x - (obj.bottomright()[1] // 2)
+                                        ypos = mapy + obj_y - obj.bottomright()[0]
                                         if ypos >= 0 and xpos >= 0:
                                             self.map.set_xy(xpos, ypos, char_to_use,"o")
-        self.map.set_collision(self.sprites)
+        self.map.set_collision(self.objs)
     
-    def can_move(self, sprite, move_x = 0, move_y = 0):
-        """Check if there are any characters in the area that the sprite would take up."""
+    def can_move(self, obj, move_x = 0, move_y = 0):
+        """Check if there are any characters in the area that the obj would take up."""
         assert (move_x >= -1 and move_x <= 1 and move_y >= -1 and move_x <= 1), "move_y and move_x can only be -1, 0, or 1."
-        for y in range((move_y*sprite.yspeed) + sprite.originy - sprite.bottomright()[0],(move_y*sprite.yspeed) + sprite.originy + 1):
-            for x in range(move_x + sprite.originx - (sprite.bottomright()[1] // 2),move_x + sprite.originx + sprite.bottomright()[1]):
-                if self.map.collision_map[y][x] != BLANK and self.map.collision_map[y][x] != sprite.char:
+        for y in range((move_y*obj.yspeed) + obj.originy - obj.bottomright()[0],(move_y*obj.yspeed) + obj.originy + 1):
+            for x in range(move_x + obj.originx - (obj.bottomright()[1] // 2),move_x + obj.originx + obj.bottomright()[1]):
+                try: 
+                    if self.map.collision_map[y][x] != BLANK and self.map.collision_map[y][x] != obj.char:
+                        return False
+                except:
                     return False
         return True
-
-    def follow_sprite(self,guide_img = ""): # Check this for every game loop
-        """Find the sprite for the window/camera to follow. This sprite must be stored in the mobile sprites list (msprites)"""
-        if guide_img != "":
-            if self.guide == -1:
-                for index in self.sprites.msprites: # Remember, msprites only stores the indices of movable items found in sprites
-                    if self.sprites.sprites[index].img == guide_img: #if the names are the same
-                        self.guide = index
-            if self.map.w_corner[0] > 0 and self.map.w_corner[0] + W_WID < len(self.map.output_map[0]): # X
-                if self.sprites.sprites[self.guide].origin_x - WGC < self.map.w_corner[0]:
-                    self.map.w_corner[0] -= 1
-                elif self.sprites.sprites[self.guide].origin_x + WGC > self.map.w_corner[0] + W_WID:
-                    self.map.w_corner[0] += 1
-            if self.map.w_corner[1] > 0 and self.map.w_corner[1] + W_HEI < len(self.map.output_map): # Y
-                if self.sprites.sprites[self.guide].origin_y - WGC < self.map.w_corner[1]:
-                    self.map.w_corner[1] -= 1
-                elif self.sprites.sprites[self.guide].origin_y + WGC > self.map.w_corner[1] + W_HEI:
-                    self.map.w_corner[1] += 1
 
 class Map():
     """Three arrays are stored in a Map object: the user input map, the output map, and a collision map.
@@ -189,26 +196,26 @@ class Map():
         self.collision_map = [] # Same as the input_map, with each char thickened to the width of its sprite.
         self.w_corner = [0,0] # These are the map coordinates of the top-left-most item shown in the window. X,Y
 
-    def set_collision(self,sprites):
+    def set_collision(self,objs):
         self.in_to_col()
         assert len(self.output_map) > 0, "Error: Output map has not been created"
-        for sprite in sprites.sprites:
-            if len(sprite.char) > 0:
-                length = len(sprite.array[0]) # Get the width of a sprite
+        for obj in objs.objs:
+            if len(obj.char) > 0:
+                length = len(obj.array[0]) # Get the width of a sprite
                 # ERROR: width is not consistent. Sprites aren't 
                 for y in range(len(self.output_map)):
                     for x in range(len(self.output_map[y])):
-                        if self.input_map[y][x] == sprite.char:
-                            if sprite.geometry == "line":
+                        if self.input_map[y][x] == obj.char:
+                            if obj.geometry == "line":
                                 for x2 in range(length):
-                                    self.set_xy(x-(length//2)+x2 + 1,y,sprite.char,"c") # place sprite char on collision map
-                            elif sprite.geometry == "all":
-                                for y2 in range(len(sprite.array)):
-                                    for x2 in range(len(sprite.array[0])):
-                                        xpos = x + x2 - (sprite.bottomright()[1] // 2)
-                                        ypos = y + y2 - sprite.bottomright()[0]
+                                    self.set_xy(x-(length//2)+x2 + 1,y,obj.char,"c") # place sprite char on collision map
+                            elif obj.geometry == "all":
+                                for y2 in range(len(obj.array)):
+                                    for x2 in range(len(obj.array[0])):
+                                        xpos = x + x2 - (obj.bottomright()[1] // 2)
+                                        ypos = y + y2 - obj.bottomright()[0]
                                         if ypos >= 0 and xpos >= 0:
-                                            self.set_xy(xpos, ypos, sprite.char,"c")
+                                            self.set_xy(xpos, ypos, obj.char,"c")
 
     def set_path(self,path=""):
         if len(path)>0:
@@ -258,12 +265,6 @@ class Map():
         for row in range(self.w_corner[1],row_and_hei):
             # UPDATE: Add check to see if it's any different from the new char
             [ print(item,end="") for item in self.output_map[row][self.w_corner[0]:item_and_wid] ]
-            ## OLD PRINTING METHOD ## 50% slower
-            #for item in range(self.w_corner[0],item_and_wid):
-            #   try:
-            #       print(self.output_map[row][item],end="")
-            #   except:
-            #       pass # Out of Range
             print()
         print()
             
@@ -288,21 +289,22 @@ class Map():
         except:
             return False # For going out of window bounds.
 
-class Sprites():
+class Objs():
     def __init__(self):
         self.path = ""
-        self.sprites = []
-        self.msprites = [] # a list of indices from sprites
+        self.objs = [] # Stores objects. Each includes a sprites key
+        self.sprites = dict() # {img:array}
+        self.mobile_objs = [] # a list of indices in sprites
 
-    def get_msprites(self):
-        for i in range(len(self.sprites)):
-            if self.sprites[i].movement:
-                self.msprites.append(i)
+    def get_mobile_objs(self):
+        for i in range(len(self.objs)):
+            if self.objs[i].movement != None or self.objs[i].gravity != None:
+                self.mobile_objs.append(i)
 
     def get_sprites(self,path=""):
         if len(path)>0:
             self.path = path
-        curr_img = ""
+        curr_img = None
         curr_array = []
         self.path = DIRPATH + "\\" + self.path # Adds parent directory of running program
         with open(self.path, 'r',encoding='utf-8') as file:
@@ -310,51 +312,48 @@ class Sprites():
             while(currentline):
                 if len(currentline) > 0: #No blank lines
                     if currentline[0] == SIGN and currentline[-1] == SIGN: # Begins and ends with SIGN
-                        if curr_img != "": # If this is not the first sprite name
-                            self.sprites.append(self.Sprite(img = curr_img,array = curr_array))
-                            # Adds a newly created sprite with name and array values to the sprites list ^
+                        if curr_img != None: # If this is not the first sprite name
+
+                            self.sprites[curr_img] = curr_array
                             curr_array = []
+
                         curr_img = currentline[1:-1] # Remove SIGNs
                     else:
                         curr_array.append(currentline)
                 currentline = file.readline()[:-1] # Removes the \n
-                
-    def new(self,img = "", char = "", coords = [-1,-1], movement = False, geometry = "default"):
-        """Every spritename possible has already been made from the given spritesheet. This just changes
-        data."""
-        assert type(self.sprites) == type(list())
-        for sprite in self.sprites:
-            if sprite.img == img: # Only the sprite name and array cannot change
-                sprite.char = char
-                sprite.movement = movement
-                sprite.geometry = geometry
-                sprite.set_origin(coords[0],coords[1])
 
-    
-    class Sprite():
+    def new(self,img="", char = "", coords = [0,0], movement = None, geometry = "all",xspeed = 1,yspeed = 1,health =1,facing='right',gravity=None):
+        """Creates an Obj and adds it to the objs list."""
+        obj = self.Obj(img, char, coords, movement, geometry,xspeed,yspeed,health,facing,gravity)
+        obj.array = self.sprites[img]
+        self.objs.append(obj)
+
+    class Obj():
         """A Sprite is simply just an image."""
-        # UPDATE: You don't need to have the sprite array stored here, just the look-up name.
-        # UPDATE: This should be retitled as Object.
-        def __init__(self,img="", char = "", coords = [0,0], array = [], movement = False, geometry = "none"):
-            self.img = img
-            self.array = array # Array will be found from the sprite sheet text doc.
+        def __init__(self,img="", char = "", coords = [0,0], movement = None, geometry = "all",xspeed = 1,yspeed = 1,health =1,facing='right',gravity=None):
+            if len(img) == 0:
+                self.img = [char]
+            else:
+                self.img = img
+            self.array = [] # Must be set through Objs function new()
             self.originx = coords[0]
             self.originy = coords[1]
             self.top_left = [0,0]
             self.bot_right = [0,0]
-            self.geometry = geometry # none, line, or all
-            self.movement = movement
+            self.geometry = geometry # Options of: None, line, or all.
+            self.movement = movement # Options of: None, random, leftright, updown, wasd, arrows
+            # UPDATE: Moving objects that share a sprite will choose only one as mobile.
             self.char = char
-            self.xspeed = 1
-            self.yspeed = 1
+            self.xspeed = xspeed
+            self.yspeed = yspeed
+            self.health = health
+            self.facing = facing # Options of: up,down,left,right
+            self.gravity = gravity # Options of :None,up,down,left,right
 
         def set_origin(self,x,y):
             self.originx = x
             self.originy = y
-        def set_xy_char(self,x,y,newchar):
-            """Change a char at a given coordinate."""
-            try:    self.array[y,x] = newchar
-            except: pass
+    
         def get_char(self,x:int,y:int):
             """Returns the char stored here in a sprite array."""
             try:    return self.array[y][x]
