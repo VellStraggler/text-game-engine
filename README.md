@@ -44,8 +44,12 @@ So much of the Text Game Engine runs in the background that you need as little a
 import textengine as tx
 g = tx.GameObject()
 g.map.set_path('map.txt')
-g.sprites.get_sprites('sprites.txt')
-g.sprites.new('wall','w')
-g.sprites.new('tree','t')
+g.objs.get_sprites('sprites.txt')
+g.objs.new('wall','w')
+g.objs.new('tree','t')
 g.run_map()
 ```
+
+
+# DEVELOPER NOTES
+textengine uses playsound version 1.2.2, NOT the latest
