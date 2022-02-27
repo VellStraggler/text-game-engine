@@ -62,22 +62,22 @@ class Game():
         self.fpss = []
         self.start_time = 0
         self.waiting = 0
-        self.waitmax = .01
+        self.gamespeed = .03
 
     def run_map(self):
         """Combine the map and the objs and begin the main game loop."""
         assert len(self.objs.sprites) > 0, "Error: No sprites found."
         self.set_output_map()
         # Put objs into the map based on the input map.
-        self.objs.get_mobile_objs() # Compile a list of moveable objs.
+        self.objs.set_live_objs() # Compile a list of moveable objs.
         print(CLR)
         self.map.print_all()
         self.start_time = time.time()
         while(not self.quit):
             self.game_loop()
-        #total = self.frames/(time.time()-self.start_time)
-        #print(f"Game Over. Average FPS: {total:.3f}")
-        print(f"{SPACES}Game Over!")
+        total = self.frames/(time.time()-self.start_time)
+        print(f"Game Over. Average FPS: {total:.3f}")
+        #print(f"{SPACES}Game Over!")
         input("Press ENTER to exit.\n")
 
     def game_loop(self):
@@ -87,15 +87,15 @@ class Game():
         self.wait()
         self.move()
         self.map.print_all()
-        #self.run_fps()
+        self.run_fps()
         # Lag Frame
-        #self.wait()
-        #self.map.print_all()
+        self.wait()
+        self.map.print_all()
         #self.run_fps()
     
     def wait(self):
         self.loop_time = time.time()
-        while(self.waiting<self.waitmax):
+        while(self.waiting<self.gamespeed):
             self.waiting = time.time() - self.loop_time
         self.waiting = 0
 
@@ -126,8 +126,9 @@ class Game():
         print()
 
     def move(self):
-        for i in self.objs.mobile_objs:
+        for i in self.objs.live_objs:
             obj = self.objs.objs[i]
+            # PLAYER MOVEMENT
             if obj.move == "wasd":
                 if keyboard.is_pressed("a"):
                     self.move_player(obj,0-obj.xspeed)
@@ -155,33 +156,47 @@ class Game():
             # DAMAGE-TAKING
             if len(obj.enemy_chars) > 0:
                 for e_char in obj.enemy_chars:
-                    #print(obj.topleft[0],obj.topleft[1],obj.hp)
-                    if self.should_take_dmg(obj,e_char):
-                        enemy = self.obj_from_char(e_char)
-                        obj.hp -= enemy.dmg
+                    self.take_dmg(obj,e_char)
+                    if obj.hp <= 0:
+                        self.array = [BLANK]
             # CAMERA-MOVING
-            if self.map.w_corner[1] + W_WID - WGC_X < obj.origx:
-                self.map.w_corner[1] += obj.xspeed
+            if obj.move == "wasd":
+                if self.map.w_corner[1] + W_WID - WGC_X < obj.origx:
+                    self.map.w_corner[1] += obj.xspeed
 
         # UPDATE: Add leftright move for goombas
         self.move_lr()
-        self.map.in_to_out() # Reset the output map 
-        self.set_output_map() # Remap the sprites
 
         # GAME-ENDING CHECKS:
-        for i in self.objs.mobile_objs:
-            if self.objs.objs[i].move == "wasd":
-                if self.objs.objs[i].hp <= 0:
+        i = 0
+        while i < len(self.objs.live_objs):
+            obji = self.objs.live_objs[i]
+            curr_obj = self.objs.objs[obji]
+            if curr_obj.move == "wasd":
+                if curr_obj.hp <= 0:
                     self.quit = True
-                elif self.objs.objs[i].origy == len(self.map.output_map) -1:
+                    curr_obj.array = self.objs.sprites["dead"]
+                elif curr_obj.origy == len(self.map.output_map) -1:
                     self.quit = True
+            else: # All non-player mobs, DEATH
+                if curr_obj.hp <= 0:
+                    self.map.inp_map[curr_obj.origy][curr_obj.origx] = BLANK
+                    #self.objs.objs.pop(obji)
+            i+=1
+        
+        self.map.in_to_out() # Reset the output map 
+        self.set_output_map() # Remap the sprites
 
     def obj_from_char(self,char):
         for obj in self.objs.objs:
             if obj.char == char:
                 return obj
 
-    def should_take_dmg(self,obj,e_char):
+    def take_dmg(self,obj,e_char):
+        enemy = self.obj_from_char(e_char)
+        if self.should_take_dmg(obj,enemy,e_char):
+            obj.hp -= enemy.dmg
+    def should_take_dmg(self,obj,enemy,e_char):
         """Check all sides of an object for enemy chars
         on the coll_map"""
         xs = obj.topleft[0]
@@ -189,15 +204,19 @@ class Game():
         ys = obj.topleft[1]
         yf = ys+obj.bot_right_y()+1
         try:
-            if e_char in self.map.coll_map[ys-1][xs:xf]:
-                return True
-            if e_char in self.map.coll_map[yf][xs:xf]:
-                return True
+            if 'down' in enemy.dmg_dirs:
+                if e_char in self.map.coll_map[ys-1][xs:xf]: #ABOVE
+                    return True
+            if 'up' in enemy.dmg_dirs:
+                if e_char in self.map.coll_map[yf][xs:xf]: #BELOW
+                    return True
             for y in range(ys,yf):
-                if self.map.coll_map[y][xs] == e_char:
-                    return True
-                if e_char in self.map.coll_map[y][xf+1] == e_char:
-                    return True
+                if 'right' in enemy.dmg_dirs:
+                    if self.map.coll_map[y][xs] == e_char: #LEFT
+                        return True
+                if 'left' in enemy.dmg_dirs:
+                    if e_char in self.map.coll_map[y][xf+1] == e_char: #RIGHT
+                        return True
         except:
             pass
         return False
@@ -222,7 +241,7 @@ class Game():
                 # Whether they're negative or positive
                     
     def move_lr(self):
-        for i in self.objs.mobile_objs:
+        for i in self.objs.live_objs:
             if self.objs.objs[i].move == "leftright":
                 obj = self.objs.objs[i]
                 if obj.face == "right":
@@ -263,9 +282,9 @@ class Game():
                   if curr_obj.move != None or curr_obj.grav:
                     # Objects that will never move should not have special
                     # attributes.
-                    if curr_obj.get_origin() != [-1,-1]:
+                    if curr_obj.get_origin() != [-1,-1] and not self.map.inited:
                     # Makes sure it's not the only obj, and has a set coord.
-                        curr_obj = self.objs.copy(obji)
+                            curr_obj = self.objs.copy(obji)
                   curr_obj.set_origin(mapx,mapy)
                   self.map.output_map[mapy][mapx] = BLANK
                   # If it is, replace an area around that point 
@@ -280,6 +299,7 @@ class Game():
                         xpos = mapx + obj_x - (curr_obj.bot_right_x() // 2)
                         if ypos >= 0 and xpos >= 0:
                           self.map.set_xy(xpos, ypos, char_to_use,"o")
+        self.map.inited = True
         self.map.set_coll(self.objs)
     
     def can_move(self, obj, move_x = 0, move_y = 0):
@@ -316,6 +336,7 @@ class Map():
         self.w_corner = [0,0] # Y,X
         # These are the map coordinates of the 
         # top-left-most item shown in the window.
+        self.inited = False
 
     def set_coll(self,objs):
         self.in_to_col()
@@ -417,12 +438,13 @@ class Objs():
         self.path = ""
         self.objs = [] # Stores objects. Each includes a sprites key
         self.sprites = dict() # {img:array}
-        self.mobile_objs = [] # a list of indices in sprites
+        self.live_objs = [] # a list of indices in sprites
 
-    def get_mobile_objs(self):
+    def set_live_objs(self):
+        self.live_objs = list()
         for i in range(len(self.objs)):
             if self.objs[i].move != None or self.objs[i].grav == True:
-                self.mobile_objs.append(i)
+                self.live_objs.append(i)
 
     def get_sprites(self,path=""):
         if len(path)>0:
@@ -450,10 +472,10 @@ class Objs():
 
     def new(self,img="", char = "", coords = [0,0], move = None,
         geom = "all", xspeed = 1,yspeed = 1,hp =1,face='right',
-        grav=False,dmg = 1,enemy_chars=[]):
+        grav=False,dmg = 1,enemy_chars=[],dmg_dirs=[]):
         """Creates an Obj and appends it to the objs list."""
         obj = self.Obj(img, char, coords, move, geom,xspeed,yspeed,
-            hp,face,grav,dmg,enemy_chars)
+            hp,face,grav,dmg,enemy_chars,dmg_dirs)
         obj.array = self.sprites[img]
         self.objs.append(obj)
 
@@ -462,14 +484,14 @@ class Objs():
          that to the objs list."""
         o = self.objs[obji]
         self.new(o.img,o.char,[o.origx,o.origy],o.move,o.geom,o.xspeed,o.yspeed,o.hp,
-            o.face,o.grav,o.dmg,o.enemy_chars)
+            o.face,o.grav,o.dmg,o.enemy_chars,o.dmg_dirs)
         return self.objs[-1]
 
     class Obj():
         """A Sprite is simply just an image."""
         def __init__(self,img="", char = "", coords = [-1,-1], move = None, 
         geom = "all",xspeed = 1,yspeed = 1,hp =1,face='right',grav=False, 
-        dmg = 1,enemy_chars=[]):
+        dmg = 1,enemy_chars=[],dmg_dirs=[]):
             if len(img) == 0:
                 self.img = [char]
             else:
@@ -478,12 +500,12 @@ class Objs():
             self.origx = coords[0]
             self.origy = coords[1]
             self.topleft = [0,0] #STORED IN X,Y FORM
-            self.bot_right = [0,0]
+            #self.bot_right = [0,0]
             self.geom = geom # Options of: None, line, or all.
             self.move = move
             # Options of: None, random, leftright, updown, wasd, arrows
             # UPDATE: Moving objects that share a sprite will
-            # choose only one as mobile.
+            # choose only one as live.
             self.char = char
             self.xspeed = xspeed
             self.yspeed = yspeed
@@ -493,6 +515,7 @@ class Objs():
             self.jump = 0 # based on yspeed
             self.dmg = dmg
             self.enemy_chars = enemy_chars
+            self.dmg_dirs = dmg_dirs
 
         def set_origin(self,x,y):
             self.set_origx(x)
