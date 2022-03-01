@@ -62,22 +62,23 @@ class Game():
         self.fpss = []
         self.start_time = 0
         self.waiting = 0
-        self.gamespeed = .03
+        self.gamespeed = 0
+        self.total = 0
 
     def run_map(self):
         """Combine the map and the objs and begin the main game loop."""
         assert len(self.objs.sprites) > 0, "Error: No sprites found."
         self.set_output_map()
-        # Put objs into the map based on the input map.
-        self.objs.set_live_objs() # Compile a list of moveable objs.
+        self.objs.set_live_objs()
         print(CLR)
-        self.map.print_all()
         self.start_time = time.time()
         while(not self.quit):
             self.game_loop()
-        total = self.frames/(time.time()-self.start_time)
-        print(f"Game Over. Average FPS: {total:.3f}")
-        #print(f"{SPACES}Game Over!")
+        self.end_game_phrase()
+
+    def end_game_phrase(self):
+        self.total = self.frames/(time.time()-self.start_time)
+        print(f"{SPACES}Game Over!\nAverage FPS: {self.total:.3f}")
         input("Press ENTER to exit.\n")
 
     def game_loop(self):
@@ -106,7 +107,6 @@ class Game():
         self.fpss.append(self.f_time)
 
     def debug_maps(self):
-        """
         print("input")
         for y in self.map.inp_map:
             for x in y:
@@ -117,7 +117,6 @@ class Game():
             for b in a:
                 print(b,end="")
             print()
-        """
         print("collision")
         for c in self.map.coll_map:
             for d in c:
@@ -126,14 +125,12 @@ class Game():
         print()
 
     def move(self):
+        if keyboard.is_pressed("q"):
+            self.quit = True
         for i in self.objs.live_objs:
             obj = self.objs.objs[i]
             # PLAYER MOVEMENT
             if obj.move == "wasd":
-                if keyboard.is_pressed("a"):
-                    self.move_player(obj,0-obj.xspeed)
-                if keyboard.is_pressed("d"):
-                    self.move_player(obj,obj.xspeed)
                 if keyboard.is_pressed("w"):
                     if not obj.grav: # If no gravity then do this
                         self.move_player(obj,0,0-obj.yspeed)
@@ -142,10 +139,27 @@ class Game():
                         # If on top of something
                             obj.jump = obj.yspeed
                             self.move_player(obj,0,0-obj.yspeed)
+                if keyboard.is_pressed("a"):
+                    self.move_player(obj,0-obj.xspeed)
                 if keyboard.is_pressed("s"):
                     self.move_player(obj,0,obj.yspeed)
-                if keyboard.is_pressed("q"):
-                    self.quit = True
+                if keyboard.is_pressed("d"):
+                    self.move_player(obj,obj.xspeed)
+            elif obj.move == "dirs":
+                if keyboard.is_pressed("up arrow"):
+                    if not obj.grav: # If no gravity then do this
+                        self.move_player(obj,0,0-obj.yspeed)
+                    else:
+                        if not self.can_move(obj,0,1):
+                        # If on top of something
+                            obj.jump = obj.yspeed
+                            self.move_player(obj,0,0-obj.yspeed)
+                if keyboard.is_pressed("left arrow"):
+                    self.move_player(obj,0-obj.xspeed)
+                if keyboard.is_pressed("down arrow"):
+                    self.move_player(obj,0,obj.yspeed)
+                if keyboard.is_pressed("right arrow"):
+                    self.move_player(obj,obj.xspeed)
             # ALL THAT SHOULD FALL WILL FALL
             if obj.grav:
                 if obj.jump != 0:
@@ -160,9 +174,11 @@ class Game():
                     if obj.hp <= 0:
                         self.array = [BLANK]
             # CAMERA-MOVING
-            if obj.move == "wasd":
+            if obj.move in ["wasd","dirs"]:
                 if self.map.w_corner[1] + W_WID - WGC_X < obj.origx:
                     self.map.w_corner[1] += obj.xspeed
+                #elif self.map.w_corner[1] + WGC_X//2 > obj.origx:
+                #    self.map.w_corner[1] -= obj.xspeed
 
         # UPDATE: Add leftright move for goombas
         self.move_lr()
@@ -172,15 +188,14 @@ class Game():
         while i < len(self.objs.live_objs):
             obji = self.objs.live_objs[i]
             curr_obj = self.objs.objs[obji]
-            if curr_obj.move == "wasd":
-                if curr_obj.hp <= 0:
+            if curr_obj.move in ["wasd","dirs"]:
+                if curr_obj.hp <= 0 or curr_obj.origy == len(self.map.output_map) -1:
                     self.quit = True
                     curr_obj.array = self.objs.sprites["dead"]
-                elif curr_obj.origy == len(self.map.output_map) -1:
-                    self.quit = True
             else: # All non-player mobs, DEATH
                 if curr_obj.hp <= 0:
                     self.map.inp_map[curr_obj.origy][curr_obj.origx] = BLANK
+                    curr_obj.set_origin(0,0)
                     #self.objs.objs.pop(obji)
             i+=1
         
