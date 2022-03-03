@@ -6,7 +6,7 @@ def main():
     g.objs.get_sprites('mario_sprites.txt')
     g.camera_follow = True
 
-    g.objs.new('mario','m',move = "wasd",grav=True,
+    g.objs.new('pikachu','m',move = "wasd",grav=True,
         xspeed =3,yspeed = 3,enemy_chars=['g','f'],geom="all",
         dmg_dirs=['down'])
     g.objs.new('goomba','g',geom="all",move = "leftright",grav=True,

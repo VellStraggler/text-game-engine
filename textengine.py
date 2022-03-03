@@ -156,7 +156,8 @@ class Game():
             # PLAYER MOVEMENT
             if obj.move == "wasd":
                 if keyboard.is_pressed("w"):
-                    #self.move_up(obj)
+                    self.move_up(obj)
+                if keyboard.is_pressed("e"):
                     self.rotate_right(obj)
                 if keyboard.is_pressed("a"):
                     self.move_left(obj)
@@ -212,6 +213,7 @@ class Game():
                 if curr_obj.hp <= 0:
                     self.map.inp_map[curr_obj.origy][curr_obj.origx] = BLANK
                     curr_obj.set_origin(0,0)
+                    curr_obj.array = [[' ']]
                     curr_obj.move = None
                     #self.objs.objs.pop(obji)
             i+=1
