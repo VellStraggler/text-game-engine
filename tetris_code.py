@@ -6,7 +6,7 @@ g.map.set_path('tetris2p_map.txt')
 g.objs.get_sprites('tetris_sprites.txt')
 
 blocks = ['1','2','3','4','5','6']
-g.objs.new(blocks[random.randint(0,5)],'l',move = "wasd",grav=True,
+g.objs.new('1','l',move = "wasd",grav=True,
     xspeed =2,yspeed = 1,geom="all")
 g.objs.new(blocks[random.randint(0,5)],'o',move = "dirs",grav=True,
     xspeed =2,yspeed = 1,geom="all")

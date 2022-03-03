@@ -23,6 +23,7 @@ SPACES = ' ' * 50
 LINES = '\n' * 50
 BAD_CHARS = "⚫"
 
+
 def grid_patcher(array:list,map=False):
     """Makes arrays rectangular, that they are filled with arrays of
      uniform length."""
@@ -56,6 +57,7 @@ class Game():
         self.map = Map()
         self.objs = Objs()
         self.quit = False
+        self.camera_follow = False
 
         self.frames = 0
         self.f_time = 0
@@ -88,9 +90,11 @@ class Game():
         self.wait()
         self.move()
         self.map.print_all()
+        #self.print_objs()
         self.run_fps()
         # Lag Frame
         self.wait()
+        #self.print_objs()
         self.map.print_all()
         #self.run_fps()
     
@@ -124,6 +128,26 @@ class Game():
             print()
         print()
 
+    """
+    def print_objs(self):
+        #print(CLR)
+        for obj in self.objs.objs:
+            #Move cursor to obj.topleft
+            col = str(obj.topleft[0]-1)
+            line = str(obj.topleft[1]-1)
+            cursor = '\033['+line+';'+col+'H'
+            print(cursor,end='')
+            for y in range(obj.bot_right_y() + 1):
+                print(" ",end="")
+                for x in range(obj.bot_right_x() + 1):
+                    print(obj.get_char(x,y),end='')
+                col = str(obj.topleft[0]+y)
+                cursor = '\033['+line+';'+col+'H'
+                print("",cursor,end='')
+        cursor = '\033['+str(W_HEI)+";"+'0H'
+        print(cursor,end='')
+    """
+
     def move(self):
         if keyboard.is_pressed("q"):
             self.quit = True
@@ -132,38 +156,28 @@ class Game():
             # PLAYER MOVEMENT
             if obj.move == "wasd":
                 if keyboard.is_pressed("w"):
-                    if not obj.grav: # If no gravity then do this
-                        self.move_player(obj,0,0-obj.yspeed)
-                    else:
-                        if not self.can_move(obj,0,1):
-                        # If on top of something
-                            obj.jump = obj.yspeed
-                            self.move_player(obj,0,0-obj.yspeed)
+                    #self.move_up(obj)
+                    self.rotate_right(obj)
                 if keyboard.is_pressed("a"):
-                    self.move_player(obj,0-obj.xspeed)
+                    self.move_left(obj)
                 if keyboard.is_pressed("s"):
-                    self.move_player(obj,0,obj.yspeed)
+                    self.move_down(obj)
                 if keyboard.is_pressed("d"):
-                    self.move_player(obj,obj.xspeed)
+                    self.move_right(obj)
             elif obj.move == "dirs":
                 if keyboard.is_pressed("up arrow"):
-                    if not obj.grav: # If no gravity then do this
-                        self.move_player(obj,0,0-obj.yspeed)
-                    else:
-                        if not self.can_move(obj,0,1):
-                        # If on top of something
-                            obj.jump = obj.yspeed
-                            self.move_player(obj,0,0-obj.yspeed)
+                    #self.move_up(obj)
+                    self.rotate_right(obj)
                 if keyboard.is_pressed("left arrow"):
-                    self.move_player(obj,0-obj.xspeed)
+                    self.move_left(obj)
                 if keyboard.is_pressed("down arrow"):
-                    self.move_player(obj,0,obj.yspeed)
+                    self.move_down(obj)
                 if keyboard.is_pressed("right arrow"):
-                    self.move_player(obj,obj.xspeed)
+                    self.move_right(obj)
             # ALL THAT SHOULD FALL WILL FALL
             if obj.grav:
                 if obj.jump != 0:
-                    self.move_player(obj,0,-obj.jump)#(obj.yspeed))
+                    self.move_player(obj,0,-obj.jump)
                     obj.jump -= 1
                 else:
                     self.move_player(obj,0,obj.yspeed)
@@ -174,11 +188,13 @@ class Game():
                     if obj.hp <= 0:
                         self.array = [BLANK]
             # CAMERA-MOVING
-            if obj.move in ["wasd","dirs"]:
-                if self.map.w_corner[1] + W_WID - WGC_X < obj.origx:
-                    self.map.w_corner[1] += obj.xspeed
-                #elif self.map.w_corner[1] + WGC_X//2 > obj.origx:
-                #    self.map.w_corner[1] -= obj.xspeed
+            if self.camera_follow:
+                if obj.move in ["wasd","dirs"]:
+                    if self.map.w_corner[1] + W_WID - WGC_X < obj.origx:
+                        self.map.w_corner[1] += obj.xspeed
+                    elif self.map.w_corner[1] + WGC_X > obj.origx:
+                        if self.map.w_corner[1] > 0:
+                            self.map.w_corner[1] -= obj.xspeed
 
         # UPDATE: Add leftright move for goombas
         self.move_lr()
@@ -191,16 +207,48 @@ class Game():
             if curr_obj.move in ["wasd","dirs"]:
                 if curr_obj.hp <= 0 or curr_obj.origy == len(self.map.output_map) -1:
                     self.quit = True
-                    curr_obj.array = self.objs.sprites["dead"]
+                    curr_obj.array = [['d','e','a','d']]
             else: # All non-player mobs, DEATH
                 if curr_obj.hp <= 0:
                     self.map.inp_map[curr_obj.origy][curr_obj.origx] = BLANK
                     curr_obj.set_origin(0,0)
+                    curr_obj.move = None
                     #self.objs.objs.pop(obji)
             i+=1
         
         self.map.in_to_out() # Reset the output map 
         self.set_output_map() # Remap the sprites
+
+    #Functions for better Readability
+    def move_left(self,obj):
+        self.move_player(obj,0-obj.xspeed)
+    def move_right(self,obj):
+        self.move_player(obj,obj.xspeed)
+    def move_up(self,obj):
+        if not obj.grav: # If no gravity then do this
+            self.move_player(obj,0,0-obj.yspeed)
+        elif not self.can_move(obj,0,1):
+            # If on top of something
+                obj.jump = obj.yspeed
+                self.move_player(obj,0,0-obj.yspeed)
+    def move_down(self,obj):
+        self.move_player(obj,0,obj.yspeed)
+
+    def rotate_right(self,obj):
+        """Rotates the object sprite 90 degrees"""
+        sprite = [] # Must make a new sprite sequentially,
+        for x in range(len(obj.array[0])//2):
+            row = [] # otherwise it creates pointers.
+            for y in range(len(obj.array)*2):
+                row.append("_")
+            sprite.append(row)
+        
+        # To rotate, it is inverted, and then mirrored along y.
+        for y in range(len(sprite)):
+            for x in range(len(sprite[0])//2):
+                sprite[y][-((x*2)+2)] = obj.array[x][(y*2)]
+                sprite[y][-((x*2)+1)] = obj.array[x][(y*2)+1]
+        obj.array = sprite
 
     def obj_from_char(self,char):
         for obj in self.objs.objs:
@@ -257,26 +305,27 @@ class Game():
                     
     def move_lr(self):
         for i in self.objs.live_objs:
-            if self.objs.objs[i].move == "leftright":
-                obj = self.objs.objs[i]
-                if obj.face == "right":
-                    if self.can_move(obj,move_x=1):
-                        self.map.set_xy(obj.origx,obj.origy,BLANK,"i")
-                        # Clear the space the sprite is at.
-                        obj.set_origx(obj.origx + obj.xspeed)
-                        self.map.set_xy(obj.origx,obj.origy,obj.char,"i")
-                        # Set the new coord.
-                    else:
-                        obj.face = "left"
-                elif obj.face == "left":
-                    if self.can_move(obj,move_x=-1):
-                        self.map.set_xy(obj.origx,obj.origy,BLANK,"i")
-                        # Clear the space the sprite is at.
-                        obj.set_origx(obj.origx - obj.xspeed)
-                        self.map.set_xy(obj.origx,obj.origy,obj.char,"i")
-                        # Set the new coord.
-                    else:
-                        obj.face = "right"
+            if self.objs.objs[i].origx > self.map.w_corner[1] -WGC_X and self.objs.objs[i].origx < self.map.w_corner[1] + W_WID + WGC_X:
+                if self.objs.objs[i].move == "leftright":
+                    obj = self.objs.objs[i]
+                    if obj.face == "right":
+                        if self.can_move(obj,move_x=1):
+                            self.map.set_xy(obj.origx,obj.origy,BLANK,"i")
+                            # Clear the space the sprite is at.
+                            obj.set_origx(obj.origx + obj.xspeed)
+                            self.map.set_xy(obj.origx,obj.origy,obj.char,"i")
+                            # Set the new coord.
+                        else:
+                            obj.face = "left"
+                    elif obj.face == "left":
+                        if self.can_move(obj,move_x=-1):
+                            self.map.set_xy(obj.origx,obj.origy,BLANK,"i")
+                            # Clear the space the sprite is at.
+                            obj.set_origx(obj.origx - obj.xspeed)
+                            self.map.set_xy(obj.origx,obj.origy,obj.char,"i")
+                            # Set the new coord.
+                        else:
+                            obj.face = "right"
 
     def set_output_map(self):
         """This is necessary to create the Map's Output Map.
@@ -321,9 +370,10 @@ class Game():
         """Check if there are any characters in the
          area that the obj would take up. Takes literal change in x and y.
          Returns True if character can move in that diRECTion."""
+        # STARTS AT MAX SPEED, SHOULD START AT 0
         while (move_x != 0 or move_y != 0):
             for y in range(move_y + obj.origy - obj.bot_right_y(),move_y + obj.origy + 1):
-                for x in range(move_x + obj.origx - (obj.bot_right_x() // 2),move_x + obj.origx + obj.bot_right_x() - 1):
+                for x in range(move_x + obj.origx - (obj.bot_right_x() // 2),move_x + obj.origx + obj.bot_right_x() - 0):
                     try: 
                         if self.map.coll_map[y][x] != BLANK and self.map.coll_map[y][x] != obj.char:
                             return False
@@ -417,13 +467,16 @@ class Map():
                 curr_line = file.readline()
             
     def print_all(self):
+        """Uses coordinate-based printing. Comparatively slow.
+        Sprite-based printing is faster since it literally prints
+        less. print_objs() is found in the Game class."""
         row_and_hei = self.w_corner[0] + W_HEI + 1 - INFO_HEI
         # Addition is expensive, so we only do two assignments instead.
-        item_and_wid = self.w_corner[1] + W_WID + 1 # <-'
+        wid = self.w_corner[1] + W_WID + 1 # <-'
         print(CUR * W_HEI)
         for row in range(self.w_corner[0],row_and_hei):
         # UPDATE: Add check to see if it's any different from the new char
-            [print(item,end="") for item in self.output_map[row][self.w_corner[1]:item_and_wid]]
+            [print(i,end="") for i in self.output_map[row][self.w_corner[1]:wid]]
             print()
         print()
             
@@ -548,12 +601,14 @@ class Objs():
             return [self.origx,self.origy]
     
         def get_char(self,x:int,y:int):
-            """Returns the char stored here in a sprite array."""
+            """Returns the char stored here in a sprite array.
+            Takes x,y, returns [y][x]"""
             try:    return self.array[y][x]
             except: return BLANK
             
         def bot_right(self):
-            """Return coord vals [Y,X] of bot_right char in sprite."""
+            """Return coord vals [Y,X] of bot_right char in sprite.
+            The map coord vals are stored in the topleft var."""
             return [len(self.array[0])-1,len(self.array)-1]
         def bot_right_x(self):
             """Get the far right x value of the object sprite"""
