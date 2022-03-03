@@ -19,9 +19,9 @@
             s                               s            s                               s
             s                               s            s                               s
             s                               s            s                               s
-            s                               ss           s                               s
-            s                               ss           s                               s
-            s                               ss           s                               s
+            s                               ss           s                               ss
+            s                               ss           s                               ss
+            s                               ss           s                               ss
             s p p p p p p p p p p p p p p p s            s p p p p p p p p p p p p p p p s
             s p p p p p p p p p p p p p p p s            s p p p p p p p p p p p p p p p s
             c f f f f f f f f f f f f f f f c            c f f f f f f f f f f f f f f f c 
