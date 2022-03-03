@@ -67,25 +67,29 @@ class Game():
         self.gamespeed = 0
         self.total = 0
 
-    def run_map(self):
+    def run_game(self):
         """Combine the map and the objs and begin the main game loop."""
-        assert len(self.objs.sprites) > 0, "Error: No sprites found."
-        self.set_output_map()
+        self.init_map()
+        while(not self.quit):
+            self.game_loop()
+        self.end_game()
+
+    def init_map(self):
+        """All that comes before the main game_loop"""
+        self.create_map()
         self.objs.set_live_objs()
         print(CLR)
         self.start_time = time.time()
-        while(not self.quit):
-            self.game_loop()
-        self.end_game_phrase()
 
-    def end_game_phrase(self):
+    def end_game(self):
+        """All the comes after the main game_loop"""
         self.total = self.frames/(time.time()-self.start_time)
         print(f"{SPACES}Game Over!\nAverage FPS: {self.total:.3f}")
         input("Press ENTER to exit.\n")
 
     def game_loop(self):
         """This is what loops for every game tick.
-        It is run by the run_map method."""
+        It is run by the run_game method."""
         # Update Frame
         self.wait()
         self.move()
@@ -212,9 +216,11 @@ class Game():
             obji = self.objs.live_objs[i]
             curr_obj = self.objs.objs[obji]
             if curr_obj.move in ["wasd","dirs"]:
+                '''
                 if curr_obj.hp <= 0 or curr_obj.origy == len(self.map.output_map) -1:
                     self.quit = True
-                    curr_obj.array = [['d','e','a','d']]
+                    curr_obj.array = [['d','e','a','d']]'''
+                pass
             else: # All non-player mobs, DEATH
                 if curr_obj.hp <= 0:
                     self.map.inp_map[curr_obj.origy][curr_obj.origx] = BLANK
@@ -225,7 +231,7 @@ class Game():
             i+=1
         
         self.map.in_to_out() # Reset the output map 
-        self.set_output_map() # Remap the sprites
+        self.create_map() # Remap the sprites
 
     #Functions for better Readability
     def move_left(self,obj):
@@ -244,6 +250,7 @@ class Game():
 
     def rotate_right(self,obj):
         """Rotates the object sprite 90 degrees"""
+        # Only works properly on even-width objects.
         sprite = [] # Must make a new sprite sequentially,
         for x in range(len(obj.array[0])//2):
             row = [] # otherwise it creates pointers.
@@ -257,6 +264,13 @@ class Game():
                 sprite[y][-((x*2)+2)] = obj.array[x][(y*2)]
                 sprite[y][-((x*2)+1)] = obj.array[x][(y*2)+1]
         obj.array = sprite
+
+    def replace_chars(self,obj,new_char):
+        """ Replaces the characters of an object on the
+         INPUT MAP with new_char."""
+        for y in range(obj.topleft[1],obj.topleft[1]+obj.bottomrighty()):
+            for x in range(obj.topleft[0],obj.topleft[0]+obj.bottomrightx()):
+                self.map.set_xy(x,y,BLANK,"i")
 
     def obj_from_char(self,char):
         for obj in self.objs.objs:
@@ -291,6 +305,12 @@ class Game():
         except:
             pass
         return False
+
+    def teleport_obj(self,obj,y:int=0,x:int=0,char_left=BLANK):
+
+        self.map.set_xy(obj.origx,obj.origy,char_left,"i")
+        obj.set_origin(x,y)
+        self.map.set_xy(obj.origx,obj.origy,obj.char,"i")
 
     def move_obj(self,obj,move_x:int = 0,move_y:int = 0):
         """Moves a single object move_x and move_y amount OR LESS."""
@@ -346,7 +366,7 @@ class Game():
                         else:
                             obj.face = "right"
 
-    def set_output_map(self):
+    def create_map(self):
         """This is necessary to create the Map's Output Map.
         A new object will be created for each sprite that is both
         on the map and in the sprite dictionary."""
@@ -384,6 +404,17 @@ class Game():
                           self.map.set_xy(xpos, ypos, char_to_use,"o")
         self.map.inited = True
         self.map.set_coll(self.objs)
+        self.remove_extras()
+
+    def remove_extras(self):
+        i = 0
+        while i < len(self.objs.objs):
+            if self.objs.objs[i].get_origin() == [-1,-1]:
+                self.objs.objs.pop(i)
+            elif self.objs.objs[i].get_origin() == [0,0]:
+                self.objs.objs.pop(i)
+            else:
+                i+=1
 
 class Map():
     """Three arrays are stored in a Map object: the wasd input 
@@ -394,7 +425,7 @@ class Map():
         self.path = ""
         self.inp_map = [] # Map of sprite origin coords
         self.output_map = []
-        # Set using the set_output_map function in the GameObject class.
+        # Set using the create_map function in the GameObject class.
         self.coll_map = []
         # Same as the inp_map, with each char
         # thickened to the width of its sprite.
@@ -572,8 +603,6 @@ class Objs():
             self.geom = geom # Options of: None, line, or all.
             self.move = move
             # Options of: None, random, leftright, updown, wasd, arrows
-            # UPDATE: Moving objects that share a sprite will
-            # choose only one as live.
             self.char = char
             self.xspeed = xspeed
             self.yspeed = yspeed
@@ -584,6 +613,7 @@ class Objs():
             self.dmg = dmg
             self.enemy_chars = enemy_chars
             self.dmg_dirs = dmg_dirs
+            self.spawnpoint = [coords[0],coords[1]]
 
         def set_origin(self,x,y):
             self.set_origx(x)

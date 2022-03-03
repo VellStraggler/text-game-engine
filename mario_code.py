@@ -16,7 +16,7 @@ def main():
     g.objs.new('pipe','p')
     g.objs.new('flag','f',dmg_dirs=['left'])
 
-    g.run_map()
+    g.run_game()
 
 while True:
     main()
