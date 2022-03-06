@@ -1,8 +1,8 @@
 import textengine as tx
 
 g = tx.GameObject()
-g.map.path = 'example_map.txt'
-g.sprites.path = 'spritesheet1.txt'
+g.map.path = 'example/example_map.txt'
+g.sprites.path = 'example/spritesheet.txt'
 g.map.translate()
 g.sprites.get_sprites()
 
