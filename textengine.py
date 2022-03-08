@@ -52,6 +52,10 @@ def grid_patcher(array:list,map=False):
                 assert False, "Only strings and lists can be in the array"
     return array
 
+FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
+    '>':'<','(':')',')':'(','◐':'◑','◑':'◐'}
+# Dictionary of chars (keys) and their opposites (values)
+
 class Game():
     """
     Creates an empty map and empty sprite list.
@@ -61,7 +65,7 @@ class Game():
         self.map = Map()
         self.objs = Objs()
         self.quit = False
-        self.camera_follow = False
+        self.camera_follow = []
 
         self.frames = 0
         self.tick = 0
@@ -69,7 +73,7 @@ class Game():
         self.fpss = []
         self.start_time = 0
         self.waiting = 0
-        self.gamespeed = 0
+        self.game_speed = 0
         self.total = 0
 
     def run_game(self):
@@ -109,13 +113,13 @@ class Game():
         #self.debug_maps()
         self.run_fps()
         # Lag Frame
-        self.wait()
-        self.map.print_all()
+        #self.wait()
+        #self.map.print_all()
         #self.debug_maps()
     
     def wait(self):
         self.loop_time = time.time()
-        while(self.waiting<self.gamespeed):
+        while(self.waiting<self.game_speed):
             self.waiting = time.time() - self.loop_time
         self.waiting = 0
 
@@ -180,30 +184,34 @@ class Game():
             elif self.objs.objs[i].move == "leftright":
                 if self.map.w_corner[1] + W_WID + WGC_X > self.objs.objs[i].origx > self.map.w_corner[1] -WGC_X:
                     obj = self.objs.objs[i]
-                    if obj.face == "right":
+                    if obj.face_right:
                         if self.can_move(obj,move_x=obj.xspeed):
                             self.move_right(obj)
                         else:
-                            obj.face = "left"
-                    elif obj.face == "left":
+                            obj.face_right = False
+                    else:
                         if self.can_move(obj,move_x=-obj.xspeed):
                             self.move_left(obj)
                         else:
-                            obj.face = "right"
+                            obj.face_right = True
             # DAMAGE-TAKING
-            if len(obj.enemy_chars) > 0:
-                for e_char in obj.enemy_chars:
-                    self.take_dmg(obj,e_char)
-                    if obj.hp <= 0: 
-                        obj.array = [BLANK]
+            for e_char in obj.enemy_chars:
+                self.take_dmg(obj,e_char)
+
             # CAMERA-MOVING
-            if self.camera_follow:
+            if "x" in self.camera_follow:
                 if obj.move in ["wasd","dirs"]:
                     if self.map.w_corner[1] + W_WID - WGC_X < obj.origx:
                         self.map.w_corner[1] += obj.xspeed
                     elif self.map.w_corner[1] + WGC_X > obj.origx:
                         if self.map.w_corner[1] > 0:
                             self.map.w_corner[1] -= obj.xspeed
+            if "y" in self.camera_follow:
+                    if self.map.w_corner[0] + W_HEI - WGC_Y < obj.origy:
+                        self.map.w_corner[0] += obj.yspeed
+                    elif self.map.w_corner[0] + WGC_Y > obj.origy:
+                        if self.map.w_corner[0] > 0:
+                            self.map.w_corner[0] -= obj.yspeed
 
         # GAME-ENDING CHECKS:
         i = 0
@@ -227,8 +235,14 @@ class Game():
         self.create_map() # Remap the sprites
 
     #Functions for better Readability
-    def move_left(self,obj):    self.move_obj(obj,-obj.xspeed)
-    def move_right(self,obj):   self.move_obj(obj,obj.xspeed)
+    def move_left(self,obj):
+        if obj.face_right:
+            obj.flip_sprite()
+        self.move_obj(obj,-obj.xspeed)
+    def move_right(self,obj):   
+        if not obj.face_right:
+            obj.flip_sprite()
+        self.move_obj(obj,obj.xspeed)
     def move_up(self,obj):
         if not obj.grav_tick: # If no gravity then do this
             self.move_obj(obj,0,-obj.yspeed)
@@ -341,8 +355,8 @@ class Game():
             while (move_x != 0 or move_y != 0):
                 for x in range(move_x + obj.topleft[0] + 1,move_x + obj.topleft[0] + obj.bot_right_x()+2):
                     try:
-                        if self.map.coll_map[obj.origy][x] != BLANK:
-                            if self.map.coll_map[obj.origy][x] != obj.char:
+                        if self.map.coll_map[obj.origy+move_y][x] != BLANK:
+                            if self.map.coll_map[obj.origy+move_y][x] != obj.char:
                                 return False
                     except:
                         return False
@@ -372,38 +386,42 @@ class Game():
         """This is necessary to create the Map's Output Map.
         A new object will be created for each sprite that is both
         on the map and in the sprite dictionary."""
-        for obji in range(len(self.objs.objs)):
-        # Goes by range so that it doesn't go through newly-added objs.
-          obj = self.objs.objs[obji]
-          curr_obj = obj # curr_obj is the pointer this func ops on.
-          curr_obj.array = grid_patcher(curr_obj.array)
-          # Sprites must be rectangular
-          if curr_obj.char != '': # Make sure they have a map char
-          # GO through each char in the map by ROW, then COLUMN
-            for mapy in range(0,len(self.map.out_map)):
-              for mapx in range(0,len(self.map.out_map[mapy])):
-                # Check if a obj's map char is present on the map.
-                if self.map.is_xy(mapx,mapy,curr_obj.char,"o"):
-                  if curr_obj.move != None or curr_obj.grav_tick > 0:
-                    # Objects that will never move should not have special
-                    # attributes.
-                    if curr_obj.get_origin() != [0,0] and not self.map.inited:
-                    # Makes sure it's not the only obj, and has a set coord.
-                            curr_obj = self.objs.copy(obji)
-                  curr_obj.set_origin(mapx,mapy)
-                  self.map.out_map[mapy][mapx] = BLANK
-                  # If it is, replace an area around that point 
-                  # with the sprite array.
-                  for obj_y in range(curr_obj.bot_right_y() + 1):
-                    for obj_x in range(curr_obj.bot_right_x() + 1):
-                      # Only change the char if it has not 
-                      # already been changed
-                      char_to_use = curr_obj.get_char(obj_x,obj_y)
-                      if char_to_use != BLANK or (curr_obj.get_char(obj_x-1,obj_y) != BLANK and curr_obj.get_char(obj_x+1,obj_y) != BLANK):
-                        ypos = mapy + obj_y - curr_obj.bot_right_y()
-                        xpos = mapx + obj_x - (curr_obj.bot_right_x() // 2)
-                        if ypos >= 0 and xpos >= 0:
-                          self.map.set_xy(xpos, ypos, char_to_use,"o")
+        for mapy in range(0,len(self.map.out_map)):
+          for mapx in range(0,len(self.map.out_map[mapy])):
+            if not self.map.is_xy(mapx,mapy,BLANK,'o'): #SKIP BLANKS (DUH)
+                for obji in range(len(self.objs.objs)):
+                # Goes by range so that it doesn't go through newly-added objs.
+                    obj = self.objs.objs[obji]
+                    curr_obj = obj # curr_obj is the pointer this func ops on.
+                    if curr_obj.char != '': # Make sure they have a map char
+                        # Check if a obj's map char is present on the map.
+                        if self.map.is_xy(mapx,mapy,curr_obj.char,"o"):
+                            if not self.map.inited:
+                                if curr_obj.move != None or curr_obj.grav_tick > 0:
+                                # Objs that never move won't have special attributes.
+                                    if curr_obj.get_origin() != [0,0]:
+                                    # Makes sure it's not the only obj, and has a set coord.
+                                        curr_obj = self.objs.copy(obji)
+                                curr_obj.set_origin(mapx,mapy)
+                            self.map.set_xy(mapx, mapy, BLANK,"o") # remove origin char
+                            # Print a sprite around its origin.
+                            maxx = curr_obj.bot_right_x()
+                            for obj_y in range(curr_obj.bot_right_y() + 1):
+                                blanks_before = True
+                                blanks_after = True
+                                for obj_x in range(maxx//2 + 1):
+                                    char = curr_obj.get_char(obj_x,obj_y)
+                                    if char != BLANK or not blanks_before:
+                                        blanks_before = False
+                                        ypos = mapy + obj_y - curr_obj.bot_right_y()
+                                        xpos = mapx + obj_x - (maxx // 2)
+                                        self.map.set_xy(xpos, ypos, char,"o")
+                                    char = curr_obj.get_char(maxx-obj_x,obj_y)
+                                    if char != BLANK or not blanks_after:
+                                        blanks_after = False
+                                        ypos = mapy + obj_y - curr_obj.bot_right_y()
+                                        xpos = mapx - obj_x + (maxx // 2) + maxx%2
+                                        self.map.set_xy(xpos, ypos, char,"o")
         self.map.inited = True
         self.map.set_coll(self.objs)
         self.remove_extras()
@@ -526,15 +544,16 @@ class Map():
             
     def set_xy(self,x,y,char,map = "o"):
         """Sets the character at a given position."""
-        try:
-            if map == "o":
-                self.out_map[y][x] = char
-            elif map == "c":
-                self.coll_map[y][x] = char
-            elif map == "i":
-                self.inp_map[y][x] = char
-        except:
-            pass # For going out of bounds.
+        if x > -1 < y:
+            try:
+                if map == "o":
+                    self.out_map[y][x] = char
+                elif map == "c":
+                    self.coll_map[y][x] = char
+                elif map == "i":
+                    self.inp_map[y][x] = char
+            except:
+                pass # For going out of bounds.
     def is_xy(self,x,y,char,map = "o"):
         """Returns if a certain character is at this position."""
         try:
@@ -592,16 +611,17 @@ class Objs():
                             curr_array = []
                         curr_img = curr_line[1:-1] # Remove SIGNs
                     else:
-                        curr_array.append(curr_line)
+                        curr_array.append(list(curr_line))
                 curr_line = file.readline()[:-1] # Removes the \n
 
     def new(self,img="", char = "", coords = [0,0], move = None,
-        geom = "all", xspeed = 1,yspeed = 1,hp =1,face='right',
+        geom = "all", xspeed = 1,yspeed = 1,hp =1,face_right=True,face_down=False,
         grav_tick=0,dmg = 1,enemy_chars=[],dmg_dirs=[],set_rotate=0,
-        spawn=[0,0]):
+        spawn=[0,0],animate=True):
         """Creates an Obj and appends it to the objs list."""
         obj = self.Obj(img, char, coords, move, geom,xspeed,yspeed,
-            hp,face,grav_tick,dmg,enemy_chars,dmg_dirs,spawn)
+            hp,face_right,face_down,grav_tick,dmg,enemy_chars,dmg_dirs,
+            spawn,animate)
         obj.array = self.sprites[img]
         while obj.rotate != set_rotate:
             obj.rotate_right()
@@ -612,37 +632,42 @@ class Objs():
          that to the objs list."""
         o = self.objs[obji]
         self.new(o.img,o.char,[o.origx,o.origy],o.move,o.geom,o.xspeed,o.yspeed,o.hp,
-            o.face,o.grav_tick,o.dmg,o.enemy_chars,o.dmg_dirs,o.rotate,o.spawn)
+            o.face_right,o.face_down,o.grav_tick,o.dmg,o.enemy_chars,o.dmg_dirs,o.rotate,
+            o.spawn,o.animate)
         return self.objs[-1]
 
     class Obj():
         """A Sprite is simply just an image."""
-        def __init__(self,img="", char = "", coords = [0,0], move = None, 
-        geom = "all",xspeed = 1,yspeed = 1,hp =1,face='right',grav_tick=0, 
-        dmg = 1,enemy_chars=[],dmg_dirs=[],spawn=[0,0]):
-            if len(img) == 0:
+        def __init__(self,img:str="", char = "", coords = [0,0], move = None, 
+        geom:str = "all",xspeed = 1,yspeed = 1,hp =1,face_right=True,
+        face_down=False,grav_tick:int=0,dmg = 1,enemy_chars=[],dmg_dirs=[],
+        spawn=[0,0],animate=True):
+            if not len(img): # If there is no img.
                 self.img = [char]
             else:
                 self.img = img
-            self.array = [] # Must be set through Objs function new()
             self.origx = coords[0]
             self.origy = coords[1]
-            self.topleft = [0,0] #STORED IN X,Y FORM
-            self.geom = geom # Options of: None, line, or all.
+            self.topleft = [0,0] # STORED IN X,Y FORM.
+            self.geom = geom # Options of: None, line, complex, or all.
             self.move = move
-            # Options of: None, random, leftright, updown, wasd, arrows
+            # Options of: None, random, leftright, updown, wasd, arrows.
             self.char = char
             self.xspeed = xspeed
             self.yspeed = yspeed
             self.hp = hp
-            self.face = face # Options of: up,down,left,right
-            self.grav_tick = grav_tick # Boolean
+            self.grav_tick = grav_tick
             self.jump = 0 # based on yspeed
             self.dmg = dmg
             self.enemy_chars = enemy_chars
             self.dmg_dirs = dmg_dirs
-            self.rotate = 0 # 0 through 3
             self.spawn = spawn
+            self.animate = animate
+
+            self.face_right = face_right # Left: False, Right: True
+            self.face_down = face_down # Up: False, Down: True
+            self.array = [] # Must be set through Objs function new().
+            self.rotate = 0 # 0 through 3
             self.score = 0
 
         def set_origin(self,x,y):
@@ -675,6 +700,21 @@ class Objs():
             """Get the far right y value of the object sprite"""
             return len(self.array)-1
         
+        def flip_sprite(self):
+            """Flips the sprite of an image vertically (left to right)"""
+            self.face_right = not self.face_right
+            if self.animate:
+                maxx = len(self.array[0])
+                for y in range(len(self.array)):
+                    for x in range(maxx//2+maxx%2):
+                        hold = self.array[y][x]
+                        if hold in FLIP_CHARS.keys():
+                            hold = FLIP_CHARS[hold]
+                        self.array[y][x] = self.array[y][maxx-x-1]
+                        if self.array[y][x] in FLIP_CHARS.keys():
+                            self.array[y][x] = FLIP_CHARS[self.array[y][x]]
+                        self.array[y][maxx-x-1] = hold
+
         def rotate_right(self):
             """Rotates the object sprite 90 degrees."""
             self.rotate = (self.rotate + 1)%4

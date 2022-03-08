@@ -4,7 +4,8 @@ def main():
     g = tx.Game()
     g.map.set_path('mario/mario_map.txt')
     g.objs.get_sprites('mario/mario_sprites.txt')
-    g.camera_follow = True
+    g.camera_follow = ["x"]
+    g.game_speed = .02
 
     g.objs.new('mario','m',move = "wasd",grav_tick=1,
         xspeed =3,yspeed = 3,enemy_chars=['g','f'],

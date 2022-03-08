@@ -1,3 +1,3 @@
-import playsound
-while True:
-    playsound.playsound('song.mp3')
+print("\\","/")
+string = ["\\","/"]
+print(string[0],string[1])
