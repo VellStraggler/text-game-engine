@@ -1,4 +1,5 @@
-import time, keyboard, os, random, threading
+import time, keyboard, os, random
+from multiprocessing.pool import ThreadPool
 from numpy import newaxis
 from playsound import playsound
 
@@ -17,8 +18,8 @@ W_HEI = 30
 # Based on the Windows Terminal window at default size.
 # UPDATE: add function to detect window dimensions/set them.
 INFO_HEI=3
-WGC_X = 20
-WGC_Y = WGC_X//2
+WGC_X = W_WID//2 - 5
+WGC_Y = W_HEI//2 - 5
 # WINDOW GUIDE CUSHION, the breathing room between the sprite between
 # the window follows and the edge of the window.
 
@@ -53,7 +54,9 @@ def grid_patcher(array:list,map=False):
     return array
 
 FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
-    '>':'<','(':')',')':'(','◐':'◑','◑':'◐'}
+    '>':'<','(':')',')':'(','◐':'◑','◑':'◐','↙':'↘','↘':'↙','כ':'c',
+    'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↗','↗':'↖','⌋':'⌊',
+    '⌊':'⌋'}
 # Dictionary of chars (keys) and their opposites (values)
 
 class Game():
@@ -66,6 +69,7 @@ class Game():
         self.objs = Objs()
         self.quit = False
         self.camera_follow = []
+        self.theme = ""
 
         self.frames = 0
         self.tick = 0
@@ -76,9 +80,12 @@ class Game():
         self.game_speed = 0
         self.total = 0
 
+        self.pool = ThreadPool(processes=1)
+
     def run_game(self):
         """Combine the map and the objs and begin the main game loop."""
         self.init_map()
+        self.play_theme()
         while(not self.quit):
             self.game_loop()
         self.end_game()
@@ -92,6 +99,8 @@ class Game():
 
     def end_game(self):
         """All the comes after the main game_loop"""
+        self.pool.terminate()
+        self.pool.join()
         self.total = self.frames/(time.time()-self.start_time)
         print(f"{SPACES}Game Over!\nAverage FPS: {self.total:.3f}")
         scores = []
@@ -106,16 +115,11 @@ class Game():
     def game_loop(self):
         """This is what loops for every game tick.
         It is run by the run_game method."""
-        # Update Frame
         self.wait()
         self.move()
         self.map.print_all()
         #self.debug_maps()
         self.run_fps()
-        # Lag Frame
-        #self.wait()
-        #self.map.print_all()
-        #self.debug_maps()
     
     def wait(self):
         self.loop_time = time.time()
@@ -147,11 +151,16 @@ class Game():
                 print(d,end="")
             print()
         print()
-        
+
     def play_theme(self):
+        self.pool.apply_async(self.theme_loop)
+    def theme_loop(self):
         """Add this function to thread 2."""
-        theme = ''
-        playsound(theme)
+        if len(self.theme) > 0:
+            while True:
+                playsound(self.theme)
+        else:
+            time.sleep(1)
 
     def move(self):
         if keyboard.is_pressed("q"):
@@ -161,13 +170,6 @@ class Game():
         self.objs.set_live_objs()
         for i in self.objs.live_objs:
             obj = self.objs.objs[i]
-            # ALL THAT SHOULD FALL WILL FALL
-            if obj.grav_tick > 0:
-                if self.frames % obj.grav_tick == 0:
-                    if obj.jump != 0:
-                        self.move_obj(obj,0,-obj.jump)
-                        obj.jump -= 1
-                    else:   self.move_obj(obj,0,obj.yspeed)
             # PLAYER MOVEMENT
             if obj.move == "wasd":
                 if keyboard.is_pressed("w"):    self.move_up(obj)
@@ -188,12 +190,19 @@ class Game():
                         if self.can_move(obj,move_x=obj.xspeed):
                             self.move_right(obj)
                         else:
-                            obj.face_right = False
+                            obj.flip_sprite()
                     else:
                         if self.can_move(obj,move_x=-obj.xspeed):
                             self.move_left(obj)
                         else:
-                            obj.face_right = True
+                            obj.flip_sprite()
+            # ALL THAT SHOULD FALL WILL FALL
+            if obj.grav_tick > 0:
+                if self.frames % obj.grav_tick == 0:
+                    if obj.jump != 0 and keyboard.is_pressed("w"):
+                        self.move_obj(obj,0,-obj.jump)
+                        obj.jump -= 1
+                    else:   self.move_obj(obj,0,obj.yspeed)
             # DAMAGE-TAKING
             for e_char in obj.enemy_chars:
                 self.take_dmg(obj,e_char)
@@ -478,8 +487,9 @@ class Map():
                         # Remove the collision point that came from the input map
                         if obj.geom == "line":
                             for x2 in range(length):
-                                self.set_xy(x - (length//2) + x2 + 1,y,obj.char,"c")
-                                # place sprite char on coll map
+                                if obj.array[-1][x2] != BLANK:
+                                    self.set_xy(x - (length//2) + x2 + 1,y,obj.char,"c")
+                                    # place sprite char on coll map
                         elif obj.geom == "all":
                             for y2 in range(len(obj.array)):
                                 for x2 in range(len(obj.array[0])):

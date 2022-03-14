@@ -5,6 +5,7 @@ g = tx.Game()
 g.map.set_path('tetris/tetris2p_map.txt')
 g.objs.get_sprites('tetris/tetris_sprites.txt')
 g.game_speed = .5
+g.theme = 'tetris/song.mp3'
 
 g.objs.new(str(random.randint(1,9)),'l',move = "wasd",grav_tick=8,
     xspeed =2,yspeed = 1,geom="complex",spawn=[9,27],animate=False)
@@ -61,6 +62,7 @@ def game_loop(stuck):
 def run_tetris():
     stuck = 0
     g.init_map()
+    g.play_theme()
     while(not g.quit):
         game_loop(stuck)
     g.end_game()

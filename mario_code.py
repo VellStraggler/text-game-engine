@@ -5,7 +5,7 @@ def main():
     g.map.set_path('mario/mario_map.txt')
     g.objs.get_sprites('mario/mario_sprites.txt')
     g.camera_follow = ["x"]
-    g.game_speed = .02
+    g.game_speed = 0.07
 
     g.objs.new('mario','m',move = "wasd",grav_tick=1,
         xspeed =3,yspeed = 3,enemy_chars=['g','f'],
@@ -15,7 +15,7 @@ def main():
     g.objs.new('block','b')
     g.objs.new('block2','v')
     g.objs.new('pipe','p')
-    g.objs.new('flag','f',dmg_dirs=['left','up'])
+    g.objs.new('flag','f',geom="line",dmg_dirs=['left','up'])
 
     g.run_game()
 

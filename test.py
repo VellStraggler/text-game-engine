@@ -1,3 +1,2 @@
-print("\\","/")
-string = ["\\","/"]
-print(string[0],string[1])
+print("┳═一i")
+print("hihi")
