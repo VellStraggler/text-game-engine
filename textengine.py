@@ -1,6 +1,5 @@
 import time, keyboard, os, random
 from multiprocessing.pool import ThreadPool
-from numpy import newaxis
 from playsound import playsound
 
 DIRPATH = os.path.dirname(__file__)
@@ -26,8 +25,6 @@ WGC_Y = W_HEI//2 - 5
 # Helpful in debugging information.
 SPACES = ' ' * 50
 LINES = '\n' * 50
-BAD_CHARS = "⚫"
-
 
 def grid_patcher(array:list,map=False):
     """Makes arrays rectangular, that they are filled with arrays of
@@ -118,7 +115,6 @@ class Game():
         self.wait()
         self.move()
         self.map.print_all()
-        #self.debug_maps()
         self.run_fps()
     
     def wait(self):
@@ -126,31 +122,12 @@ class Game():
         while(self.waiting<self.game_speed):
             self.waiting = time.time() - self.loop_time
         self.waiting = 0
-
     def run_fps(self):
         self.frames += 1
         self.tick = (self.tick + 1)%MAX_TICK
         self.f_time = time.time()
         print("FPS:",1/(self.f_time-self.loop_time))
         self.fpss.append(self.f_time)
-
-    def debug_maps(self):
-        '''print("input")
-        for y in self.map.inp_map:
-            for x in y:
-                print(x,end="")
-            print()
-        print("output")
-        for a in self.map.out_map:
-            for b in a:
-                print(b,end="")
-            print()
-        print("collision")'''
-        for c in self.map.geom_map:
-            for d in c:
-                print(d,end="")
-            print()
-        print()
 
     def play_theme(self):
         self.pool.apply_async(self.theme_loop)
@@ -234,13 +211,12 @@ class Game():
                 pass
             else: # All non-player mobs, DEATH
                 if curr_obj.hp <= 0:
-                    self.map.inp_map[curr_obj.origy][curr_obj.origx] = BLANK
                     curr_obj.set_origin(0,0)
                     curr_obj.array = [[' ']]
                     curr_obj.move = None
             i+=1
         
-        self.map.copy_inp_map(self.map.out_map) # Reset the output map 
+        self.map.clear_map(self.map.out_map)
         self.create_map() # Remap the sprites
 
     #Functions for better Readability
@@ -263,16 +239,17 @@ class Game():
 
     def replace_chars(self,obj,new_char):
         """ Replaces the characters of an object on the
-        INPUT_MAP with new_char."""
+        INPUT_MAP with new_char.
+        ISSUE: Not working properly."""
         new_obj = self.obj_from_char(new_char)
-        # Only works correctly when width of obj sprite is divisible
-        # by width of new_obj
-        for y in range((obj.height()//len(new_obj.array))):
-            for x in range(obj.width()//len(new_obj.array[0])):
-                newx = obj.origx + x*len(new_obj.array[0])
-                newy = obj.top_y + y*len(new_obj.array)
-                if not self.map.is_xy(newx,newy,BLANK,"o") or self.map.is_xy(newx,newy,obj.char,"o"):
-                    self.map.set_xy(newx,newy,new_char,"i")
+        assert new_obj.height() == 1, "New Object's gotta be short."
+        if obj.height()%new_obj.height()==0 and obj.width()%new_obj.width()==0:
+            for y in range(obj.height()):
+                for x in range(obj.width()//new_obj.width()):
+                    nx = obj.origx + (x * new_obj.width())
+                    ny = obj.top_y + y
+                    if not self.map.is_xy(nx,ny,BLANK,"o"):
+                        self.map.set_xy(nx,ny,new_char,"i")
 
     def set_new_img(self,obj,new_img):
         obj.img = new_img
@@ -300,23 +277,20 @@ class Game():
                 if e_char in self.map.geom_map[ys-1][xs:xf]: #ABOVE
                     return True
             if 'up' in enemy.dmg_dirs:
-                if e_char in self.map.geom_map[yf][xs:xf]: #BELOW
+                if e_char in self.map.geom_map[yf+1][xs:xf]: #BELOW
                     return True
             for y in range(ys,yf):
                 if 'right' in enemy.dmg_dirs:
-                    if self.map.geom_map[y][xs] == e_char: #LEFT
+                    if self.map.geom_map[y][xs-1] == e_char: #LEFT
                         return True
                 if 'left' in enemy.dmg_dirs:
-                    if e_char in self.map.geom_map[y][xf+1] == e_char: #RIGHT
+                    if e_char in self.map.geom_map[y][xf] == e_char: #RIGHT
                         return True
         except:
             pass
         return False
 
-    def teleport_obj(self,obj,y:int=0,x:int=0,char_left=BLANK,leave_shadow=False):
-        if leave_shadow:
-            self.objs.new(img=obj.img,char=char_left,coords=[obj.origx,obj.origy],
-            geom="complex",set_rotate=obj.rotate) # Deprecated
+    def teleport_obj(self,obj,y:int=0,x:int=0,char_left=BLANK):
         if self.map.is_xy(obj.origx,obj.origy,obj.char,"i"):
             # If char has not already been replaced
             self.map.set_xy(obj.origx,obj.origy,char_left,"i")
@@ -327,12 +301,11 @@ class Game():
         """Moves a single object move_x and move_y amount OR LESS."""
         while move_x != 0 or move_y != 0:
             if self.can_move(obj,move_x,move_y):
-                self.map.set_xy(obj.origx,obj.origy,BLANK,"i")
-                # Clears the space the sprite is at.
+                self.map.move_map_char(obj,move_x,move_y)
+                #self.map.set_xy(obj.origx,obj.origy,BLANK,"i")
                 obj.set_origy(obj.origy+move_y)
                 obj.set_origx(obj.origx+move_x)
-                self.map.set_xy(obj.origx,obj.origy,obj.char,"i")
-                # Sets the new coord.
+                #self.map.set_xy(obj.origx,obj.origy,obj.char,"i")
                 move_x,move_y = 0,0
             else:
                 if move_x != 0:
@@ -348,11 +321,12 @@ class Game():
          Returns True if character can move in that diRECTion."""
         if obj.geom == "all":
             while (move_x != 0 or move_y != 0):
-                for y in range(move_y + obj.origy - obj.height() + 1,move_y + obj.origy + 1):
+                for y in range(move_y + obj.top_y, move_y + obj.origy + 1):
                     for x in range(move_x + obj.origx,move_x + obj.origx + obj.width()):
                         try:
-                            if self.map.geom_map[y][x] != BLANK and self.map.geom_map[y][x] != obj.char:
-                                return False
+                            if self.map.geom_map[y][x] != BLANK:
+                                if self.map.geom_map[y][x] != obj.char:
+                                    return False
                         except:
                             return False
                 if move_x != 0:
@@ -375,16 +349,14 @@ class Game():
                     move_y += int((move_y*-1)/(abs(move_y)))
             return True
         elif obj.geom == "complex":
+            """ISSUE: Not working for some odd reason."""
             while (move_x != 0 or move_y != 0):
-                for y in range(move_x + obj.origy - obj.height() + 1,move_x +obj.origy + 1):
-                    for x in range(move_y + obj.origx,move_y + obj.origx + obj.width()):
-                        try:
+                for y in range(move_y + obj.top_y,move_y + obj.origy + 1):
+                    for x in range(move_x + obj.origx,move_x + obj.origx + obj.width()):
+                        if self.map.geom_map[y-move_y][x-move_x] == obj.char:
                             if self.map.geom_map[y][x] != BLANK:
-                                if self.map.geom_map[y][x] != BLANK:
-                                    if self.map.geom_map[y][x] != obj.char:
-                                        return False
-                        except:
-                            return False
+                                if self.map.geom_map[y][x] != obj.char:
+                                    return False
                 if move_x != 0:
                     move_x += int((move_x*-1)/(abs(move_x)))
                 if move_y != 0:
@@ -395,43 +367,45 @@ class Game():
         """This is necessary to create the Map's Output Map.
         A new object will be created for each sprite that is both
         on the map and in the sprite dictionary."""
-        for mapy in range(0,len(self.map.out_map)):
-          for mapx in range(0,len(self.map.out_map[mapy])):
-            if not self.map.is_xy(mapx,mapy,BLANK,'o'): #SKIP BLANKS (DUH)
-                for obji in range(len(self.objs.objs)):
-                # Goes by range so that it doesn't go through newly-added objs.
-                    obj = self.objs.objs[obji]
-                    curr_obj = obj # curr_obj is the pointer this func ops on.
-                    if curr_obj.char != '': # Make sure they have a map char
-                        # Check if a obj's map char is present on the map.
-                        if self.map.is_xy(mapx,mapy,curr_obj.char,"o"):
-                            if not self.map.inited:
-                                if curr_obj.move != None or curr_obj.grav_tick > 0:
-                                # Objs that never move won't have special attributes.
-                                    if curr_obj.get_origin() != [0,0]:
-                                    # Makes sure it's not the only obj, and has a set coord.
-                                        curr_obj = self.objs.copy(obji)
-                                curr_obj.set_origin(mapx,mapy)
-                            self.map.set_xy(mapx, mapy, BLANK,"o") # remove origin char
-                            # Print a sprite around its origin.
-                            for obj_y in range(curr_obj.height()):
-                                blanks_before = True
-                                blanks_after = True
-                                for obj_x in range((curr_obj.width()//2)+1):
-                                    char = curr_obj.get_char(obj_x,obj_y)
-                                    # Don't put any blanks at the start or 
-                                    # end of a line of a sprite.
-                                    if char != BLANK or not blanks_before:
-                                        blanks_before = False
-                                        ypos = mapy + obj_y - curr_obj.height()
-                                        xpos = mapx + obj_x
-                                        self.map.set_xy(xpos, ypos, char,"o")
-                                    char = curr_obj.get_char(curr_obj.width()-obj_x,obj_y)
-                                    if char != BLANK or not blanks_after:
-                                        blanks_after = False
-                                        ypos = mapy + obj_y - curr_obj.height()
-                                        xpos = mapx - obj_x + curr_obj.width()
-                                        self.map.set_xy(xpos, ypos, char,"o")
+        self.map.clear_map(self.map.out_map)
+        objrange = len(self.objs.objs)
+        for i in self.map.sparse_map:
+            mapx = i[1]
+            mapy = i[0]
+            char = i[2]
+            for obji in range(objrange):
+            # Goes by range so that it doesn't go through newly-added objs.
+                obj = self.objs.objs[obji]
+                curr_obj = obj # curr_obj is the pointer this func ops on.
+                if curr_obj.char == char: # Make sure they have char as their self.char
+                    # Check if a obj's map char is present on the map.
+                    if not self.map.inited:
+                        if curr_obj.move != None or curr_obj.grav_tick > 0:
+                        # Objs that never move won't have special attributes.
+                            if curr_obj.get_origin() != [0,0]:
+                            # Makes sure it's not the only obj of its kind,
+                            # and has a set coord.
+                                curr_obj = self.objs.copy(obji)
+                        curr_obj.set_origin(mapx,mapy)
+                    # Print a sprite around its origin.
+                    for obj_y in range(curr_obj.height()):
+                        blanks_before = True
+                        blanks_after = True
+                        for obj_x in range((curr_obj.width()//2)+1):
+                            char = curr_obj.get_char(obj_x,obj_y)
+                            # Don't put any blanks at the start or 
+                            # end of a line of a sprite.
+                            if char != BLANK or not blanks_before:
+                                blanks_before = False
+                                ypos = mapy + obj_y - curr_obj.height()
+                                xpos = mapx + obj_x
+                                self.map.set_xy(xpos, ypos, char,"o")
+                            char = curr_obj.get_char(curr_obj.width()-obj_x,obj_y)
+                            if char != BLANK or not blanks_after:
+                                blanks_after = False
+                                ypos = mapy + obj_y - curr_obj.height()
+                                xpos = mapx - obj_x + curr_obj.width()
+                                self.map.set_xy(xpos, ypos, char,"o")
         self.map.inited = True
         self.map.set_geom(self.objs)
         self.remove_extras()
@@ -451,8 +425,9 @@ class Map():
 
     def __init__(self):
         self.path = ""
-        self.inp_map = [] # Map of sprite origin coords.
-        self.sparse_map = []
+        self.width = 0
+        self.height = 0
+        self.sparse_map = [] # [[y,x,char],[y,x,char],..]
         # Stores each input map char and its coordinates.
         self.out_map = []
         # Set using the create_map function in the GameObject class.
@@ -464,77 +439,82 @@ class Map():
 
     def set_geom(self,objs):
         """Called after the input and output maps have been made."""
-        self.copy_inp_map(self.geom_map)
+        self.clear_map(self.geom_map)
         last_obj = None
         assert len(self.out_map) > 0, "Error: Output map has not been created"
-        for mapy in range(len(self.out_map)):
-            for mapx in range(len(self.out_map[mapy])):
-                if not self.is_xy(mapx,mapy,BLANK,"i"): # Skip blank spots.
-                    # Find the object belonging to the character on OUT_MAP.
-                    found = False
-                    if last_obj != None and last_obj.char == self.get_xy(mapx,mapy,"i"):
+        for i in self.sparse_map:
+            mapx = i[1]
+            mapy = i[0]
+            char = i[2]
+            # Find the object belonging to the character on OUT_MAP.
+            found = False
+            if last_obj != None and last_obj.char == char:
+                found = True
+                obj = last_obj
+                # Checks to see if this char is the same as the last
+                # Theoretically improves efficiency
+            else:
+                i = 0
+                while i < len(objs.objs) and not found:
+                    obj = objs.objs[i]
+                    if obj.char == char:
+                        last_obj = obj
                         found = True
-                        obj = last_obj
-                        # Checks to see if this char is the same as the last
-                        # Theoretically improves efficiency
-                    else:
-                        i = 0
-                        while i < len(objs.objs) and not found:
-                            obj = objs.objs[i]
-                            if obj.char == self.get_xy(mapx,mapy,"i"):
-                                last_obj = obj
-                                found = True
-                            else: i +=1
-                    if found:
-                        # Remove the collision point that came from the input map
-                        self.set_xy(mapx, mapy, BLANK,"c")
-                        if obj.geom == "line":
-                            for x2 in range(obj.width()):
-                                if obj.array[-1][x2] != BLANK:
-                                    self.set_xy(mapx + x2,mapy,obj.char,"c")
-                                    # place sprite char on geom map
-                        elif obj.geom == "all":
-                            for y2 in range(obj.height()):
-                                for x2 in range(obj.width()):
-                                    self.set_xy(mapx+x2, mapy-y2, obj.char,"c")
-                        elif obj.geom == "complex":
-                            # Based on all characters of a sprite that are not blank.
-                            for y2 in range(obj.height()):
-                                for x2 in range(obj.width()):
-                                    if obj.array[y2][x2] != BLANK:
-                                        self.set_xy(mapx+x2,mapy-y2, obj.char,"c")
+                    else: i +=1
+            if found:
+                if obj.geom == "line":
+                    for x2 in range(obj.width()):
+                        if obj.array[-1][x2] != BLANK:
+                            self.set_xy(mapx + x2,mapy,obj.char,"g")
+                            # place sprite char on geom map
+                elif obj.geom == "all":
+                    for y2 in range(obj.height()):
+                        for x2 in range(obj.width()):
+                            self.set_xy(mapx+x2, mapy-y2, obj.char,"g")
+                elif obj.geom == "complex":
+                    # Based on all characters of a sprite that are not blank.
+                    for y2 in range(obj.height()):
+                        for x2 in range(obj.width()):
+                            if obj.array[y2][x2] != BLANK:
+                                self.set_xy(mapx+x2,mapy-y2, obj.char,"g")
 
     def set_path(self,path=""):
         if len(path)>0:
             self.path = path
         self.store_map()
-        self.inp_map = grid_patcher(self.inp_map,True)
-        self.copy_inp_map(self.out_map)
+        self.clear_map(self.out_map)
 
-    def copy_inp_map(self,copy):
-        if len(copy) == 0:
-            for y in range(len(self.inp_map)):
-                copy.append(self.inp_map[y][:])
+    def clear_map(self,copy):
+        """Create a blank map of size self.width by self.height."""
+        if len(copy) == 0: # If the copy is new.
+            for y in range(self.height):
+                copy.append(list(BLANK * self.width))
         else:
-            assert len(self.inp_map[-1]) == len(copy[0]),"Error: maps are not the same sizes"
-            for y in range(len(self.inp_map)):
-                copy[y] = self.inp_map[y][:]
+            assert len(copy) == self.height, "Map must be the same height."
+            assert len(copy[-1]) == self.width, "Map must be the same width."
+            for y in range(self.height):
+                copy[y] = (list(BLANK * self.width))
 
     def store_map(self):
-        """ Stores text from file as 2D array or list:
-        [[x1,x2,x3],[x1,x2,x3]]
-        Reads from the preset path, saves to inp_map """
+        """ Stores characters and their coords in self.sparse_map,
+        using a preset path. Also sets self.width and self.height. """
         self.path = DIRPATH + "\\" + self.path
         # Adds parent directory of running program
+        y = 0
+        maxwidth = 0
         with open(self.path,'r') as file:
             curr_line = file.readline() # stores first line as string
             while curr_line:
-                xlist = [] # Begin a new row of items
                 curr_line = curr_line[:-1] # Remove newline calls.
-                for char in curr_line:
-                    xlist.append(char)
-                self.inp_map.append(xlist) # Add row to the inp_map
+                if len(curr_line) > maxwidth:
+                    maxwidth = len(curr_line)
+                for x in range(len(curr_line)):
+                    if curr_line[x] != BLANK:
+                        self.sparse_map.append([y,x,curr_line[x]])
+                y += 1
                 curr_line = file.readline()
+        self.height = y - 1
+        self.width = maxwidth
             
     def print_all(self):
         """Uses coordinate-based printing. Comparatively slow.
@@ -546,44 +526,100 @@ class Map():
         print(CUR * (W_HEI+INFO_HEI))
         for row in range(self.w_corner[0],row_and_hei):
         # UPDATE: Add check to see if it's any different from the new char
-            [print(i,end="") for i in self.out_map[row][self.w_corner[1]:wid]]
+            try:[print(i,end="") for i in self.out_map[row][self.w_corner[1]:wid]]
+            except:print(BLANK,end='')
             print()
         print()
-            
-    def set_xy(self,x,y,char,map = "o"):
-        """Sets the character at a given position."""
+
+    def move_map_char(self,obj,movex=0,movey=0):
+        """Similar to self.set_xy, only applies to sparse_map."""
+        oldx = obj.origx
+        oldy = obj.origy
+        newx = oldx + movex
+        newy = oldy + movey
+        char = obj.char
+        max = len(self.sparse_map)
+        i = 0
+        while i < max:
+            curry = self.sparse_map[i][0]
+            currx = self.sparse_map[i][1]
+            currchar = self.sparse_map[i][2]
+            if curry == oldy and currx == oldx and char == currchar:
+                self.sparse_map.pop(i)
+                # We already have the new data, no need to save this.
+                i = max
+            else:
+                i+= 1
+        i = 0
+        while i < (max-1):
+            if self.sparse_map[i][0] < newy or self.sparse_map[i][1] < newx:
+                i+=1
+            else:
+                self.sparse_map.insert(i,[newy,newx,char])
+                i = max
+
+
+    def set_xy(self,x,y,char,map = "o",prev_char = None):
+        """Sets char at a given position on map"""
         if x > -1 < y:
             try:
                 if map == "o":
                     self.out_map[y][x] = char
-                elif map == "c":
+                elif map == "g":
                     self.geom_map[y][x] = char
                 elif map == "i":
-                    self.inp_map[y][x] = char
+                    stop = False
+                    i = 0
+                    length = len(self.sparse_map)
+                    if char == BLANK: # Delete item from sparse_map
+                        while i < length and not stop:
+                            mx = self.sparse_map[i][1]
+                            my = self.sparse_map[i][0]
+                            mchar = self.sparse_map[i][2]
+                            if my == y and mx == x and mchar == prev_char:
+                                self.sparse_map.pop(i)
+                                stop = True
+                            elif my > y:
+                                stop = True # You're trying to delete blankness.
+                            else:
+                                i+= 1
+                    else:
+                        while i < length and not stop:
+                            if self.sparse_map[i][0] < y or self.sparse_map[i][1] < x:
+                                i+=1
+                            else:
+                                self.sparse_map.insert(i,[y,x,char])
+                                stop = True
+                            
             except:
                 pass # For going out of bounds.
     def is_xy(self,x,y,char,map = "o"):
         """Returns if a certain character is at this position."""
-        try:
-            if map == "o":
-                return self.out_map[y][x] == char
-            elif map == "c":
-                return self.geom_map[y][x] == char
-            elif map == "i":
-                return self.inp_map[y][x] == char
-        except:
-            return False # For going out of bounds.
+        return char in self.get_xy(x,y,map)
     def get_xy(self,x,y,map = "o"):
-        """Returns what characters is at this position."""
+        """Returns what character is at this position."""
         try:
             if map == "o":
                 return self.out_map[y][x]
-            elif map == "c":
+            elif map == "g":
                 return self.geom_map[y][x]
             elif map == "i":
-                return self.inp_map[y][x]
+                stop = False
+                i = 0
+                chars = []
+                while i < len(self.sparse_map) and not stop:
+                    if self.sparse_map[i][0] == y or self.sparse_map[i][1] == x:
+                        chars.append(self.sparse_map[i][2])
+                        i+=1
+                    elif self.sparse_map[i][0] > y:
+                        stop = True
+                    else:
+                        i+=1
+                if len(chars) == 0:
+                    return [BLANK] # Nothing is saved at the given coord.
+                return chars
         except:
-            return BLANK # For going out of bounds.
+            return [BLANK] # For going out of bounds.
 
 class Objs():
     def __init__(self):
@@ -685,7 +721,7 @@ class Objs():
             self.origx = x
         def set_origy(self,y):
             self.origy = y
-            self.top_y = self.origy - self.height()
+            self.top_y = self.origy - self.height() + 1
 
         def get_origin(self):
             return [self.origx,self.origy]
@@ -708,16 +744,15 @@ class Objs():
             """Flips the sprite of an image vertically (left to right)"""
             self.face_right = not self.face_right
             if self.animate:
-                maxx = len(self.array[0])
-                for y in range(len(self.array)):
-                    for x in range(maxx//2+maxx%2):
+                for y in range(self.height()):
+                    for x in range(self.width()//2+self.width()%2):
                         hold = self.array[y][x]
                         if hold in FLIP_CHARS.keys():
                             hold = FLIP_CHARS[hold]
-                        self.array[y][x] = self.array[y][maxx-x-1]
+                        self.array[y][x] = self.array[y][self.width()-x-1]
                         if self.array[y][x] in FLIP_CHARS.keys():
                             self.array[y][x] = FLIP_CHARS[self.array[y][x]]
-                        self.array[y][maxx-x-1] = hold
+                        self.array[y][self.width()-x-1] = hold
 
         def rotate_right(self):
             """Rotates the object sprite 90 degrees."""

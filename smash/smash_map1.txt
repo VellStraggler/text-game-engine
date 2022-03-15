@@ -3,29 +3,29 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-           q                       w                    e                 r                 t                p               f                     j                   k                    b
-                   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a                
-
-
-
-
-   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a
+   a                                   w                    e                 r                 t                p               f                     j                   k                    b             a
+   a                   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a          
+   a
+   a
+   a
+   a                                                                                                                                                                                               q
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
 
 
 

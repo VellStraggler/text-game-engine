@@ -14,10 +14,16 @@
 
   b                                                                                              b
 
-  b    m                             g    p       g         g                         g    p     b
+  b         m    p                   g    p       g         g                         g    p     b
 
   b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
 
   b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
 
-  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
+  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b                                                                              
+
+
+
+
+
+
