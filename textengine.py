@@ -146,7 +146,7 @@ class Game():
                 print(b,end="")
             print()
         print("collision")
-        for c in self.map.coll_map:
+        for c in self.map.geom_map:
             for d in c:
                 print(d,end="")
             print()
@@ -290,24 +290,24 @@ class Game():
             obj.hp -= enemy.dmg
     def should_take_dmg(self,obj,enemy,e_char):
         """ Check all sides of an object for enemy chars
-        on the coll_map"""
+        on the geom_map"""
         xs = obj.topleft[0]
         xf = xs+obj.bot_right_x()+1
         ys = obj.topleft[1]
         yf = ys+obj.bot_right_y()+1
         try:
             if 'down' in enemy.dmg_dirs:
-                if e_char in self.map.coll_map[ys-1][xs:xf]: #ABOVE
+                if e_char in self.map.geom_map[ys-1][xs:xf]: #ABOVE
                     return True
             if 'up' in enemy.dmg_dirs:
-                if e_char in self.map.coll_map[yf][xs:xf]: #BELOW
+                if e_char in self.map.geom_map[yf][xs:xf]: #BELOW
                     return True
             for y in range(ys,yf):
                 if 'right' in enemy.dmg_dirs:
-                    if self.map.coll_map[y][xs] == e_char: #LEFT
+                    if self.map.geom_map[y][xs] == e_char: #LEFT
                         return True
                 if 'left' in enemy.dmg_dirs:
-                    if e_char in self.map.coll_map[y][xf+1] == e_char: #RIGHT
+                    if e_char in self.map.geom_map[y][xf+1] == e_char: #RIGHT
                         return True
         except:
             pass
@@ -351,7 +351,7 @@ class Game():
                 for y in range(move_y + obj.origy - obj.bot_right_y(),move_y + obj.origy + 1):
                     for x in range(move_x + obj.topleft[0] + 1,move_x + obj.topleft[0] + obj.bot_right_x()+2):
                         try:
-                            if self.map.coll_map[y][x] != BLANK and self.map.coll_map[y][x] != obj.char:
+                            if self.map.geom_map[y][x] != BLANK and self.map.geom_map[y][x] != obj.char:
                                 return False
                         except:
                             return False
@@ -364,8 +364,8 @@ class Game():
             while (move_x != 0 or move_y != 0):
                 for x in range(move_x + obj.topleft[0] + 1,move_x + obj.topleft[0] + obj.bot_right_x()+2):
                     try:
-                        if self.map.coll_map[obj.origy+move_y][x] != BLANK:
-                            if self.map.coll_map[obj.origy+move_y][x] != obj.char:
+                        if self.map.geom_map[obj.origy+move_y][x] != BLANK:
+                            if self.map.geom_map[obj.origy+move_y][x] != obj.char:
                                 return False
                     except:
                         return False
@@ -379,9 +379,9 @@ class Game():
                 for y in range(obj.origy - obj.bot_right_y(),obj.origy + 1):
                     for x in range(obj.topleft[0] + 1,obj.topleft[0] + obj.bot_right_x()+2):
                         try:
-                            if self.map.coll_map[y][x] != BLANK:
-                                if self.map.coll_map[y+move_y][x+move_x] != BLANK:
-                                    if self.map.coll_map[y+move_y][x+move_x] != obj.char:
+                            if self.map.geom_map[y][x] != BLANK:
+                                if self.map.geom_map[y+move_y][x+move_x] != BLANK:
+                                    if self.map.geom_map[y+move_y][x+move_x] != obj.char:
                                         return False
                         except:
                             return False
@@ -432,7 +432,7 @@ class Game():
                                         xpos = mapx - obj_x + (maxx // 2) + maxx%2
                                         self.map.set_xy(xpos, ypos, char,"o")
         self.map.inited = True
-        self.map.set_coll(self.objs)
+        self.map.set_geom(self.objs)
         self.remove_extras()
 
     def remove_extras(self):
@@ -445,23 +445,25 @@ class Game():
 
 class Map():
     """Three arrays are stored in a Map object: the wasd input 
-    map, the output map, and a coll map.
+    map, the output map, and a geom map.
     Set the map path upon initialization"""
 
     def __init__(self):
         self.path = ""
-        self.inp_map = [] # Map of sprite origin coords
+        self.inp_map = [] # Map of sprite origin coords.
+        self.sparse_map = []
+        # Stores each input map char and its coordinates.
         self.out_map = []
         # Set using the create_map function in the GameObject class.
-        self.coll_map = [] # For checking collision.
+        self.geom_map = [] # For checking collision.
         self.w_corner = [0,0] # Y,X
         # These are the map coordinates of the 
         # top-left-most item shown in the window.
         self.inited = False
 
-    def set_coll(self,objs):
+    def set_geom(self,objs):
         """Called after the input and output maps have been made."""
-        self.copy_inp_map(self.coll_map)
+        self.copy_inp_map(self.geom_map)
         last_obj = None
         assert len(self.out_map) > 0, "Error: Output map has not been created"
         for y in range(len(self.out_map)):
@@ -489,7 +491,7 @@ class Map():
                             for x2 in range(length):
                                 if obj.array[-1][x2] != BLANK:
                                     self.set_xy(x - (length//2) + x2 + 1,y,obj.char,"c")
-                                    # place sprite char on coll map
+                                    # place sprite char on geom map
                         elif obj.geom == "all":
                             for y2 in range(len(obj.array)):
                                 for x2 in range(len(obj.array[0])):
@@ -559,7 +561,7 @@ class Map():
                 if map == "o":
                     self.out_map[y][x] = char
                 elif map == "c":
-                    self.coll_map[y][x] = char
+                    self.geom_map[y][x] = char
                 elif map == "i":
                     self.inp_map[y][x] = char
             except:
@@ -570,7 +572,7 @@ class Map():
             if map == "o":
                 return self.out_map[y][x] == char
             elif map == "c":
-                return self.coll_map[y][x] == char
+                return self.geom_map[y][x] == char
             elif map == "i":
                 return self.inp_map[y][x] == char
         except:
@@ -581,7 +583,7 @@ class Map():
             if map == "o":
                 return self.out_map[y][x]
             elif map == "c":
-                return self.coll_map[y][x]
+                return self.geom_map[y][x]
             elif map == "i":
                 return self.inp_map[y][x]
         except:
