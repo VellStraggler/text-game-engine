@@ -135,7 +135,7 @@ class Game():
         self.fpss.append(self.f_time)
 
     def debug_maps(self):
-        print("input")
+        '''print("input")
         for y in self.map.inp_map:
             for x in y:
                 print(x,end="")
@@ -145,7 +145,7 @@ class Game():
             for b in a:
                 print(b,end="")
             print()
-        print("collision")
+        print("collision")'''
         for c in self.map.geom_map:
             for d in c:
                 print(d,end="")
@@ -267,12 +267,12 @@ class Game():
         new_obj = self.obj_from_char(new_char)
         # Only works correctly when width of obj sprite is divisible
         # by width of new_obj
-        for y in range((obj.bot_right_y()//len(new_obj.array))+1):
-            for x in range(1,obj.bot_right_x()//len(new_obj.array[0])+2):
-                newx = obj.topleft[0] + x*len(new_obj.array[0])
-                newy = obj.topleft[1] + y*len(new_obj.array)
+        for y in range((obj.height()//len(new_obj.array))):
+            for x in range(obj.width()//len(new_obj.array[0])):
+                newx = obj.origx + x*len(new_obj.array[0])
+                newy = obj.top_y + y*len(new_obj.array)
                 if not self.map.is_xy(newx,newy,BLANK,"o") or self.map.is_xy(newx,newy,obj.char,"o"):
-                    self.map.set_xy(newx-1,newy,new_char,"i")
+                    self.map.set_xy(newx,newy,new_char,"i")
 
     def set_new_img(self,obj,new_img):
         obj.img = new_img
@@ -291,10 +291,10 @@ class Game():
     def should_take_dmg(self,obj,enemy,e_char):
         """ Check all sides of an object for enemy chars
         on the geom_map"""
-        xs = obj.topleft[0]
-        xf = xs+obj.bot_right_x()+1
-        ys = obj.topleft[1]
-        yf = ys+obj.bot_right_y()+1
+        xs = obj.origx
+        xf = xs+obj.width()
+        ys = obj.top_y
+        yf = ys+obj.height()
         try:
             if 'down' in enemy.dmg_dirs:
                 if e_char in self.map.geom_map[ys-1][xs:xf]: #ABOVE
@@ -348,8 +348,8 @@ class Game():
          Returns True if character can move in that diRECTion."""
         if obj.geom == "all":
             while (move_x != 0 or move_y != 0):
-                for y in range(move_y + obj.origy - obj.bot_right_y(),move_y + obj.origy + 1):
-                    for x in range(move_x + obj.topleft[0] + 1,move_x + obj.topleft[0] + obj.bot_right_x()+2):
+                for y in range(move_y + obj.origy - obj.height() + 1,move_y + obj.origy + 1):
+                    for x in range(move_x + obj.origx,move_x + obj.origx + obj.width()):
                         try:
                             if self.map.geom_map[y][x] != BLANK and self.map.geom_map[y][x] != obj.char:
                                 return False
@@ -362,7 +362,7 @@ class Game():
             return True
         elif obj.geom == "line":
             while (move_x != 0 or move_y != 0):
-                for x in range(move_x + obj.topleft[0] + 1,move_x + obj.topleft[0] + obj.bot_right_x()+2):
+                for x in range(move_x + obj.origx,move_x + obj.origx + obj.width()):
                     try:
                         if self.map.geom_map[obj.origy+move_y][x] != BLANK:
                             if self.map.geom_map[obj.origy+move_y][x] != obj.char:
@@ -376,12 +376,12 @@ class Game():
             return True
         elif obj.geom == "complex":
             while (move_x != 0 or move_y != 0):
-                for y in range(obj.origy - obj.bot_right_y(),obj.origy + 1):
-                    for x in range(obj.topleft[0] + 1,obj.topleft[0] + obj.bot_right_x()+2):
+                for y in range(move_x + obj.origy - obj.height() + 1,move_x +obj.origy + 1):
+                    for x in range(move_y + obj.origx,move_y + obj.origx + obj.width()):
                         try:
                             if self.map.geom_map[y][x] != BLANK:
-                                if self.map.geom_map[y+move_y][x+move_x] != BLANK:
-                                    if self.map.geom_map[y+move_y][x+move_x] != obj.char:
+                                if self.map.geom_map[y][x] != BLANK:
+                                    if self.map.geom_map[y][x] != obj.char:
                                         return False
                         except:
                             return False
@@ -414,22 +414,23 @@ class Game():
                                 curr_obj.set_origin(mapx,mapy)
                             self.map.set_xy(mapx, mapy, BLANK,"o") # remove origin char
                             # Print a sprite around its origin.
-                            maxx = curr_obj.bot_right_x()
-                            for obj_y in range(curr_obj.bot_right_y() + 1):
+                            for obj_y in range(curr_obj.height()):
                                 blanks_before = True
                                 blanks_after = True
-                                for obj_x in range(maxx//2 + 1):
+                                for obj_x in range((curr_obj.width()//2)+1):
                                     char = curr_obj.get_char(obj_x,obj_y)
+                                    # Don't put any blanks at the start or 
+                                    # end of a line of a sprite.
                                     if char != BLANK or not blanks_before:
                                         blanks_before = False
-                                        ypos = mapy + obj_y - curr_obj.bot_right_y()
-                                        xpos = mapx + obj_x - (maxx // 2)
+                                        ypos = mapy + obj_y - curr_obj.height()
+                                        xpos = mapx + obj_x
                                         self.map.set_xy(xpos, ypos, char,"o")
-                                    char = curr_obj.get_char(maxx-obj_x,obj_y)
+                                    char = curr_obj.get_char(curr_obj.width()-obj_x,obj_y)
                                     if char != BLANK or not blanks_after:
                                         blanks_after = False
-                                        ypos = mapy + obj_y - curr_obj.bot_right_y()
-                                        xpos = mapx - obj_x + (maxx // 2) + maxx%2
+                                        ypos = mapy + obj_y - curr_obj.height()
+                                        xpos = mapx - obj_x + curr_obj.width()
                                         self.map.set_xy(xpos, ypos, char,"o")
         self.map.inited = True
         self.map.set_geom(self.objs)
@@ -466,12 +467,12 @@ class Map():
         self.copy_inp_map(self.geom_map)
         last_obj = None
         assert len(self.out_map) > 0, "Error: Output map has not been created"
-        for y in range(len(self.out_map)):
-            for x in range(len(self.out_map[y])):
-                if not self.is_xy(x,y,BLANK,"i"): # Skip blank spots.
+        for mapy in range(len(self.out_map)):
+            for mapx in range(len(self.out_map[mapy])):
+                if not self.is_xy(mapx,mapy,BLANK,"i"): # Skip blank spots.
                     # Find the object belonging to the character on OUT_MAP.
                     found = False
-                    if last_obj != None and last_obj.char == self.get_xy(x,y,"i"):
+                    if last_obj != None and last_obj.char == self.get_xy(mapx,mapy,"i"):
                         found = True
                         obj = last_obj
                         # Checks to see if this char is the same as the last
@@ -480,33 +481,28 @@ class Map():
                         i = 0
                         while i < len(objs.objs) and not found:
                             obj = objs.objs[i]
-                            if obj.char == self.get_xy(x,y,"i"):
+                            if obj.char == self.get_xy(mapx,mapy,"i"):
                                 last_obj = obj
                                 found = True
                             else: i +=1
                     if found:
-                        length = len(obj.array[0]) # Get the width of a sprite.
                         # Remove the collision point that came from the input map
+                        self.set_xy(mapx, mapy, BLANK,"c")
                         if obj.geom == "line":
-                            for x2 in range(length):
+                            for x2 in range(obj.width()):
                                 if obj.array[-1][x2] != BLANK:
-                                    self.set_xy(x - (length//2) + x2 + 1,y,obj.char,"c")
+                                    self.set_xy(mapx + x2,mapy,obj.char,"c")
                                     # place sprite char on geom map
                         elif obj.geom == "all":
-                            for y2 in range(len(obj.array)):
-                                for x2 in range(len(obj.array[0])):
-                                    ypos = y + y2 - obj.bot_right_y()
-                                    xpos = x + x2 - (obj.bot_right_x() // 2)
-                                    self.set_xy(xpos, ypos, obj.char,"c")
+                            for y2 in range(obj.height()):
+                                for x2 in range(obj.width()):
+                                    self.set_xy(mapx+x2, mapy-y2, obj.char,"c")
                         elif obj.geom == "complex":
                             # Based on all characters of a sprite that are not blank.
-                            self.set_xy(x, y, BLANK,"c")
-                            for y2 in range(len(obj.array)):
-                                for x2 in range(len(obj.array[0])):
-                                    ypos = y + y2 - obj.bot_right_y()
-                                    xpos = x + x2 - obj.bot_right_x() // 2
+                            for y2 in range(obj.height()):
+                                for x2 in range(obj.width()):
                                     if obj.array[y2][x2] != BLANK:
-                                        self.set_xy(xpos, ypos, obj.char,"c")
+                                        self.set_xy(mapx+x2,mapy-y2, obj.char,"c")
 
     def set_path(self,path=""):
         if len(path)>0:
@@ -660,7 +656,7 @@ class Objs():
                 self.img = img
             self.origx = coords[0]
             self.origy = coords[1]
-            self.topleft = [0,0] # STORED IN X,Y FORM.
+            self.top_y = 0
             self.geom = geom # Options of: None, line, complex, or all.
             self.move = move
             # Options of: None, random, leftright, updown, wasd, arrows.
@@ -687,10 +683,9 @@ class Objs():
             self.set_origy(y)
         def set_origx(self,x):
             self.origx = x
-            self.topleft[0] = self.origx - len(self.array[0])//2 - len(self.array[0])%2
         def set_origy(self,y):
             self.origy = y
-            self.topleft[1] = self.origy + 1 - len(self.array)
+            self.top_y = self.origy - self.height()
 
         def get_origin(self):
             return [self.origx,self.origy]
@@ -702,15 +697,12 @@ class Objs():
             except: return BLANK
             
         def bot_right(self):
-            """Return coord vals [Y,X] of bot_right char in sprite.
-            The map coord vals are stored in the topleft var."""
-            return [len(self.array[0])-1,len(self.array)-1]
-        def bot_right_x(self):
-            """Get the far right x value of the object sprite"""
-            return len(self.array[0]) - 1
-        def bot_right_y(self):
-            """Get the far right y value of the object sprite"""
-            return len(self.array)-1
+            """Returns width and height"""
+            return [len(self.array[0]),len(self.array)]
+        def width(self):
+            return len(self.array[0])
+        def height(self):
+            return len(self.array)
         
         def flip_sprite(self):
             """Flips the sprite of an image vertically (left to right)"""

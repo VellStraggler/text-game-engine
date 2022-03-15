@@ -7,8 +7,8 @@ g.camera_follow = ["x","y"]
 g.theme = ''#song.wav'
 
 
-g.objs.new("door","d",geom="line")
-g.objs.new("door-open","h",geom="complex")
+g.objs.new("door-open","d",geom="line")
+g.objs.new("door","h",geom="complex")
 g.objs.new("face","q")
 g.objs.new("wall","f")
 g.objs.new("wall-side","s")
