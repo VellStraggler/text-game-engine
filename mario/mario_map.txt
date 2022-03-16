@@ -1,23 +1,30 @@
-  b
+
+
+
 
   b
 
-  b                                           p
+  b
+
+  b                                       p       g
 
   b                                       b   b   b   b                                          b
 
   b                                                                                              b                                                                     b                                            b
 
   b                                                                                              b                                  b                                  b    g              b                        b
-
-  b                                                           b                                  b                             b    b                                  b    b    b    b    b                        b
+        m
+  b                                             g             b              g                   b                             b    b                                  b    b    b    b    b                        b
                                                               
   b                                                                                              b                        b    b    b                                                                               b
 
-  b    m                             g    p       g         g                         g    p     b                   b    b    b    b                   g                       g                         b         b                   f
+  b                                  g                             g   g              g    p     b                   b    b    b    b                   g                       g                         b         b                   f
  
   b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b              v    v    v    v    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
 
   b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b              b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
 
   b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
+
+
+  

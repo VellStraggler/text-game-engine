@@ -1,4 +1,4 @@
-       s                                                                  s    s                                                                s    s                                                                                                                                                              
+       s                                                                  s    s                                                                s    s                                                                                                                                                                                                               z
 
        s                                                                  s    s                                                                s    s
 
@@ -31,7 +31,7 @@
        s                                                                                                                                        s
                                                                           s    s                                                                s    s                                                                                                                                  z
        s                                                                                                                                        s
-                                                                          s    s                                                                s    s                                                                                                       t                          z                        
+                                                                          s    s                                                                s    s                                                                                                       t                          z                                       
        s                                                                                                                                        s
        s                                                                  sf f s                                                                s    s                                                                                                                                  z
 
@@ -55,7 +55,7 @@
 
        s                                                                  s    s                                                                s    s                                                                                                                                  z
 
-       s                                                                  s    s                                                                s    s                                                                                                                                  z
+       s                                                                  s    s                                                                s    s                                                                                                                                   
 
        s                                                                  s    s         g                                                      s    s                                                                                                                                  z
 
@@ -65,27 +65,12 @@
 
        s                                                                  s    s                                                                                                                                                                                                        z
 
-       s                                                                  s    s                                                                                                                                                                                                        z
+       s                                                                  s    s                                                                                                                                                                                                        z                        x     x     x     x     x     x     x     x     x
                                                                                                                                                 b b b
        s                                                                  s    s                                                                                                                                                                                                        z
                                                                                                                                                 s    s
        s                                                                  s    s                                                                                                                                                                                                        z
-       sb b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b s    sb b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b s    sx     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x                                          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+       sb b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b s    sb b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b b s    sx                 x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x     x                                          
 
 
 

@@ -5,7 +5,7 @@ g.map.set_path("undertaker/under_house_map.txt")
 g.objs.get_sprites("undertaker/under_sprites.txt")
 g.camera_follow = ["x","y"]
 g.theme = ''#song.wav'
-
+g.map.window = [40,50]
 
 g.objs.new("door-open","d",geom="line")
 g.objs.new("door","h",geom="complex")
@@ -18,7 +18,7 @@ g.objs.new("tree",'t',geom="line")
 g.objs.new("fence","x",geom="line")
 g.objs.new("fence-side","z")
 g.objs.new("piano","p",geom="line")
-g.objs.new("grimm-d","g",move="wasd",geom="line",xspeed=2,
-    yspeed=1)
+g.objs.new("grimm-d","g",geom="line",move="wasd",
+    xspeed=2, yspeed=1)
 
 g.run_game()
