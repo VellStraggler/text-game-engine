@@ -62,7 +62,8 @@ class Game():
         self.geom_set_dict =    {"all":self.geom_all,
                             "complex":self.geom_complex,
                             "line":self.geom_line,
-                            "skeleton":self.geom_line}
+                            "skeleton":self.geom_line,
+                            None:self.geom_none}
         self.act_set_dict = {"switch_sprite":self.act_switch_sprite,
                             "quit":self.act_quit,
                             "sound":self.act_sound,
@@ -500,6 +501,8 @@ class Game():
         [self.map.set_xy(x + obj.origx, obj.origy, obj.char,"g")
         for x in range(obj.width())
         if obj.array[-1][x] != BLANK]
+    def geom_none(self,obj):
+        pass
 
     def create_map(self):
         """This creates the output AND geometry
