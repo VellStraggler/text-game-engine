@@ -7,15 +7,17 @@ def main():
     g.add_theme('mario/text_mario.wav')
     g.add_sounds_simple(["jump","death","quit"],"mario")
     
-    g.camera_follow = ["x"]
+    g.camera_follow = ["x","y"]
     g.game_delay = 0.0
     g.acts.new(char="f",effect="quit")
     g.acts.new("","location","m","quit",[233,-1])
+    g.acts.new("","location","m","quit",[-1,31])
     
-    g.objs.new('mario','m',geom="complex",move = "wasd",grav_tick=1,
-        xspeed =3,yspeed = 3,enemy_chars=['g','f'],
+    g.objs.new('mario','m',geom="complex",move = "wasd",grav=True,
+        xspeed =70,yspeed = 12,enemy_chars=['g','f'],
         dmg_dirs=['down'])
-    g.objs.new('goomba','g',move = "leftright",grav_tick=1,
+    g.objs.new('goomba','g',move = "leftright",grav=True,
+        xspeed =10,
         dmg_dirs=['left','right','down'],enemy_chars=['m'])
     g.objs.new('block','b')
     g.objs.new('block2','v')
@@ -25,4 +27,4 @@ def main():
     g.run_game()
 
 while True:
-    main()#
+    main()

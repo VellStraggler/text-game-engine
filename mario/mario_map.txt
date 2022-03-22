@@ -2,30 +2,33 @@
 
 
 
-  b
 
-  b
 
-  b                                       p       g
 
-  b                                       b   b   b   b                                          b
 
-  b                                                                                              b                                                                     b                                            b
 
-  b                                                                                              b                                  b                                  b    g              b                        b
+   
+
+   
+
+                                          p       g
+
+                                          b   b   b   b                                          b
+
+                                                                                                 b                                                                     b                                            b
+
+                                                                                                 b                                  b                                  b    g              b                        b
         m
-  b                                             g             b              g                   b                             b    b                                  b    b    b    b    b                        b
+                                                g             b              g                   b                             b    b                                  b    b    b    b    b                        b
                                                               
-  b                                                                                              b                        b    b    b                                                                               b
+                                                                                                 b                        b    b    b                                                                               b
 
-  b                        p         g                             g   g              g    p     b                   b    b    b    b                   g                       g                         b         b                   f
+                           p         g                             g   g              g    p     b                   b    b    b    b                   g                       g                         b         b                   f
  
-  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b              v    v    v    v    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
+  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b              v    v    v    v    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    
 
-  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b              b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
+  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b              b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    
 
-  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
+  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    
 
 
-
-  

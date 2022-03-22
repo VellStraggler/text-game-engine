@@ -17,7 +17,7 @@ s                                                                               
 
 
 
-s       g                                                                                                                                                                                                                s
+sg                                                                                                                                                                                                                       s
 
 
 
@@ -45,7 +45,7 @@ s                                                                               
 
 
 
-s                                                         P                                     p                             H                          k                                                               s
+s                                                         P                                     x                             H                          k                                p                              s
 
 
 

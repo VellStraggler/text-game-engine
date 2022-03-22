@@ -78,3 +78,4 @@ Here are the sounds we intend to add.
 # DEVELOPER NOTES
 Textengine uses the module playsound version 1.2.2, NOT the latest
 Only WAV files work for playing sound or music. MP3 will probably not work.
+There is a MAX SPEED for any given object. It is about 100 spaces per second.

@@ -1,9 +1,10 @@
-
-
-rend_map = [['1','2','3','4','5','6','7'],['2','3','4','5','6','7','8']]
-row = 0
-print_map = ["oh","oh"]
-for line in print_map:
-    line = line.join(rend_map[row][0:4])
-    row+=1
-print(print_map)
+import keyboard
+from time import sleep,time
+key_dict_1 = {"w":'move_up',"a":'move_left',
+                            "s": 'move_down',"d": 'move_right',
+                            "e": 'interact_true',"r": 'rotate_right'}
+start = time()
+while time() - start < 30:
+    for key in key_dict_1.keys():
+        if keyboard.is_pressed(key):
+            print(key_dict_1[key])
