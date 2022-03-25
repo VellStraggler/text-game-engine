@@ -532,8 +532,8 @@ class Game():
         """This creates the output AND geometry
         maps out of all object sprites. NOT for initializing
         objects (not that you asked)."""
-        self.map.clear_map(self.map.rend_map)
-        self.map.clear_map(self.map.geom_map)
+        self.map.empty_map(self.map.rend_map)
+        self.map.empty_map(self.map.geom_map)
         for obj in self.objs.objs:
             if obj.origy > self.map.window[0] + W_HEI + (WGC_Y*3):
                 break
@@ -582,7 +582,8 @@ class Map():
     Set the map path upon initialization"""
     def __init__(self):
         self.geom_map = [] # For checking collision.
-        self.height = 0
+        self.height = W_HEI
+        self.width = W_WID
         self.overlay = [[BLANK for x in range(W_WID)] for y in range(W_HEI)]
             # Optional overlay of the game.
         self.use_overlay = False
@@ -590,32 +591,35 @@ class Map():
             # Map of the final screen. 1D list of strings.
         self.rend_map = [] # Map of what will be rendered
         self.sparse_map = [] # Made to store user-made map.
-        self.width = 0
         self.window = [0,0] # Y,X
             # These are the map coordinates of the 
             # top-left-most item shown in the window.
 
     def set_path(self,path):
         self.store_map(self.sparse_map,path)
-        self.clear_map(self.rend_map)
+        self.empty_map(self.rend_map)
 
     def set_overlay(self,path):
         self.use_overlay = True
         self.store_map(self.overlay,path)
 
-    def clear_map(self,copy):
-        """Create a blank map of size self.width by self.height."""
-        if len(copy) == 0: # If the copy is new.
+    def empty_map(self,map):
+        """Create a blank map of size self.width by self.height.
+        Should not be used on sparse_map"""
+        if len(map) == 0: # If the map is new.
             for y in range(self.height):
-                copy.append(list(BLANK * self.width))
+                map.append(list(BLANK * self.width))
         else:
             for y in range(self.height):
-                copy[y] = (list(BLANK * self.width))
+                map[y] = (list(BLANK * self.width))
+        return map
 
     def store_map(self,sparse_map,path):
         """ Stores characters and their coords in self.sparse_map,
         using a preset path. Also sets self.width and self.height. """
         path = DIRPATH + "\\" + path
+        if ".txt" not in path:
+            path += ".txt"
         # Adds parent directory of running program
         y = 0
         maxwidth = 0

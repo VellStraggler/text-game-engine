@@ -6,7 +6,7 @@ g.map.set_overlay("under/under_overlay.txt")
 g.objs.get_sprites("under/under_sprites.txt")
 g.objs.get_texts("under/under_text.txt")
 g.camera_follow = ["x","y"]
-g.add_theme('under/theme.wav')
+#g.add_theme('under/theme.wav')
 g.folder = "under/"
 
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",

@@ -1,5 +1,19 @@
-move_dict = {0:{1:"w",0:"d",-1:"s"}, 
-                          1:{0:"d"},
-                         -1:{0:"a"}}
-assert move_dict[0][1] == "w"
-assert move_dict[0][0] == "d"
+import keyboard as keys
+def rotate_map():
+    print("alt")
+
+def zoom(_in):
+    if _in:
+        print("in")
+    else:
+        print("out")
+run = True
+while run:
+    if keys.is_pressed("alt"):
+        rotate_map()
+    elif keys.is_pressed("ctrl+up arrow"):
+        zoom(True)
+    elif keys.is_pressed("ctrl+down arrow"):
+        zoom(False)
+    elif keys.is_pressed("q"):
+        run = False
