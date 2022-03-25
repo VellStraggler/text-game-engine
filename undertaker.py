@@ -9,8 +9,8 @@ g.camera_follow = ["x","y"]
 g.add_theme('under/theme.wav')
 g.folder = "under/"
 
-player = g.objs.Obj("grimm-d","g",geom="line",move="wasd",
-    xspeed=100, yspeed=20)
+player = g.objs.Obj("grimm","g",geom="line",move="wasd",
+    xspeed=100, yspeed=20,animate="sneaky")
 g.objs.append_obj(player)
 g.objs.new("face","L")
 g.objs.new("door1","h",geom="skeleton")

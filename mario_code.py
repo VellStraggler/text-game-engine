@@ -14,10 +14,10 @@ def main():
     g.acts.new("","location","m","quit",[-1,31])
     
     g.objs.new('mario','m',geom="complex",move = "wasd",grav=True,
-        xspeed =70,yspeed = 12,enemy_chars=['g','f'],
-        dmg_dirs=['down'])
+        xspeed =70,yspeed = 30,max_jump=15,enemy_chars=['g','f'],
+        dmg_dirs=['down'],animate="flip")
     g.objs.new('goomba','g',move = "leftright",grav=True,
-        xspeed =10,
+        xspeed =10,yspeed=30,animate="flip",
         dmg_dirs=['left','right','down'],enemy_chars=['m'])
     g.objs.new('block','b')
     g.objs.new('block2','v')

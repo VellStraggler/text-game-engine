@@ -1,7 +1,8 @@
 from ctypes.wintypes import LANGID
 from hashlib import new
-import time, keyboard, os, random
+import keyboard, os, random
 from pygame import mixer
+from time import time
 
 DIRPATH = os.path.dirname(__file__)
 # Required to run program in Python3 terminal.
@@ -12,6 +13,8 @@ CUR = '\033[A\033[F'
 ZER = '\033[H'
 RIT = '\033[1C'
 MAX_TICK = 16
+DEF_ANIM = {"w":None,"a":None,"s":None,"d":None}
+# Default animation dictionary for a given object.
 
 # Move the cursor up by one. Not Windows Terminal compatible.
 W_WID = 110
@@ -92,14 +95,14 @@ class Game():
         print(CLR)
         self.create_objs()
         self.create_map()
-        self.start_time = time.time()
+        self.start_time = time()
         self.play_theme()
 
     def end_game(self):
         """All the comes after the main game_loop"""
         mixer.music.stop()
         self.play_sound("quit")
-        self.total = self.frames/(time.time()-self.start_time)
+        self.total = self.frames/(time()-self.start_time)
         print(f"{SPACES}Game Over!\nAverage FPS: {self.total:.3f}")
         scores = []
         for obj in self.objs.objs:
@@ -114,7 +117,7 @@ class Game():
     def game_loop(self):
         """This is what loops for every game tick.
         It is run by the run_game method."""
-        self.frame_start = time.time()
+        self.frame_start = time()
         self.move_all()
         self.create_map()
         self.map.print_all()
@@ -123,7 +126,7 @@ class Game():
     def run_fps(self):
         self.frames += 1
         self.tick = (self.tick + 1)%MAX_TICK
-        self.f_time = time.time()
+        self.f_time = time()
         print("FPS:",1/(self.f_time-self.frame_start))
         self.fpss.append(self.f_time)
 
@@ -183,21 +186,25 @@ class Game():
                         if obj.face_right:
                             if self.can_move(obj,1):
                                 self.move_right(obj)
-                            else: obj.flip_sprite()
+                            else: self.objs.flip_sprite(obj)
                         else:
                             if self.can_move(obj,-1):
                                 self.move_left(obj)
-                            else: obj.flip_sprite()
-                            
+                            else: self.objs.flip_sprite(obj)
                         if obj.hp <= 0: # All non-player mobs, DEATH.
                             self.kill_obj(obj,True)
+                            
                     # ALL THAT SHOULD FALL WILL FALL
                     if obj.grav:
-                        if obj.jump != 0 and keyboard.is_pressed("w"):
-                            self.move_obj(obj,0,-1)
-                            obj.jump -= 1
-                        elif self.can_move(obj,0,1):   
-                            self.move_obj(obj,0,1)
+                        if time() - obj.move_time["w"] > 3/obj.yspeed:
+                            obj.jump =0
+                            # If they haven't moved up in awhile
+                        if time() - obj.move_time["g"] > 1/obj.yspeed:
+                            if obj.jump > 0:
+                                obj.jump -= 1
+                            obj.move_time["g"] = time()
+                            if obj.jump == 0:
+                                self.move_obj(obj,0,1)
                     # DAMAGE-TAKING
                     for e_char in obj.enemy_chars:
                         self.take_dmg(obj,e_char)
@@ -234,33 +241,41 @@ class Game():
         obj.array = [[' ']]
         obj.move = None
 
+    # Synonymous functions
     def rotate_right(self,obj):
         obj.rotate_right()
     def move_left(self,obj):
-        if time.time() - obj.move_time["a"] > 1/obj.xspeed:
-            obj.move_time["a"] = time.time()
-            if obj.face_right:
-                obj.flip_sprite()
+        if time() - obj.move_time["a"] > 1/obj.xspeed:
+            obj.move_time["a"] = time()
+            obj.img = obj.animate["a"]
+            obj.array = self.objs.sprites[obj.img]
             self.move_obj(obj,-1)
     def move_right(self,obj):
-        if time.time() - obj.move_time["d"] > 1/obj.xspeed:
-            obj.move_time["d"] = time.time()
-            if not obj.face_right:
-                obj.flip_sprite()
+        if time() - obj.move_time["d"] > 1/obj.xspeed:
+            obj.move_time["d"] = time()
+            obj.img = obj.animate["d"]
+            obj.array = self.objs.sprites[obj.img]
             self.move_obj(obj,1)
+    def move_down(self,obj):
+        if time() - obj.move_time["s"] > 1/obj.yspeed:
+            obj.move_time["s"] = time() 
+            obj.img = obj.animate["s"]
+            obj.array = self.objs.sprites[obj.img]
+            obj.jump = 0
+            self.move_obj(obj,0,1)
     def move_up(self,obj):
-        if time.time() - obj.move_time["w"] > 1/obj.yspeed:
-            obj.move_time["w"] = time.time()
+        if time() - obj.move_time["w"] > 1/obj.yspeed:
+            obj.move_time["w"] = time()
+            obj.img = obj.animate["w"]
+            obj.array = self.objs.sprites[obj.img] 
             if not obj.grav:
                 self.move_obj(obj,0,-1)
             elif not self.can_move(obj,0,1): # If on top of something.
-                self.play_sound("jump")
-                obj.jump = obj.yspeed
+                obj.jump = obj.max_jump
                 self.move_obj(obj,0,-1)
-    def move_down(self,obj):   
-        if time.time() - obj.move_time["s"] > 1/obj.yspeed:
-            obj.move_time["s"] = time.time() 
-            self.move_obj(obj,0,1)
+                self.play_sound("jump")
+            elif obj.jump > 0:
+                self.move_obj(obj,0,-1)
 
     def replace_chars(self,obj,new_char):
         """ Replaces the characters of an object on the
@@ -288,8 +303,8 @@ class Game():
                 return obj
 
     def run_interacts(self,obj):
-        if time.time() - obj.move_time["i"] > 1/self.game_speed:
-            obj.move_time["i"] = time.time()
+        if time() - obj.move_time["i"] > 1/self.game_speed:
+            obj.move_time["i"] = time()
             xs,xf,ys,yf = self.set_xy_limits(obj)
             for act in self.acts.acts:
                 if act.kind == "interact":
@@ -400,8 +415,10 @@ class Game():
     def teleport_obj(self,obj,y:int=0,x:int=0,char_left=BLANK):
         pass
 
-    def move_obj(self,obj,move_x:int = 0,move_y:int = 0):
+    def move_obj(self,obj,move_x = 0,move_y = 0):
         """Moves a single object move_x and move_y amount OR LESS."""
+        assert move_x in [-1,0,1] and move_y in [-1,0,1], "ONLY 1s and 0s accepted here."
+        assert move_x == 0 or move_y == 0, "You can only move along one axis at a time."
         while move_x != 0 or move_y != 0:
             if self.can_move(obj,move_x,move_y):
                 self.move_map_char(obj,move_x,move_y)
@@ -669,7 +686,7 @@ class Objs():
         self.inventory = []
         self.max_id = 0
         self.objs = [] # Stores objects. Each includes a sprites key
-        self.sprites = dict() # {img:array}
+        self.sprites = {"dead":[[" "]]}
         self.texts = []
         self.max_height= 0 
         self.max_width = 0
@@ -706,6 +723,27 @@ class Objs():
             while(line):
                 self.texts.append(line)
                 line = file.readline()[:-1]
+
+    def flip_sprite(self,obj):
+        assert obj.animate not in [None,"flip"], "This object is not animated."
+        obj.face_right = not obj.face_right
+        if obj.face_right:
+            obj.img = obj.animate["d"]
+            obj.array = self.sprites[obj.img]
+
+    def get_flipped_sprite(self,array):
+        """ Returns a vertically mirrored
+        2D array of the given array"""
+        new_array = []
+        for y in range(len(array)):
+            line = []
+            for x in range(len(array[0])):
+                char = array[y][len(array[0])-x-1]
+                if char in FLIP_CHARS.keys():
+                    char = FLIP_CHARS[char]
+                line.append(char)
+            new_array.append(line)
+        return new_array
     
     def append_objs(self,objs:list=[]):
         """Add a list of objects to self.objs."""
@@ -713,9 +751,28 @@ class Objs():
             self.append_obj(obj)
             
     def append_obj(self,obj,rotate=0):
+        """Important object initialization happens here."""
         while rotate != obj.rotate:
             obj.rotate_right()
         obj.array = self.sprites[obj.img]
+        if obj.animate == "flip":
+            original = obj.img
+            flip_img = str(reversed(obj.img))
+            self.sprites[flip_img] = self.get_flipped_sprite(obj.array)
+            obj.animate = {"w":obj.img,"a":flip_img,"s":obj.img,"d":original}
+        elif obj.animate == None:
+            obj.animate = {"w":obj.img,"a":obj.img,"s":obj.img,"d":obj.img}
+        elif obj.animate == "sneaky":
+            # This takes the object sprite and assumes it to be facing right
+            # and to be the reverse of facing left.
+            # It looks for the object image with "-w" and "-s" added at the end
+            assert (obj.img + "-w") in self.sprites.keys(), "img_name-w required."
+            assert (obj.img + "-s") in self.sprites.keys(), "img_name-s required."
+            facing_up = obj.img + "-w"
+            facing_down = obj.img + "-s"
+            facing_left = obj.img + "-a"
+            self.sprites[facing_left] = self.get_flipped_sprite(obj.array)
+            obj.animate = {"w":facing_up,"a":facing_left,"s":facing_down,"d":obj.img}
         obj.id = self.max_id
         self.max_id+=1
         obj.i = len(self.objs)
@@ -724,11 +781,11 @@ class Objs():
     def new(self,img, char, x=0,y=0, geom = "all",
     move = None, xspeed = 1, yspeed = 1, hp =1,face_right=True,
     face_down=False, grav=False,dmg = 1, enemy_chars=[],
-    dmg_dirs=[], set_rotate=0, animate=True,txt=-1):
+    dmg_dirs=[], set_rotate=0, animate=None,txt=-1,max_jump=1):
         """Creates an Obj and appends it to the objs list."""
         obj = self.Obj(img, char, x,y, geom, move,xspeed,yspeed,
             hp,face_right,face_down,grav,dmg,enemy_chars,dmg_dirs,
-            animate,txt)
+            animate,txt,max_jump)
         self.append_obj(obj,set_rotate)
 
     def copy(self,obji,newx,newy):
@@ -737,23 +794,24 @@ class Objs():
         o = self.objs[obji]
         self.new(o.img,o.char,newx,newy,o.geom,o.move,o.xspeed,o.yspeed,o.hp,
            o.face_right,o.face_down,o.grav,o.dmg,o.enemy_chars,o.dmg_dirs,o.rotate,
-           o.animate,o.txt)
+           o.animate,o.txt,o.max_jump)
         return self.objs[-1]
 
     class Obj():
         def __init__(self,img, char, x=0,y=0, geom = "all",
         move = None, xspeed = 1,yspeed = 1,hp =1,face_right=True,
         face_down=False,grav:bool=False,dmg = 1,enemy_chars=[],dmg_dirs=[],
-        animate=True,txt:int=-1):
+        animate=None,txt:int=-1,max_jump=1):
             self.simple = False
-            self.move = move # None, random, leftright, updown, wasd, dirs.
+            self.move = move # None, leftright, wasd, dirs.
             self.grav = grav
             if move == None and not grav:
                 self.simple = True
             self.xspeed = xspeed
             self.yspeed = yspeed
             if not self.simple:
-                self.move_time = {"w":0,"a":0,"s":0,"d":0,"i":0}
+                self.move_time = {"w":0,"a":0,"s":0,"d":0,"i":0,"g":0}
+                #wasd: controls, i:interact, g:gravity (falling)
 
             self.img = img
             self.geom = geom # Options of: None, line, complex, skeleton, or all.
@@ -761,11 +819,14 @@ class Objs():
             self.origy = y
             self.char = char
             self.hp = hp
+            self.max_jump = max_jump
             self.jump = 0 # based on yspeed
             self.dmg = dmg
             self.enemy_chars = enemy_chars
             self.dmg_dirs = dmg_dirs
-            self.animate = animate
+            self.animate = animate # Edited in the objs.append_obj function
+            # "flip" is default, mirrors the image for every change between right and left.
+            # Otherwise, if it's not None it becomes a dictionary: {w,a,s,d:sprite images.}
 
             self.id = 0
             
@@ -794,19 +855,18 @@ class Objs():
         def height(self):
             return len(self.array)
         
-        def flip_sprite(self):
+        def flip_sprite_old(self):
             """Flips the sprite of an image vertically (left to right)"""
             self.face_right = not self.face_right
-            if self.animate:
-                for y in range(self.height()):
-                    for x in range(self.width()//2+self.width()%2):
-                        hold = self.array[y][x]
-                        if hold in FLIP_CHARS.keys():
-                            hold = FLIP_CHARS[hold]
-                        self.array[y][x] = self.array[y][self.width()-x-1]
-                        if self.array[y][x] in FLIP_CHARS.keys():
-                            self.array[y][x] = FLIP_CHARS[self.array[y][x]]
-                        self.array[y][self.width()-x-1] = hold
+            for y in range(self.height()):
+                for x in range(self.width()//2+self.width()%2):
+                    hold = self.array[y][x]
+                    if hold in FLIP_CHARS.keys():
+                        hold = FLIP_CHARS[hold]
+                    self.array[y][x] = self.array[y][self.width()-x-1]
+                    if self.array[y][x] in FLIP_CHARS.keys():
+                        self.array[y][x] = FLIP_CHARS[self.array[y][x]]
+                    self.array[y][self.width()-x-1] = hold
 
         def rotate_right(self):
             """Rotates the object sprite 90 degrees."""
