@@ -19,7 +19,7 @@ g.objs.new("wall","f")
 g.objs.new("wall-side","s")
 g.objs.new("wall-back","b")
 g.objs.new("father","u",geom="line")
-g.objs.new("tree",'t',geom="line")
+g.objs.new("jack",'t',geom="line")
 g.objs.new("fence","x",geom="line")
 g.objs.new("fence-side","z")
 g.objs.new("piano","p",geom="line")
@@ -28,6 +28,9 @@ g.objs.new("carpet","G",geom=None)
 g.objs.new("plant","P",geom="line")
 g.objs.new("door3","H",geom="skeleton")
 g.objs.new("key","k",geom="line")
+g.objs.new("bedside","T",geom="all")
+g.objs.new("bookshelf","B",geom="all")
+g.objs.new("curtain-window","c",geom="all")
 
 doors = {"door2":"door1","door1":"door2","door3":"door2"}
 plants = {"plant":"plant1","plant1":"plant"}

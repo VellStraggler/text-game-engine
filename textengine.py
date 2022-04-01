@@ -1,8 +1,6 @@
-from ctypes.wintypes import LANGID
-from hashlib import new
 import keyboard, os, random
 from pygame import mixer
-from time import time
+from time import time,sleep
 
 DIRPATH = os.path.dirname(__file__)
 # Required to run program in Python3 terminal.
@@ -170,7 +168,7 @@ class Game():
         if keyboard.is_pressed("p"):
             mixer.music.set_volume(.25)
             keyboard.wait("p")
-            time.sleep(.5)
+            sleep(.5)
             mixer.music.set_volume(1)
         id_tracker = []
         for obj in self.objs.objs:
@@ -604,7 +602,7 @@ class Map():
         self.store_map(self.overlay,path)
 
     def empty_map(self,map):
-        """Create a blank map of size self.width by self.height.
+        """ Create a blank map of size self.width by self.height.
         Should not be used on sparse_map"""
         if len(map) == 0: # If the map is new.
             for y in range(self.height):
@@ -612,6 +610,18 @@ class Map():
         else:
             for y in range(self.height):
                 map[y] = (list(BLANK * self.width))
+        return map
+
+    def increase_width(self,map):
+        """ Increases the width of all maps by 1."""
+        for y in range(self.height):
+            map[y].append(BLANK)
+        return map
+
+    def increase_height(self,map):
+        """ Increases the width of all maps by 1."""
+        line = list(BLANK * self.width)
+        map.append(line)
         return map
 
     def store_map(self,sparse_map,path):
@@ -644,6 +654,7 @@ class Map():
         wid = self.window[1] + W_WID
         print(CUR * (W_HEI+INFO_HEI)) #"\033[1;35;100m"
         for row in range(W_HEI):
+            #self.print_map[row] = "".join(self.geom_map[row+self.window[0]][self.window[1]:wid])
             self.print_map[row] = "".join(self.rend_map[row+self.window[0]][self.window[1]:wid])
             # UPDATE: OVERLAY WOULD GO HERE.
         [print(self.print_map[i]) for i in range(W_HEI)]
