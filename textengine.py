@@ -612,18 +612,6 @@ class Map():
                 map[y] = (list(BLANK * self.width))
         return map
 
-    def increase_width(self,map):
-        """ Increases the width of all maps by 1."""
-        for y in range(self.height):
-            map[y].append(BLANK)
-        return map
-
-    def increase_height(self,map):
-        """ Increases the width of all maps by 1."""
-        line = list(BLANK * self.width)
-        map.append(line)
-        return map
-
     def store_map(self,sparse_map,path):
         """ Stores characters and their coords in self.sparse_map,
         using a preset path. Also sets self.width and self.height. """
