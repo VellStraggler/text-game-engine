@@ -38,12 +38,12 @@ class MapMaker():
     def main_loop(self):
         """This runs a loop that checks for changes and updates the map."""
         while not keys.is_pressed(QUIT):
+            self.frame_start = time()
             self.run_key_command()
             char = BLANK
             map_x,map_y = self.get_cursor_coords()
             length = len(self.inp_win.get(START,END))
             char = self.inp_win.get('insert-1c')
-            #print(map_x,map_y,self.inp_win.get(INSERT))
             if length > MAX_LEN + 1:
                 self.inp_win.delete(INSERT)
                 self.map[map_y][map_x] = char
@@ -63,7 +63,9 @@ class MapMaker():
             if self.update:
                 self.update_win()
                 self.update = False
-
+            try:print(f"FPS: {(1/(time()-self.frame_start)):.2f}")
+            except ZeroDivisionError: pass
+        
     def get_cursor_coords(self):
         """Gets the cursor location on inp_win, converts it into map
         coordinates, accounting for camera position."""
@@ -77,14 +79,12 @@ class MapMaker():
         for y in self.map:
             y.append(BLANK)
         self.press_save()
-        #print("Width increased to", len(self.map[0]))
 
     def increase_height(self):
         """ This increases the width of the map by 1."""
         line = list(BLANK * len(self.map[0]))
         self.map.append(line)
         self.press_save()
-        #print("Height increased to", len(self.map))
 
     def patch_map(self):
         """Makes arrays rectangular, that they are filled with arrays of
@@ -164,6 +164,8 @@ class MapMaker():
                 self.update_camera()
 
     def update_camera(self):
+        """Updates the variables on the GUI that change when the
+        camera moves. Sets update_win to be called at end of frame."""
         self.cam_msg.configure(text=str(self.xcam) + "," + str(self.ycam))
         self.wid_hei.configure(text="Map Dimensions: " + str(len(self.map[0])) + ", " + str(len(self.map)))
         self.update = True
@@ -211,14 +213,14 @@ class MapMaker():
                     newline = list(file.readline()[:-1])
             self.patch_map()
         else:
-            self.create_new_file() #using whatever is in file_name_entry
+            self.create_new_file()
         self.update_camera()
         self.update_win()
 
     def create_window(self):
         self.win.geometry("940x700+250+25")
         canvas = Canvas(self.win)
-        canvas.master.title('TXTEngine Map Editor (Ver: 1.1)')
+        canvas.master.title('TXTEngine MapEditor (Ver: 1.1)')
 
         # Buttons Above:
         self.file_name_entry = Entry(self.win)

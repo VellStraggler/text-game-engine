@@ -2,6 +2,7 @@ import textengine as tx
 
 g = tx.Game()
 g.map.set_path("under/under_house_map.txt")
+#g.map.set_path("test.txt")
 g.map.set_overlay("under/under_overlay.txt")
 g.objs.get_sprites("under/under_sprites.txt")
 g.objs.get_texts("under/under_text.txt")
