@@ -17,7 +17,7 @@ class MapMaker():
         self.file_name= ""
         self.win = Tk()
         self.key_time = 0
-        self.key_speed = 0.0
+        self.key_speed = 0.3
         self.non_blanks = False
         self.rotated = False
         self.update = False
@@ -63,7 +63,6 @@ class MapMaker():
             if self.update:
                 self.update_win()
                 self.update = False
-        #self.press_save()
 
     def get_cursor_coords(self):
         """Gets the cursor location on inp_win, converts it into map
@@ -114,11 +113,11 @@ class MapMaker():
                     line = line + str(x)
                 file.write(line + "\n")
         self.update_win()
-
     def create_new_file(self):
         self.press_save()
 
     def rotate_map(self):
+        self.rotated = not self.rotated
         if self.rotated:
             print("The map is rotated.")
         else:
@@ -134,37 +133,39 @@ class MapMaker():
         """This checks for commands that are pressed."""
         if time() - self.key_time > self.key_speed: 
             self.key_time = time()
-            if keys.is_pressed("ctrl+r"):
+            if keys.is_pressed("ctrl+s"):
+                self.press_save()
+            elif keys.is_pressed("ctrl+r"):
                 self.rotate_map()
             elif keys.is_pressed("ctrl+z"):
                 self.zoom(True)
             elif keys.is_pressed("ctrl+x"):
                 self.zoom(False)
-            else:
-                if keys.is_pressed("ctrl+up arrow"): # Arrows control camera.
-                    if self.ycam > 0:
-                        self.ycam -= 1
-                        self.update_camera()
-                elif keys.is_pressed("ctrl+down arrow"):
-                    self.ycam += 1
-                    if self.ycam + HEI > len(self.map):
-                        self.increase_height()
-                    self.update_camera()
-                if keys.is_pressed("ctrl+right arrow"):
-                    self.xcam += 1
-                    if self.xcam + WID > len(self.map[0]):
-                        self.increase_width()
-                    self.update_camera()
-                elif keys.is_pressed("ctrl+left arrow"):
-                    if self.xcam > 1:
-                        self.xcam -= 2
-                        self.update_camera()
-                    elif self.xcam > 0:
-                        self.xcam -= 1
-                        self.update_camera()
+        if keys.is_pressed("ctrl+up arrow"): # Arrows control camera.
+            if self.ycam > 0:
+                self.ycam -= 1
+                self.update_camera()
+        elif keys.is_pressed("ctrl+down arrow"):
+            self.ycam += 1
+            if self.ycam + HEI > len(self.map):
+                self.increase_height()
+            self.update_camera()
+        if keys.is_pressed("ctrl+right arrow"):
+            self.xcam += 1
+            if self.xcam + WID > len(self.map[0]):
+                self.increase_width()
+            self.update_camera()
+        elif keys.is_pressed("ctrl+left arrow"):
+            if self.xcam > 1:
+                self.xcam -= 2
+                self.update_camera()
+            elif self.xcam > 0:
+                self.xcam -= 1
+                self.update_camera()
 
     def update_camera(self):
         self.cam_msg.configure(text=str(self.xcam) + "," + str(self.ycam))
+        self.wid_hei.configure(text="Map Dimensions: " + str(len(self.map[0])) + ", " + str(len(self.map)))
         self.update = True
 
     def update_win(self):
@@ -198,6 +199,8 @@ class MapMaker():
             self.file_name = file_entry
 
     def set_path(self):
+        self.xcam = 0
+        self.ycam = 0
         self.set_file_name()
         if exists(self.file_name):
             with open(self.file_name,'r') as file:
@@ -207,15 +210,15 @@ class MapMaker():
                     self.map.append(newline)
                     newline = list(file.readline()[:-1])
             self.patch_map()
-            #print("height:",len(self.map),"width:",len(self.map[0]))
         else:
             self.create_new_file() #using whatever is in file_name_entry
+        self.update_camera()
         self.update_win()
 
     def create_window(self):
         self.win.geometry("940x700+250+25")
         canvas = Canvas(self.win)
-        canvas.master.title('TXTEngine Map Editor (Ver: 1.0)')
+        canvas.master.title('TXTEngine Map Editor (Ver: 1.1)')
 
         # Buttons Above:
         self.file_name_entry = Entry(self.win)
@@ -232,11 +235,8 @@ class MapMaker():
         clear_e = Button(self.win, text='Clear Map',command=self.clear_map)
         clear_e.grid(row=1, column=9)
 
-        #f = font.Font(family="monospace",size=11)
-
         # Input Window:
         self.inp_win = Text(self.win, width=WID, height=HEI)
-        #self.inp_win['font'] = f
         self.inp_win.insert(START,(BLANK * MAX_LEN))
         self.inp_win.grid(row = 2, column = 1,columnspan=9,padx=25)
         self.inp_win.mark_set("insert",START)
@@ -244,6 +244,9 @@ class MapMaker():
         # Buttons Below:
         self.cam_msg = Message(self.win,text=str(self.xcam)  + ", " + str(self.ycam))
         self.cam_msg.grid(row=3,column=1)
+
+        self.wid_hei = Message(self.win,text="Map Dimensions: " + str(WID) + ", " + str(HEI))
+        self.wid_hei.grid(row=4,column=1)
 
         zoom_msg = Message(self.win,text="Zoom out:")
         zoom_msg.grid(row=3,column=2,pady=10)
@@ -281,4 +284,3 @@ m.create_window()
 m.main_loop()
     # Button to rotate map
     # Zooming in/out
-    # Terminal-style text
