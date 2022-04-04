@@ -1,17 +1,18 @@
-import keyboard, os, random
+import random
+from keyboard import is_pressed,wait
+from os.path import dirname
 from pygame import mixer
 from time import time,sleep
 
-DIRPATH = os.path.dirname(__file__)
+DIRPATH = dirname(__file__)
 # Required to run program in Python3 terminal.
 BLANK = ' '
 SIGN = '$'
-CLR = "\033[2J"
+CLEAR = "\033[2J"
 CUR = '\033[A\033[F'
 ZER = '\033[H'
 RIT = '\033[1C'
 MAX_TICK = 16
-DEF_ANIM = {"w":None,"a":None,"s":None,"d":None}
 # Default animation dictionary for a given object.
 
 # Move the cursor up by one. Not Windows Terminal compatible.
@@ -90,7 +91,7 @@ class Game():
 
     def init_map(self):
         """All that comes before the main game_loop"""
-        print(CLR)
+        print(CLEAR)
         self.create_objs()
         self.create_map()
         self.start_time = time()
@@ -163,11 +164,11 @@ class Game():
             self.sounds[key].play()
 
     def move_all(self):
-        if keyboard.is_pressed("q"):
+        if is_pressed("q"):
             self.quit = True
-        if keyboard.is_pressed("p"):
+        if is_pressed("p"):
             mixer.music.set_volume(.25)
-            keyboard.wait("p")
+            wait("p")
             sleep(.5)
             mixer.music.set_volume(1)
         id_tracker = []
@@ -211,7 +212,7 @@ class Game():
         # PLAYER MOVEMENT:
         if obj.move in self.key_dict.keys(): # "wasd" or "dirs"
             for key in self.key_dict[obj.move].keys():
-                if keyboard.is_pressed(key):
+                if is_pressed(key):
                     self.key_dict[obj.move][key](obj)
         self.run_acts(obj)
         # CAMERA MOVING:
@@ -256,10 +257,11 @@ class Game():
             self.move_obj(obj,1)
     def move_down(self,obj):
         if time() - obj.move_time["s"] > 1/obj.yspeed:
-            obj.move_time["s"] = time() 
+            obj.move_time["s"] = time()
             obj.img = obj.animate["s"]
             obj.array = self.objs.sprites[obj.img]
-            obj.jump = 0
+            if obj.grav:
+                obj.jump = 0
             self.move_obj(obj,0,1)
     def move_up(self,obj):
         if time() - obj.move_time["w"] > 1/obj.yspeed:
@@ -573,7 +575,6 @@ class Game():
                     [self.map.set_xy_rend(out_x+i,out_y,txt[i]) for i in range(len(txt))]
                 self.geom_set_dict[obj.geom](obj)
         
-
 class Map():
     """Three arrays are stored in a Map object: the wasd input 
     map, the output map, and a geom map.
@@ -641,11 +642,11 @@ class Map():
         and prints print_map to game window."""
         wid = self.window[1] + W_WID
         print(CUR * (W_HEI+INFO_HEI)) #"\033[1;35;100m"
+        cushion = " " * 25
         for row in range(W_HEI):
-            #self.print_map[row] = "".join(self.geom_map[row+self.window[0]][self.window[1]:wid])
             self.print_map[row] = "".join(self.rend_map[row+self.window[0]][self.window[1]:wid])
             # UPDATE: OVERLAY WOULD GO HERE.
-        [print(self.print_map[i]) for i in range(W_HEI)]
+        [print(cushion,self.print_map[i]) for i in range(W_HEI)]
         print()
 
     def set_xy_geom(self,x,y,char):
