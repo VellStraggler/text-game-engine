@@ -9,7 +9,7 @@ BLANK = " "
 QUIT = "esc"
 START = '1.0'
 DEF_FILE_NAME = "default"
-MAX_LEN = (WID * HEI) - 0
+MAX_LEN = (WID * HEI)
 class MapMaker():
     """This reads a map file and allows changes."""
     def __init__(self):
@@ -17,9 +17,10 @@ class MapMaker():
         self.file_name= ""
         self.win = Tk()
         self.key_time = 0
-        self.key_speed = 0.1
+        self.key_speed = 0.0
         self.non_blanks = False
         self.rotated = False
+        self.update = False
 
         self.xcam = 0
         self.ycam = 0
@@ -42,30 +43,34 @@ class MapMaker():
             map_x,map_y = self.get_cursor_coords()
             length = len(self.inp_win.get(START,END))
             char = self.inp_win.get('insert-1c')
-            if length > MAX_LEN:
+            #print(map_x,map_y,self.inp_win.get(INSERT))
+            if length > MAX_LEN + 1:
                 self.inp_win.delete(INSERT)
                 self.map[map_y][map_x] = char
             replacer = char
-            for x in range(1,MAX_LEN-length+1):
+            for x in range(1,MAX_LEN-length+2):
                 map_x,map_y = self.get_cursor_coords()
-                if x%self.sprite_width.get(): # != 0
+                if x%self.sprite_width.get() != 0:
                     if self.non_blanks:
                         replacer = BLANK
                     else:
                         replacer = self.map[map_y][map_x]
                 else:
                     replacer = char
-                self.inp_win.insert(self.inp_win.index('insert'), replacer)
                 self.map[map_y][map_x] = replacer
+                self.inp_win.insert(self.inp_win.index('insert'), replacer)
             self.win.update()
-        self.press_save()
+            if self.update:
+                self.update_win()
+                self.update = False
+        #self.press_save()
 
     def get_cursor_coords(self):
         """Gets the cursor location on inp_win, converts it into map
         coordinates, accounting for camera position."""
         loc = int((str(self.inp_win.index(INSERT)).split('.'))[1])
         map_y = loc//WID + self.ycam
-        map_x = loc - (WID*(map_y)) + self.xcam
+        map_x = loc - (WID*(loc//WID)) + self.xcam - 1
         return map_x,map_y
 
     def increase_width(self):
@@ -73,14 +78,30 @@ class MapMaker():
         for y in self.map:
             y.append(BLANK)
         self.press_save()
-        print("Width increased to", len(self.map[0]))
+        #print("Width increased to", len(self.map[0]))
 
     def increase_height(self):
         """ This increases the width of the map by 1."""
         line = list(BLANK * len(self.map[0]))
         self.map.append(line)
         self.press_save()
-        print("Height increased to", len(self.map))
+        #print("Height increased to", len(self.map))
+
+    def patch_map(self):
+        """Makes arrays rectangular, that they are filled with arrays of
+        uniform length."""
+        assert len(self.map) > 0, "Error: Empty self.map put in."
+        max_length = WID
+        while len(self.map) < HEI:
+            self.map.append(list(BLANK)) # Add extra rows to the minimum of HEI.
+        for y in range(0,len(self.map)):
+            if len(self.map[y]) > max_length:
+                max_length = len(self.map[y]) # Get the maximum length
+        # Makes all columns the max length.
+        for row in self.map:
+            assert type(row) == type(list()), "Only strings and lists can be in the array"
+            for col in range(max_length - len(row)):
+                row.append(BLANK)
 
     def press_save(self):
         """ This writes the map to the file.
@@ -90,8 +111,9 @@ class MapMaker():
             for y in self.map:
                 line = ""
                 for x in y:
-                    line += x
+                    line = line + str(x)
                 file.write(line + "\n")
+        self.update_win()
 
     def create_new_file(self):
         self.press_save()
@@ -112,7 +134,7 @@ class MapMaker():
         """This checks for commands that are pressed."""
         if time() - self.key_time > self.key_speed: 
             self.key_time = time()
-            if keys.is_pressed("alt"):
+            if keys.is_pressed("ctrl+r"):
                 self.rotate_map()
             elif keys.is_pressed("ctrl+z"):
                 self.zoom(True)
@@ -128,19 +150,22 @@ class MapMaker():
                     if self.ycam + HEI > len(self.map):
                         self.increase_height()
                     self.update_camera()
-                elif keys.is_pressed("ctrl+right arrow"):
+                if keys.is_pressed("ctrl+right arrow"):
                     self.xcam += 1
                     if self.xcam + WID > len(self.map[0]):
                         self.increase_width()
                     self.update_camera()
                 elif keys.is_pressed("ctrl+left arrow"):
-                    if self.xcam > 0:
+                    if self.xcam > 1:
+                        self.xcam -= 2
+                        self.update_camera()
+                    elif self.xcam > 0:
                         self.xcam -= 1
                         self.update_camera()
 
     def update_camera(self):
         self.cam_msg.configure(text=str(self.xcam) + "," + str(self.ycam))
-        self.update_win()
+        self.update = True
 
     def update_win(self):
         save_loc = self.inp_win.index("insert")
@@ -148,7 +173,7 @@ class MapMaker():
         full_text = ""
         for y in range(self.ycam,self.ycam+HEI):
             for x in range(self.xcam,self.xcam+WID):
-                full_text += self.map[y][x]
+                full_text = full_text + self.map[y][x]
         self.inp_win.insert(START,full_text)
         # Set cursor loc to previous spot.
         self.inp_win.mark_set("insert", save_loc)
@@ -166,7 +191,7 @@ class MapMaker():
         if file_entry == "":
             self.file_name_entry.insert(0,DEF_FILE_NAME)
         if ".txt" not in file_entry:
-            file_entry += ".txt"
+            file_entry = file_entry + ".txt"
         if self.file_name == "" or self.file_name != file_entry:
             # If stored file_name is blank or not the same as file_entry,
             # store file_entry as new file_name
@@ -181,6 +206,8 @@ class MapMaker():
                 while newline:
                     self.map.append(newline)
                     newline = list(file.readline()[:-1])
+            self.patch_map()
+            #print("height:",len(self.map),"width:",len(self.map[0]))
         else:
             self.create_new_file() #using whatever is in file_name_entry
         self.update_win()
