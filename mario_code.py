@@ -2,15 +2,14 @@ import textengine as tx
 
 def main():
     g = tx.Game()
-    g.map.set_path('mario/mario_map.txt')
+    g.curr_map.set_path('mario/mario_map.txt')
     g.objs.get_sprites('mario/mario_sprites.txt')
     g.add_theme('mario/text_mario.wav')
     g.add_sounds_simple(["jump","death","quit"],"mario")
-    
     g.camera_follow = ["x","y"]
-    g.game_delay = 0.0
+
     g.acts.new(char="f",effect="quit")
-    g.acts.new("","location","m","quit",[233,-1])
+    g.acts.new("","location","m","switch_map",[233,-1,"mario/mario_test_"])
     g.acts.new("","location","m","quit",[-1,31])
     
     g.objs.new('mario','m',geom="complex",move = "wasd",grav=True,

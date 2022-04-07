@@ -63,9 +63,11 @@ class MapMaker():
             if self.update:
                 self.update_win()
                 self.update = False
-            try:print(f"FPS: {(1/(time()-self.frame_start)):.2f}")
-            except ZeroDivisionError: pass
-        
+    
+    def print_fps(self):
+        try:print(f"FPS: {(1/(time()-self.frame_start)):.2f}")
+        except ZeroDivisionError: pass
+
     def get_cursor_coords(self):
         """Gets the cursor location on inp_win, converts it into map
         coordinates, accounting for camera position."""
