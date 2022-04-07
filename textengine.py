@@ -72,6 +72,7 @@ class Game():
                             "skeleton":self.geom_line,
                             None:self.geom_none}
         self.act_set_dict = {"switch_sprite":self.act_switch_sprite,
+                            "rotate":self.act_rotate,
                             "quit":self.act_quit,
                             "sound":self.act_sound,
                             "unlock":self.act_unlock,
@@ -80,11 +81,11 @@ class Game():
         self.key_dict = {"wasd":
                             {"w":self.move_up,"a":self.move_left,
                             "s":self.move_down,"d":self.move_right,
-                            "e":self.run_interacts,"r":self.rotate_right},
+                            "e":self.run_interacts},
                         "dirs":
                             {"up arrow":self.move_up,"left arrow":self.move_left,
                             "down arrow":self.move_down,"right arrow":self.move_right,
-                            ".":self.run_interacts,"/":self.rotate_right}}
+                            ".":self.run_interacts}}
 
     def run_game(self):
         """Combine the map and the objs and begin the main game loop."""
@@ -261,8 +262,6 @@ class Game():
         obj.move = None
 
     # Synonymous functions
-    def rotate_right(self,obj):
-        obj.rotate_right()
     def move_left(self,obj):
         if time() - obj.move_time["a"] > 1/obj.xspeed:
             obj.move_time["a"] = time()
@@ -297,21 +296,6 @@ class Game():
             elif obj.jump > 0:
                 self.move_obj(obj,0,-1)
 
-    def replace_chars(self,obj,new_char):
-        """ Replaces the characters of an object on the
-        INPUT_MAP with new_char.
-        ISSUE: Not working properly."""
-        new_obj = self.obj_from_char(new_char)
-        assert new_obj.height() == 1, "New Object's gotta be short."
-        if obj.height()%new_obj.height()==0 and obj.width()%new_obj.width()==0:
-            for y in range(obj.height()):
-                for x in range(obj.width()//new_obj.width()):
-                    nx = obj.origx + (x * new_obj.width())
-                    ny = obj.origy - obj.height() + 1 + y
-                    if self.curr_map.get_xy_rend(nx,ny) != BLANK:
-                        #self.curr_map.set_xy(nx,ny,new_char,"i")
-                        pass
-
     def set_new_img(self,obj,new_img):
         obj.img = new_img
         obj.array = self.objs.sprites[obj.img]
@@ -330,29 +314,32 @@ class Game():
                 if not act.locked:
                     if act.kind == "interact":
                         i_char = act.char
-                        if obj.face_down:
-                            if i_char in self.curr_map.geom_map[yf+1][xs:xf]: #BELOW
-                                pass
+                        if obj.char == i_char:
+                            self.act_set_dict[act.effect](obj,act.arg)
                         else:
-                            if i_char in self.curr_map.geom_map[ys-1][xs:xf]: #ABOVE
-                                i=0
-                                found = False
-                                while self.objs.objs[i].id != obj.id and not found:
-                                    i_obj = self.objs.objs[i]
-                                    if i_char != i_obj.char:
-                                        i+=1
-                                    elif i_obj.origy != ys-1 or (i_obj.origx+i_obj.width()) < xs:
-                                        i+=1
-                                    else:
-                                        found = True
-                                self.act_set_dict[act.effect](i_obj,act.arg)
-                        for y in range(ys,yf):
-                            if obj.face_right:
-                                if self.curr_map.geom_map[y][xf] == i_char: #RIGHT
+                            if obj.face_down:
+                                if i_char in self.curr_map.geom_map[yf+1][xs:xf]: #BELOW
                                     pass
                             else:
-                                if self.curr_map.geom_map[y][xs-1] == i_char: #LEFT
-                                    pass
+                                if i_char in self.curr_map.geom_map[ys-1][xs:xf]: #ABOVE
+                                    i=0
+                                    found = False
+                                    while self.objs.objs[i].id != obj.id and not found:
+                                        i_obj = self.objs.objs[i]
+                                        if i_char != i_obj.char:
+                                            i+=1
+                                        elif i_obj.origy != ys-1 or (i_obj.origx+i_obj.width()) < xs:
+                                            i+=1
+                                        else:
+                                            found = True
+                                    self.act_set_dict[act.effect](i_obj,act.arg)
+                            for y in range(ys,yf):
+                                if obj.face_right:
+                                    if self.curr_map.geom_map[y][xf] == i_char: #RIGHT
+                                        pass
+                                else:
+                                    if self.curr_map.geom_map[y][xs-1] == i_char: #LEFT
+                                        pass
 
     def set_xy_limits(self,obj):
         """Used in run_acts and run_interacts"""
@@ -397,6 +384,10 @@ class Game():
         # ARG: dictionary of old img key and new img value
         new_img = arg[obj.img]
         self.set_new_img(obj,new_img)
+    def act_rotate(self,obj,arg):
+        obj.rotate_right()
+        self.objs.sprites[obj.img] = obj.array
+        obj.animate = {"w":obj.img,"a":obj.img,"s":obj.img,"d":obj.img}
     def act_quit(self,obj,arg):
         self.quit = True
     def act_sound(self,obj,arg):
@@ -462,8 +453,17 @@ class Game():
         except: pass
         return False
 
-    def teleport_obj(self,obj,y:int=0,x:int=0,char_left=BLANK):
-        pass
+    def teleport_obj(self,obj,x:int=0,y:int=0):
+        """Moves an object to a given location. Does not check to see if anything
+        is in the way."""
+        move_x = obj.origx - x
+        move_y = obj.origy - y
+        if x > obj.origx:
+            move_x *= -1
+        if y < obj.origy:
+            move_y *= -1
+        self.move_map_char(obj,move_x,move_y)
+
     def move_obj(self,obj,move_x = 0,move_y = 0):
         """Moves a single object move_x and move_y amount OR LESS."""
         assert move_x in [-1,0,1] and move_y in [-1,0,1], "ONLY 1s and 0s accepted here."
@@ -536,6 +536,20 @@ class Game():
             else:
                 self.objs.objs.insert(i,obj)
                 i = max
+
+    def add_to_sparse(self,x,y,char):
+        obj = self.objs.copy(self.obj_from_char(char),x,y)
+        i = 0
+        max = len(self.objs.objs)
+        while i < max-1:
+            if self.objs.objs[i].origy < y:
+                i+=1
+            elif self.objs.objs[i].origy == y and self.objs.objs[i].origx < x:
+                i+=1
+            else:
+                self.objs.objs.insert(i,obj)
+                i = max
+        self.curr_map.sparse_map.insert(0,[x,y,char])
 
     def init_objs(self):
         """Initializes all objects, referring to objs.objs made
@@ -685,7 +699,7 @@ class Map():
         if sparse_map == self.sparse_map:
             self.height = y
             self.width = maxwidth
-    
+
     def print_all(self):
         """ Appends the proper area of self.rend_map to self.print_map,
         and prints print_map to game window."""
@@ -838,27 +852,30 @@ class Objs():
     def new(self,img, char, x=0,y=0, geom = "all",
     move = None, xspeed = 1, yspeed = 1, hp =1,face_right=True,
     face_down=False, grav=False,dmg = 1, enemy_chars=[],
-    dmg_dirs=[], set_rotate=0, animate=None,txt=-1,max_jump=1):
+    dmg_dirs=[], set_rotate=0, animate=None,txt=-1,max_jump=1,data=dict()):
         """Creates an Obj and appends it to the objs list."""
         obj = self.Obj(img, char, x,y, geom, move,xspeed,yspeed,
             hp,face_right,face_down,grav,dmg,enemy_chars,dmg_dirs,
-            animate,txt,max_jump)
+            animate,txt,max_jump,data)
         self.append_obj(obj,set_rotate)
 
     def copy(self,obji,newx,newy):
         """Makes a copy of an object from its objs index and appends
          that to the objs list."""
-        o = self.objs[obji]
+        if type(obji) == type(int()):
+            o = self.objs[obji]
+        else: # An object was given, not an index
+            o = obji
         self.new(o.img,o.char,newx,newy,o.geom,o.move,o.xspeed,o.yspeed,o.hp,
            o.face_right,o.face_down,o.grav,o.dmg,o.enemy_chars,o.dmg_dirs,o.rotate,
-           o.animate,o.txt,o.max_jump)
+           o.animate,o.txt,o.max_jump,o.data)
         return self.objs[-1]
 
     class Obj():
         def __init__(self,img, char, x=0,y=0, geom = "all",
         move = None, xspeed = 1,yspeed = 1,hp =1,face_right=True,
         face_down=False,grav:bool=False,dmg = 1,enemy_chars=[],dmg_dirs=[],
-        animate=None,txt:int=-1,max_jump=1):
+        animate=None,txt:int=-1,max_jump=1,data=dict()):
             self.simple = False
             self.move = move # None, leftright, wasd, dirs.
             self.grav = grav
@@ -894,6 +911,7 @@ class Objs():
             self.rotate = 0 # 0 through 3
             self.score = 0
             self.live = True
+            self.data = data
 
         def set_origin(self,x,y):
             self.origx = x

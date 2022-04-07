@@ -24,3 +24,16 @@ def grid_patcher(array:list,map=False):
             else:
                 assert False, "Only strings and lists can be in the array"
     return array
+
+def replace_chars(self,obj,new_char):
+    """ Replaces the characters of an object on the
+    INPUT_MAP with new_char."""
+    new_obj = self.obj_from_char(new_char)
+    assert new_obj.height() == 1, "New object's gotta be short."
+    if obj.height()%new_obj.height()==0 and obj.width()%new_obj.width()==0:
+        for y in range(obj.height()):
+            for x in range(obj.width()//new_obj.width()):
+                nx = obj.origx + (x * new_obj.width())
+                ny = obj.origy - obj.height() + 1 + y
+                if self.curr_map.get_xy_rend(nx,ny) != BLANK:
+                    self.curr_map.set_xy_rend(nx,ny,new_char)
