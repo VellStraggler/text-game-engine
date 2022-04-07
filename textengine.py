@@ -77,6 +77,7 @@ class Game():
                             "sound":self.act_sound,
                             "unlock":self.act_unlock,
                             "switch_map":self.act_switch_map,
+                            "switch_theme":self.act_switch_theme,
                             "kill":self.act_kill}   
         self.key_dict = {"wasd":
                             {"w":self.move_up,"a":self.move_left,
@@ -239,7 +240,7 @@ class Game():
         if "x" in self.camera_follow:
             if self.curr_map.width > self.curr_map.window[1] + W_WID < obj.origx + WGC_X:
                 self.curr_map.window[1] += 1
-            elif self.curr_map.window[1] + WGC_X > obj.origx:
+            elif self.curr_map.window[1] + WGC_X > obj.origx - obj.width():
                 if self.curr_map.window[1] > 0:
                     self.curr_map.window[1] -= 1
         if "y" in self.camera_follow:
@@ -384,6 +385,10 @@ class Game():
         # ARG: dictionary of old img key and new img value
         new_img = arg[obj.img]
         self.set_new_img(obj,new_img)
+    def act_switch_theme(self,obj,arg):
+        mixer.music.stop()
+        self.add_theme(arg[-1])
+        self.play_theme()
     def act_rotate(self,obj,arg):
         obj.rotate_right()
         self.objs.sprites[obj.img] = obj.array
@@ -392,6 +397,8 @@ class Game():
         self.quit = True
     def act_sound(self,obj,arg):
         # ARG: sound path
+        if type(arg) == type(list()):
+            arg = arg[-1]
         self.add_sound(arg,arg)
         self.play_sound(arg)
     def act_unlock(self,obj,arg):
