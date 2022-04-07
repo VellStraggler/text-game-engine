@@ -13,15 +13,15 @@
 
 
 
+                                                                                                          f
 
+  b         m    p                        p                g                               p     b    b    b    b    b
 
-  b         m    p                        p                g                               p     b
+  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
 
-  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
+  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
 
-  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b
-
-  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b                                                                              
+  b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b                                                                          
 
 
 

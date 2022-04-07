@@ -256,6 +256,7 @@ class Game():
         if sound:
             self.play_sound("death")
         obj.set_origin(0,0)
+        obj.live = False
         obj.array = [[' ']]
         obj.move = None
 
@@ -326,8 +327,8 @@ class Game():
             obj.move_time["i"] = time()
             xs,xf,ys,yf = self.set_xy_limits(obj)
             for act in self.acts.acts:
-                if act.kind == "interact":
-                    if not act.locked:
+                if not act.locked:
+                    if act.kind == "interact":
                         i_char = act.char
                         if obj.face_down:
                             if i_char in self.curr_map.geom_map[yf+1][xs:xf]: #BELOW
@@ -352,6 +353,7 @@ class Game():
                             else:
                                 if self.curr_map.geom_map[y][xs-1] == i_char: #LEFT
                                     pass
+
     def set_xy_limits(self,obj):
         """Used in run_acts and run_interacts"""
         xs = obj.origx
@@ -378,6 +380,17 @@ class Game():
                         if xs <= act.arg[0] < xf or act.arg[0] == -1:
                             self.act_set_dict[act.effect](obj,act.arg)
                             # Call the proper function from the act_set dictionary
+                elif act.kind == "touch":
+                    bubble = set()
+                    for char in self.curr_map.geom_map[yf+1][xs:xf]:
+                        bubble.add(char)
+                    for char in self.curr_map.geom_map[ys-1][xs:xf]:
+                        bubble.add(char)
+                    for y in range(ys,yf):
+                        bubble.add(self.curr_map.geom_map[y][xs-1])
+                        bubble.add(self.curr_map.geom_map[y][xf])
+                    if act.arg[0] in bubble:
+                        self.act_set_dict[act.effect](obj,act.arg)
 
     # These functions are put into act_set_dict, for quicker lookup than if statements.
     def act_switch_sprite(self,obj,arg):
@@ -395,10 +408,10 @@ class Game():
         for targ_act in self.acts.acts:
             if targ_act.name == arg:
                 targ_act.locked = False
-    def act_switch_map(self,obj,arg):
-        # ARG: name of new map
+    def act_switch_map(self,obj,arg:list):
+        # The last item in ARG is the file_name
         # Find the map in map_list, or create it
-        file_name = arg[2]
+        file_name = arg[-1]
         index = 0
         map_not_found = True
         while map_not_found and index < len(self.map_list):
@@ -880,6 +893,7 @@ class Objs():
             self.array = [] # Must be set through Objs function new().
             self.rotate = 0 # 0 through 3
             self.score = 0
+            self.live = True
 
         def set_origin(self,x,y):
             self.origx = x
