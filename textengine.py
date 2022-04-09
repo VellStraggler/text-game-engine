@@ -3,7 +3,7 @@ from keyboard import is_pressed,wait
 from os.path import dirname
 from pygame import mixer
 from time import time,sleep
-import numpy
+import numpy as np
 
 DIRPATH = dirname(__file__)
 # Required to run program in Python3 terminal.
@@ -22,6 +22,7 @@ W_HEI = 30
 # Based on the Windows Terminal window at default size.
 # UPDATE: add function to detect window dimensions/set them.
 INFO_HEI=3
+RETURN = CUR * (W_HEI+INFO_HEI)
 WGC_X = W_WID//2 - 5
 WGC_Y = W_HEI//2 - 5
 # WINDOW GUIDE CUSHION, the breathing room between the sprite between
@@ -654,10 +655,11 @@ class Map():
         self.overlay = [[BLANK for x in range(W_WID)] for y in range(W_HEI)]
             # Optional overlay of the game.
         self.use_overlay = False
+        #self.print_map = np.array([S_LINE for i in range(W_HEI)])
         self.print_map = [S_LINE for i in range(W_HEI)]
             # Map of the final screen. 1D list of strings.
         self.rend_map = [] # Map of what will be rendered
-        self.sparse_map = [] # Made to store user-made map.
+        self.sparse_map = list() # Made to store user-made map.
         self.window = [0,0] # Y,X
             # These are the map coordinates of the 
             # top-left-most item shown in the window.
@@ -682,7 +684,7 @@ class Map():
                 map[y] = (list(BLANK * self.width))
         return map
 
-    def store_map(self,sparse_map,path):
+    def store_map(self,sparse_map:list,path):
         """ Stores characters and their coords in self.sparse_map,
         using a preset path. Also sets self.width and self.height. """
         path = DIRPATH + "\\" + path
@@ -711,12 +713,13 @@ class Map():
         """ Appends the proper area of self.rend_map to self.print_map,
         and prints print_map to game window."""
         wid = self.window[1] + W_WID
-        print(CUR * (W_HEI+INFO_HEI)) #"\033[1;35;100m"
-        cushion = " " * 25
+        print(RETURN) #"\033[1;35;100m"
+        [[print("".join(self.rend_map[row][self.window[1]:wid]))] for row in range(self.window[0],self.window[0]+W_HEI)]
+        """cushion = ""#" " * 25
         for row in range(W_HEI):
             self.print_map[row] = "".join(self.rend_map[row+self.window[0]][self.window[1]:wid])
             # UPDATE: OVERLAY WOULD GO HERE.
-        [print(cushion,self.print_map[i]) for i in range(W_HEI)]
+        [print(cushion,self.print_map[i]) for i in range(W_HEI)]"""
         print()
 
     def set_xy_geom(self,x,y,char):
