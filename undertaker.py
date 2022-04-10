@@ -22,7 +22,6 @@ g.acts.new("start game","touch","X","sound",["Y","move_cursor2.wav"])
 g.acts.new("start game","touch","X","switch_theme",["Y","theme.wav"])
 g.acts.new("start game","touch","X","switch_map",["Y","under/map1.txt"])
 
-
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",
     xspeed=100, yspeed=20,animate="sneaky")
 g.objs.append_obj(player)
@@ -52,16 +51,16 @@ g.objs.new("table","T",geom="line")
 doors = {"door-closed":"door-open","door-open":"door-closed","door-locked":"door-open"}
 plants = {"plant":"plant1","plant1":"plant"}
 
-g.acts.new(char="d",effect="switch_sprite",arg=doors)
 g.acts.new(char="d",effect="sound",arg="door_close.wav")
-g.acts.new("unlock_door","interact","D","switch_sprite",doors,True)
+g.acts.new(char="d",effect="switch_sprite",arg=doors)
 g.acts.new(char="D",effect="sound",arg="door_close.wav")
-g.acts.new(char="P",effect="switch_sprite",arg=plants)
+g.acts.new("unlock_door","interact","D","switch_sprite",doors,True)
 g.acts.new(char="P",effect="sound",arg="bink_sound.wav")
+g.acts.new(char="P",effect="switch_sprite",arg=plants)
 g.acts.new("","location","g","switch_map",[235,15,"under/map1.txt"])
 g.acts.new(char="p",effect="sound",arg="piano.wav")
 g.acts.new(char="k",effect="unlock",arg="unlock_door")
 g.acts.new(char="k",effect="sound",arg="bink_sound.wav")
 g.acts.new(char="k",effect="kill")
 
-g.run_game()#
+g.run_game()

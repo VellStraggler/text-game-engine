@@ -37,3 +37,16 @@ def replace_chars(self,obj,new_char):
                 ny = obj.origy - obj.height() + 1 + y
                 if self.curr_map.get_xy_rend(nx,ny) != BLANK:
                     self.curr_map.set_xy_rend(nx,ny,new_char)
+
+def flip_sprite_old(self):
+    """Flips the sprite of an image vertically (left to right)"""
+    self.face_right = not self.face_right
+    for y in range(self.height()):
+        for x in range(self.width()//2+self.width()%2):
+            hold = self.array[y][x]
+            if hold in FLIP_CHARS.keys():
+                hold = FLIP_CHARS[hold]
+            self.array[y][x] = self.array[y][self.width()-x-1]
+            if self.array[y][x] in FLIP_CHARS.keys():
+                self.array[y][x] = FLIP_CHARS[self.array[y][x]]
+            self.array[y][self.width()-x-1] = hold
