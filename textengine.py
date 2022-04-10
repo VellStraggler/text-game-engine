@@ -83,7 +83,7 @@ class Game():
         self.key_dict = {"wasd":
                             {"w":self.move_up,"a":self.move_left,
                             "s":self.move_down,"d":self.move_right,
-                            "e":self.run_interacts},
+                            "e":self.run_interacts,"ctrl+r":self.reload_screen},
                         "dirs":
                             {"up arrow":self.move_up,"left arrow":self.move_left,
                             "down arrow":self.move_down,"right arrow":self.move_right,
@@ -338,6 +338,9 @@ class Game():
                                     if self.curr_map.geom_map[y][xs-1] == i_char: #LEFT
                                         pass
 
+    def reload_screen(self,obj):
+        self.init_rendering()
+
     def set_xy_limits(self,obj):
         """Used in run_acts and run_interacts"""
         xs = obj.origx
@@ -589,7 +592,6 @@ class Game():
     def add_to_update_objs(self,obj):
         """Adds everything in the rows of a moved object into
         the updated objects list."""
-        self.objs.add_to_update_objs(obj)
         # Clear the render area the sprite is currently at.
         for y in range(obj.origy-obj.height(),obj.origy+1):
             for x in range(obj.origx-1,obj.origx + obj.width()+1):
@@ -597,6 +599,22 @@ class Game():
                 if self.curr_map.get_xy_geom(x,y) == obj.char:
                     self.curr_map.set_xy_geom(x,y,BLANK)
         # Render the area the sprite currently takes up as if it weren't there
+        min_y = obj.origy - self.objs.max_height#obj.height()
+        max_y = obj.origy + self.objs.max_height
+        min_x = obj.origx - self.objs.max_width
+        max_x = obj.origx + self.objs.max_width#obj.width()
+
+        i = 0
+        c_obj = self.objs.objs[i]
+        while c_obj.origy < min_y or (c_obj.origx < min_x and c_obj.origy >= min_y):
+            i += 1
+            c_obj = self.objs.objs[i]
+        while i < len(self.objs.objs)-1 and self.objs.objs[i].origy <= max_y:
+            if min_x <= c_obj.origx <= max_x:
+                self.objs.add_to_update_objs(c_obj)
+                # The main object will be at the center of this search.
+            i += 1
+            c_obj = self.objs.objs[i]
         
     def set_sprite(self,obj,new_img):
         self.add_to_update_objs(obj)
@@ -836,13 +854,14 @@ class Objs():
     def add_to_update_objs(self,obj):
         """Adds an object to the list of objects that will be updated
         on the map. This list is ordered by coordinate."""
-        i=len(self.update_objs)-1
+        self.update_objs.append(obj)
+        """i=len(self.update_objs)-1
         while i > 0 and self.update_objs[i].origy > obj.origy:
             i-=1
         # Once it reaches the y, go until the x is further or it's on the next y
         while i > 0 and obj.origx > self.update_objs[i].origx and obj.origy == self.update_objs[i].origy:
             i-=1
-        self.update_objs.insert(i,obj)
+        self.update_objs.insert(i,obj)"""
         
     def get_flipped_sprite(self,array):
         """ Returns a vertically mirrored
