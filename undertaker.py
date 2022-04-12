@@ -7,6 +7,7 @@ g.objs.get_sprites("under/sprites.txt")
 g.objs.get_texts("under/text.txt")
 g.camera_follow = ["x","y"]
 g.folder = "under/"
+g.default_color = tx.get_color_number(54)
 g.add_theme('menu.wav')
 
 g.objs.new("title","Z")

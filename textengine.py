@@ -4,6 +4,7 @@ from os.path import dirname
 from pygame import mixer
 from time import time,sleep
 import numpy as np
+from math import log
 
 DIRPATH = dirname(__file__)
 # Required to run program in Python3 terminal.
@@ -36,6 +37,11 @@ FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
     '>':'<','(':')',')':'(','◐':'◑','◑':'◐','↙':'↘','↘':'↙','כ':'c',
     'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↗','↗':'↖','⌋':'⌊',
     '⌊':'⌋'}
+
+ccode = "\033[0;39;"
+COLORS = {"default":ccode+"49m","white":ccode+"47m",
+        "cyan":ccode+"46m","yellow":ccode+"43m",
+        "green":ccode+"42m","magenta":ccode+"45m",}
 
 class Game():
     """
@@ -79,15 +85,18 @@ class Game():
                             "unlock":self.act_unlock,
                             "switch_map":self.act_switch_map,
                             "switch_theme":self.act_switch_theme,
-                            "kill":self.act_kill}   
+                            "kill":self.act_kill,
+                            "up_score":self.up_score}   
         self.key_dict = {"wasd":
-                            {"w":self.move_up,"a":self.move_left,
-                            "s":self.move_down,"d":self.move_right,
+                            {"w":self.move_up,"s":self.move_down,
+                            "a":self.move_left,"d":self.move_right,
                             "e":self.run_interacts,"ctrl+r":self.reload_screen},
                         "dirs":
                             {"up arrow":self.move_up,"left arrow":self.move_left,
                             "down arrow":self.move_down,"right arrow":self.move_right,
                             ".":self.run_interacts}}
+        
+        self.default_color = COLORS["default"]
 
     def run_game(self):
         """Combine the map and the objs and begin the main game loop."""
@@ -114,7 +123,7 @@ class Game():
     def init_map(self,first=True):
         """All that comes before the main game_loop"""
         if first:
-            print(CLEAR)
+            print(CLEAR,self.default_color)
             self.start_time = time()
             self.play_theme()
         self.init_objs()
@@ -125,7 +134,7 @@ class Game():
         mixer.music.stop()
         self.play_sound("quit")
         self.total = self.frames/(time()-self.start_time)
-        print(f"{SPACES}Game Over!\nAverage FPS: {self.total:.3f}")
+        print(f"{COLORS['default']}{SPACES}Game Over!\nAverage FPS: {self.total:.3f}")
         scores = []
         for obj in self.objs.objs:
             if not obj.simple:
@@ -134,7 +143,8 @@ class Game():
                 elif obj.move =="dirs":
                     scores.append('Player 2: ' + str(obj.score))
         print(f"Scores: {scores}")
-        input("Press ENTER to exit.\n")
+        input(f"Press ENTER to exit.\n") # Hide input from the whole game
+        print(COLORS['default'],CLEAR)
 
     def game_loop(self):
         """This is what loops for every game tick.
@@ -242,13 +252,13 @@ class Game():
         self.run_acts(obj)
         # CAMERA MOVING:
         if "x" in self.camera_follow:
-            if self.curr_map.width > self.curr_map.window[0] + W_WID < obj.origx + WGC_X:
+            if self.curr_map.width > self.curr_map.window[0] + W_WID < obj.origx + WGC_X + obj.width():
                 self.curr_map.window[0] += 1
-            elif self.curr_map.window[0] + WGC_X > obj.origx - obj.width():
+            elif self.curr_map.window[0] + WGC_X > obj.origx:
                 if self.curr_map.window[0] > 0:
                     self.curr_map.window[0] -= 1
         if "y" in self.camera_follow:
-            if self.curr_map.height > self.curr_map.window[1] + W_HEI < obj.origy + WGC_Y :
+            if self.curr_map.height > self.curr_map.window[1] + W_HEI < obj.origy + WGC_Y:
                 self.curr_map.window[1] += 1
             elif self.curr_map.window[1] + WGC_Y > obj.origy:
                 if self.curr_map.window[1] > 0:
@@ -256,7 +266,7 @@ class Game():
         # GAME-ENDING CHECKS:
         if obj.hp <= 0 or obj.origy == self.curr_map.width -1:
             self.quit = True
-            obj.array = [['d','e','a','d']]
+            self.set_sprite(obj,"dead")
 
     def kill_obj(self,obj,sound:bool=False): # DEATH
         if sound:
@@ -269,26 +279,26 @@ class Game():
 
     # Synonymous functions
     def move_left(self,obj):
+        self.set_sprite(obj,obj.animate["a"])
         if time() - obj.move_time["a"] > 1/obj.xspeed:
             obj.move_time["a"] = time()
-            self.set_sprite(obj,obj.animate["a"])
             self.move_obj(obj,-1)
     def move_right(self,obj):
+        self.set_sprite(obj,obj.animate["d"])
         if time() - obj.move_time["d"] > 1/obj.xspeed:
             obj.move_time["d"] = time()
-            self.set_sprite(obj,obj.animate["d"])
             self.move_obj(obj,1)
     def move_down(self,obj):
+        self.set_sprite(obj,obj.animate["s"])
         if time() - obj.move_time["s"] > 1/obj.yspeed:
             obj.move_time["s"] = time()
-            self.set_sprite(obj,obj.animate["s"])
             if obj.grav:
                 obj.jump = 0
             self.move_obj(obj,0,1)
     def move_up(self,obj):
+        self.set_sprite(obj,obj.animate["w"])
         if time() - obj.move_time["w"] > 1/obj.yspeed:
             obj.move_time["w"] = time()
-            self.set_sprite(obj,obj.animate["w"])
             if not obj.grav:
                 self.move_obj(obj,0,-1)
             elif not self.can_move(obj,0,1): # If on top of something.
@@ -428,7 +438,9 @@ class Game():
         self.init_map(False)
     def act_kill(self,obj,arg):
         # Make sure this is the last act of that object.
-        self.kill_obj(obj)            
+        self.kill_obj(obj)
+    def up_score(self,obj,arg):
+        obj.score += arg[-1]        
 
     def take_dmg(self,obj,e_char):
         enemy = self.obj_from_char(e_char)
@@ -1018,3 +1030,17 @@ class Objs():
                     sprite[y][-((x*2)+2)] = self.array[x][(y*2)]
                     sprite[y][-((x*2)+1)] = self.array[x][(y*2)+1]
             self.array = sprite
+
+def get_color_number(x):
+    return ("\033[48;5;" + str(x) + "m")
+
+def print_color_numbers():
+    spaces = " "
+    color_base = "\033[48;5;"
+    for x in range(256):
+        color = color_base + str(x) + "m"
+        try:spaces = " " * (3 - int(log(x,10)))
+        except:pass
+        print(f"{color}{x}{spaces}{C['default']}",end="")
+        if (x-15)%6 == 0:
+            print()

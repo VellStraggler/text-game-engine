@@ -9,6 +9,7 @@ def main():
     g.camera_follow = ["x","y"]
 
     g.acts.new("","touch","g","switch_map",["f","mario/mario_test_.txt"])
+    g.acts.new("","touch","g","up_score",["g",10])
     g.acts.new("","location","m","quit",[-1,31])
     
     g.objs.new('mario','m',geom="complex",move = "wasd",grav=True,
