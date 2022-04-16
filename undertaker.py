@@ -1,4 +1,5 @@
 import textengine as tx
+from textengine import color_by_num
 
 g = tx.Game()
 g.curr_map.set_path("under/menu.txt")
@@ -7,8 +8,9 @@ g.objs.get_sprites("under/sprites.txt")
 g.objs.get_texts("under/text.txt")
 g.camera_follow = ["x","y"]
 g.folder = "under/"
-g.default_color = tx.get_color_number(54)
+g.set_default_color(color_by_num(54))
 g.add_theme('menu.wav')
+wood = 52
 
 g.objs.new("title","Z")
 g.objs.new("cursor","X",move="wasd",geom="all",yspeed=30,xspeed=30)
@@ -24,7 +26,7 @@ g.acts.new("start game","touch","X","switch_theme",["Y","theme.wav"])
 g.acts.new("start game","touch","X","switch_map",["Y","under/map1.txt"])
 
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",
-    xspeed=100, yspeed=20,animate="sneaky")
+    xspeed=100, yspeed=20,animate="sneaky",color=240)
 g.objs.append_obj(player)
 g.objs.new("face","L")
 g.objs.new("face","q",geom="skeleton")
@@ -33,21 +35,21 @@ g.objs.new("door-locked","D",geom="skeleton")
 g.objs.new("wall-side","w")
 g.objs.new("wall","f")
 g.objs.new("wall-back","b")
-g.objs.new("father","u",geom="line")
+g.objs.new("father","u",geom="line",color=240)
 g.objs.new("jack",'t',geom="line")
 g.objs.new("fence","x",geom="line")
 g.objs.new("fence-side","z")
-g.objs.new("piano","p",geom="line")
+g.objs.new("piano","p",geom="line",color=wood)
 g.objs.new("couch","C",geom="complex")
 g.objs.new("carpet","G",geom=None)
-g.objs.new("plant","P",geom="line")
+g.objs.new("plant","P",geom="line",color=58)
 g.objs.new("key","k",geom=None)
-g.objs.new("bedside","t",geom="line")
-g.objs.new("bookshelf","B",geom="line")
-g.objs.new("curtain-window","W")
+g.objs.new("bedside","t",geom="line",color=wood)
+g.objs.new("bookshelf","B",geom="line",color=wood)
+g.objs.new("curtain-window","W",color=69)
 g.objs.new("stair-flat","s",geom=None)
 g.objs.new("stair-wall","S",geom=None)
-g.objs.new("table","T",geom="line")
+g.objs.new("table","T",geom="line",color=wood)
 
 doors = {"door-closed":"door-open","door-open":"door-closed","door-locked":"door-open"}
 plants = {"plant":"plant1","plant1":"plant"}
