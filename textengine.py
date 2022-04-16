@@ -258,21 +258,30 @@ class Game():
         # CAMERA MOVING:
         if "x" in self.camera_follow:
             if self.curr_map.width > self.curr_map.window[0] + W_WID < obj.origx + WGC_X + obj.width():
-                self.curr_map.window[0] += 1
+                self.move_camera(1)
             elif self.curr_map.window[0] + WGC_X > obj.origx:
                 if self.curr_map.window[0] > 0:
-                    self.curr_map.window[0] -= 1
+                    self.move_camera(-1)
         if "y" in self.camera_follow:
             if self.curr_map.height > self.curr_map.window[1] + W_HEI < obj.origy + WGC_Y:
-                self.curr_map.window[1] += 1
-            elif self.curr_map.window[1] + WGC_Y > obj.origy:
+                self.move_camera(0,1)
+            elif self.curr_map.window[1] + WGC_Y > obj.origy - obj.height():
                 if self.curr_map.window[1] > 0:
-                    self.curr_map.window[1] -= 1
+                    self.move_camera(0,-1)
         # GAME-ENDING CHECKS:
         if obj.hp <= 0 or obj.origy == self.curr_map.width -1:
             self.quit = True
             self.kill_obj(obj)
 
+    def can_move_camera(self,x=0,y=0,obj=None):
+        pass    
+    def move_camera(self,x=0,y=0):
+        self.curr_map.window[0] += x
+        self.curr_map.window[1] += y
+        self.curr_map.start_window_y += y
+        self.curr_map.end_window_y += y
+        self.curr_map.start_window_x += x
+        self.curr_map.end_window_x += x
     def kill_obj(self,obj,sound:bool=False): # DEATH
         if sound:
             self.play_sound("death")
@@ -625,9 +634,17 @@ class Game():
                     self.curr_map.set_xy_geom(x,y,BLANK)
         # Render the area the sprite currently takes up as if it weren't there
         min_y = obj.origy - obj.height()
+        #if min_y < self.curr_map.start_window_y:
+        #    min_y = self.curr_map.start_window_y
         max_y = obj.origy + self.objs.max_height
+        #if max_y > self.curr_map.end_window_y:
+        #    max_y = self.curr_map.end_window_y
         min_x = obj.origx - self.objs.max_width
-        max_x = obj.origx + self.objs.max_width#obj.width()
+        #if min_x < self.curr_map.start_window_x:
+        #    min_x = self.curr_map.start_window_x
+        max_x = obj.origx + self.objs.max_width
+        #if max_x > self.curr_map.end_window_x:
+        #    max_x = self.curr_map.start_window_x
 
         i = 0
         c_obj = self.objs.objs[i]
@@ -644,6 +661,7 @@ class Game():
     def set_sprite(self,obj,new_img):
         self.add_to_update_objs(obj) #re-render
         self.objs.set_sprite(obj,new_img)
+        self.geom_set_dict[obj.geom](obj)
 
     def flip_sprite(self,obj):
         assert obj.animate not in [None,"flip"], "This object is not animated."
@@ -657,6 +675,9 @@ class Game():
         self.curr_map.empty_map(self.curr_map.geom_map)
         for obj in self.objs.objs:
             self.render_obj(obj)
+            self.geom_set_dict[obj.geom](obj)
+            # Geometry is all-in-all static, and otherwise
+            # changed by object movement alone.
     def rendering(self):
         """This creates the output AND geometry
         maps out of all object sprites. NOT for initializing
@@ -672,41 +693,39 @@ class Game():
                 break
     def render_obj(self,obj):
         # Print a sprite at its origin.
+        ypos = obj.origy - obj.height()
+        substance = False
         if obj.geom != "skeleton":
-            for y in range(obj.height()):
-                s1 = True
-                s2 = True
-                for x in range((obj.width()//2+1)):
-                    char = obj.get_char(x,y)
-                    # Don't put any blanks at the start or 
-                    # end of a line of a sprite.
-                    if BLANK not in char or not s1:
-                        s1 = False
-                        ypos = obj.origy + y - obj.height()
-                        xpos = obj.origx + x
+            for row in obj.sprite:
+                substance = False
+                xpos = obj.origx
+                for char in row:
+                    if char != SIGN:
                         self.curr_map.set_xy_rend(xpos, ypos, char)
-                    char = obj.get_char(obj.width()-x,y)
-                    if BLANK not in char or not s2:
-                        s2 = False
-                        ypos = obj.origy + y - obj.height()
-                        xpos = obj.origx - x + obj.width()
-                        self.curr_map.set_xy_rend(xpos, ypos, char)
+                        substance = True
+                    elif substance:
+                        break
+                    xpos += 1
+                ypos += 1     
         else: # skeleton
-            for y in range(obj.height()):
-                for x in range(obj.width()):
-                    char = obj.get_char(x,y)
-                    # Don't print any blanks at all.
-                    if BLANK not in char:
-                        ypos = obj.origy + y - obj.height()
-                        xpos = obj.origx + x
-                        self.curr_map.set_xy_rend(xpos, ypos, char)
+            for row in obj.sprite:
+                xpos = obj.origx
+                substance = False
+                for char in row:
+                    if char != SIGN:
+                        if BLANK not in char:
+                            self.curr_map.set_xy_rend(xpos, ypos, char)
+                        substance = True
+                    elif substance:
+                        break
+                    xpos += 1
+                ypos += 1
         # Add any text above the object sprite
         if obj.txt > -1:
             txt = self.objs.texts[obj.txt]
             out_y = obj.origy - obj.height() - 2
             out_x = obj.origx + (obj.width())//2 - len(txt)//2
             [self.curr_map.set_xy_rend(out_x+i,out_y,txt[i]) for i in range(len(txt))]
-        self.geom_set_dict[obj.geom](obj)
 
 class Map():
     """Three arrays are stored in a Map object: the wasd input 
@@ -717,16 +736,19 @@ class Map():
         self.height = W_HEI
         self.width = W_WID
         self.sparse_map = list() # Made to store user-made map.
-        #self.print_map = [S_LINE for i in range(W_HEI)]
-        #self.print_map = np.array([S_LINE for i in range(W_HEI)])
             # Map of the final screen. 1D list of strings.
         self.rend_map = [] # Map of what will be rendered
+            # UPDATE: GETTING PHASED OUT.
         self.overlay = [[BLANK for x in range(W_WID)] for y in range(W_HEI)]
             # Optional overlay of the game.
         self.use_overlay = False
         self.window = [0,0] # X,Y, AS IT SHOULD BE >:D
             # These are the map coordinates of the 
-            # top-left-most item shown in the window.
+            # top-left-most char shown in the window.
+        self.start_window_y = self.window[1]
+        self.end_window_y = self.window[1] + W_HEI + (WGC_Y*3)
+        self.start_window_x = self.window[0] - (WGC_X*3)
+        self.end_window_x = self.window[0] + W_WID + (WGC_X*3)
         self.file_name = ""
 
     def set_path(self,path):
@@ -780,21 +802,17 @@ class Map():
 
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
-        # if x > -1 < y and x < self.width and y < self.height: # SUPER SLOW: ALL OF THESE.
         try: self.geom_map[y][x] = char
         except: pass
     def get_xy_geom(self,x,y):
         """Returns what character is at this position."""
-        #if x > -1 < y and x < self.width and y < self.height:
         try: return self.geom_map[y][x]
         except: return BLANK
     def set_xy_rend(self,x,y,char):
         """Sets char at a given position on map"""
-        #if x > -1 < y and x < self.width and y < self.height:
         try: self.rend_map[y][x] = char
         except: pass
     def get_xy_rend(self,x,y):
-        #if x > -1 < y and x < self.width and y < self.height:
         try: return self.rend_map[y][x]
         except: return BLANK
 
@@ -840,10 +858,11 @@ class Objs():
 
     def get_sprites(self,path):
         """Takes the sprite file path and stores the sprites in
-        the sprites dictionary."""
+        the sprites dictionary. It also interprets the sprites for
+        parts of their strings that are empty."""
         path = DIRPATH + "/" + path
-        c_img = None
-        c_sprite = []
+        curr_img = None
+        curr_sprite = []
         height = 0
         # Adds parent directory of running program
         with open(path, 'r',encoding='utf-8') as file:
@@ -851,19 +870,41 @@ class Objs():
             while(line):
                 if line[0] == SIGN and line[-1] == SIGN:
                 # Begins and ends with SIGN
-                    if c_img != None: # If this isn't the first img
-                        if len(c_sprite[0]) > self.max_width:
-                            self.max_width = len(c_sprite[0])
+                    if curr_img != None: # If this isn't the first img
+                        if len(curr_sprite[0]) > self.max_width:
+                            self.max_width = len(curr_sprite[0])
                         if height > self.max_height:
                             self.max_height = height
-                        self.sprites[c_img] = c_sprite
-                        c_sprite = []
-                    c_img = line[1:-1] # Remove SIGNs
+                        self.sprites[curr_img] = curr_sprite
+                        curr_sprite = []
+                    curr_img = line[1:-1] # Remove SIGNs
                     height = 0
                 else:
-                    c_sprite.append(list(line))
+                    line = self.replace_spaces(line)
+                    curr_sprite.append(list(line))
                     height +=1
                 line = file.readline()[:-1] # Removes the \n
+
+    def replace_spaces(self,line:str):
+        """All spaces before and after other characters are replaced
+        by the constant SIGN."""
+        s1 = True
+        s2 = True
+        start = ""
+        end = ""
+        for x in range((len(line)+1)//2):
+            char = line[x]
+            if char != BLANK or not s1: s1 = False
+            else:   char = SIGN
+            start = start + char
+            char = line[len(line)-x-1]
+            if char != BLANK or not s2: s2 = False
+            else:   char = SIGN
+            end = char + end
+        if len(line)%2==0:
+            return start + end
+        else:
+            return start[:-1] + end
 
     def get_texts(self,path):
         path = DIRPATH + "/" + path
@@ -877,7 +918,13 @@ class Objs():
         """Adds an object to the list of objects that will be updated
         on the map. This list is unordered."""
         self.update_objs.append(obj)
-        
+    
+    def add_color(self,obj,char,row=1):
+        if char != SIGN:
+            if char != "_" or row != 0:
+                char = obj.color + char + self.default_color
+        return char
+
     def get_flipped_sprite(self,obj):
         """ Returns a vertically mirrored
         2D sprite of the given sprite"""
@@ -890,9 +937,8 @@ class Objs():
                 if len(char) > 1:
                     char = char[len(char)//2]
                 if char in FLIP_CHARS:
-                    char = obj.color + FLIP_CHARS[char] + self.default_color
-                else:
-                    char = obj.color + char + self.default_color
+                    char = FLIP_CHARS[char]
+                char = self.add_color(obj,char,row)
                 line.append(char)
             new_sprite.append(line)
         return new_sprite
@@ -900,13 +946,12 @@ class Objs():
     def set_sprite(self,obj,new_img):
         obj.img = new_img
         obj.sprite = []
-        for y in self.sprites[obj.img]:
-            obj.sprite.append(list(y))
+        for row in self.sprites[obj.img]:
+            obj.sprite.append(list(row)) # Make a list copy
         if len(obj.get_char(0,0)) == 1:
             for y in range(len(obj.sprite)):
                 for x in range(len(obj.sprite[y])):
-                    obj.sprite[y][x] = obj.color + obj.sprite[y][x] + self.default_color
-        
+                    obj.sprite[y][x] = self.add_color(obj,obj.sprite[y][x],y)
         obj.rotate = 0
 
     def find_obj_index(self,obj):
@@ -920,8 +965,7 @@ class Objs():
     
     def append_objs(self,objs:list=[]):
         """Add a list of objects to self.objs."""
-        for obj in objs:
-            self.append_obj(obj)
+        [self.append_obj(obj) for obj in objs]
             
     def append_obj(self,obj,rotate=0):
         """Important object initialization happens here."""
