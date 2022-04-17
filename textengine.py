@@ -743,6 +743,7 @@ class Map():
             # Optional overlay of the game.
         self.use_overlay = False
         self.window = [0,0] # X,Y, AS IT SHOULD BE >:D
+        self.print_map = ""
             # These are the map coordinates of the 
             # top-left-most char shown in the window.
         self.start_window_y = self.window[1]
@@ -797,8 +798,12 @@ class Map():
     def print_all(self):
         """ Appends the proper area of self.rend_map to self.print_map,
         and prints print_map to game window."""
-        print(RETURN)
-        [[print("".join(self.rend_map[row][self.window[0]:self.window[0] + W_WID]))] for row in range(self.window[1],self.window[1]+W_HEI)]
+        self.print_map = ""
+        [[self.add_to_print("".join(self.rend_map[row][self.window[0]:self.window[0] + W_WID]))] for row in range(self.window[1],self.window[1]+W_HEI)]
+        print(f"{RETURN}{self.print_map}")
+
+    def add_to_print(self,text):
+        self.print_map = self.print_map + text + "\n"
 
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
