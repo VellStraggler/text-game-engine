@@ -44,12 +44,7 @@ render_obj(sprite,50,13,tx.COLORS['green'])
 render_obj(sprite,50,26,tx.COLORS['green'])
 render_obj(sprite,50,13,tx.COLORS['green'])
 
+list1 = [1,2,3,4,5,6,7,8,9]
+list1.reverse()
 
-char = "helpme"
-new = char[char.index("m")+1]
-print(new)
-list2 = ["KILL ME"]
-print(list2[0])
-print(list2[-1])
-list2.append("NOW")
-print(list2[-1])
+print(list1)

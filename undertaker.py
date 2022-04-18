@@ -7,31 +7,30 @@ g.curr_map.set_overlay("under/overlay.txt")
 g.objs.get_sprites("under/sprites.txt")
 g.objs.get_texts("under/text.txt")
 g.camera_follow = ["x","y"]
-g.folder = "under/"
 tx.default_color = color_by_num(54)
-g.add_theme('menu.wav')
+g.add_theme('under/menu.wav')
 wood = 52
 
-g.objs.new("title","Z")
-g.objs.new("cursor","X",move="wasd",geom="all",yspeed=30,xspeed=30)
-g.objs.new("start","Y",geom="all")
-g.objs.new("help","V",geom="all")
-g.objs.new("quit","Q",geom="all")
+g.objs.new("title","Z",color=232)
+g.objs.new("cursor","X",move="wasd",yspeed=30,xspeed=30)
+g.objs.new("start","Y",geom="all",color=236)
+g.objs.new("help","V",geom="all",color=240)
+g.objs.new("quit","Q",geom="all",color=244)
 
-g.acts.new("","touch","X","sound",["V","move_cursor2.wav"])
-g.acts.new("quit game","touch","X","sound",["Q","move_cursor2.wav"])
+g.acts.new("","touch","X","sound",["V","under/move_cursor2.wav"])
+g.acts.new("quit game","touch","X","sound",["Q","under/move_cursor2.wav"])
 g.acts.new("quit game","touch","X","quit",["Q"])
-g.acts.new("start game","touch","X","sound",["Y","move_cursor2.wav"])
-g.acts.new("start game","touch","X","switch_theme",["Y","theme.wav"])
+g.acts.new("start game","touch","X","sound",["Y","under/move_cursor2.wav"])
+g.acts.new("start game","touch","X","switch_theme",["Y","under/theme.wav"])
 g.acts.new("start game","touch","X","switch_map",["Y","under/map1.txt"])
 
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",
-    xspeed=50, yspeed=20,animate="sneaky",color=240)
+    xspeed=100, yspeed=20,animate="sneaky",color=240)
 g.objs.append_obj(player)
 g.objs.new("face","L")
 g.objs.new("face","q",geom="skeleton")
-g.objs.new("door-closed","d",geom="skeleton",color=wood)
-g.objs.new("door-locked","D",geom="skeleton",color=wood)
+g.objs.new("door-closed","d",geom="line",color=wood)
+g.objs.new("door-locked","D",geom="line",color=wood)
 g.objs.new("wall-side","w",color=245)
 g.objs.new("wall","f",color=245,geom="skeleton")
 g.objs.new("wall-back","b",color=245)
@@ -53,19 +52,22 @@ g.objs.new("stair-flat","s",geom=None)
 g.objs.new("stair-wall","S",geom=None)
 g.objs.new("table","T",geom="line",color=wood)
 
-doors = {"door-closed":"door-open","door-open":"door-closed","door-locked":"door-open"}
+doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"door-open"}
+door_geom = {"skeleton":"line","line":"skeleton"}
 plants = {"plant":"plant1","plant1":"plant"}
 
-g.acts.new(char="d",effect="sound",arg="door_close.wav")
+g.acts.new(char="d",effect="sound",arg="under/door_close.wav")
 g.acts.new(char="d",effect="switch_sprite",arg=doors)
-g.acts.new(char="D",effect="sound",arg="door_close.wav")
+g.acts.new(char="d",effect="switch_geometry",arg=door_geom)
+g.acts.new(char="D",effect="sound",arg="under/door_close.wav")
 g.acts.new("unlock_door","interact","D","switch_sprite",doors,True)
-g.acts.new(char="P",effect="sound",arg="bink_sound.wav")
+g.acts.new("unlock_door","interact","D","switch_geometry",door_geom)
+g.acts.new(char="P",effect="sound",arg="under/bink_sound.wav")
 g.acts.new(char="P",effect="switch_sprite",arg=plants)
 g.acts.new("","location","g","switch_map",[235,15,"under/map1.txt"])
-g.acts.new(char="p",effect="sound",arg="piano.wav")
+g.acts.new(char="p",effect="sound",arg="under/piano.wav")
 g.acts.new(char="k",effect="unlock",arg="unlock_door")
-g.acts.new(char="k",effect="sound",arg="bink_sound.wav")
+g.acts.new(char="k",effect="sound",arg="under/bink_sound.wav")
 g.acts.new(char="k",effect="kill")
 
 g.run_game()

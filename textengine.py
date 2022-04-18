@@ -60,7 +60,6 @@ class Game():
         self.speeches = []
         self.quit = False
         self.camera_follow = []
-        self.folder = "" #Optional, shortens user code.
 
         mixer.init()
         self.themes = []
@@ -68,10 +67,10 @@ class Game():
 
         self.frames = 0
         self.tick = 0
-        self.f_time = 0
+        self.fps = 0
         self.fpss = []
         self.start_time = 0
-        self.waiting = 0
+        self.fps_min = 30
         self.game_speed = 1 # General actions can be called at 1/second.
         self.total = 0
 
@@ -87,6 +86,7 @@ class Game():
                             "unlock":self.act_unlock,
                             "switch_map":self.act_switch_map,
                             "switch_theme":self.act_switch_theme,
+                            "switch_geometry":self.act_switch_geom,
                             "kill":self.act_kill,
                             "up_score":self.up_score}   
         self.key_dict = {"wasd":
@@ -129,6 +129,27 @@ class Game():
         self.init_objs()
         self.init_rendering()
 
+    def game_loop(self):
+        """This is what loops for every game tick.
+        It is run by the run_game method."""
+        self.frame_start = time()
+        self.move_all()
+        self.rendering()
+        display = False
+        if self.fps > self.fps_min:
+            self.curr_map.print_all()
+            display = True
+        self.run_fps(display)
+    
+    def run_fps(self,display):
+        self.frames += 1
+        self.tick = (self.tick + 1)%MAX_TICK
+        try:self.fps = 1/(time()-self.frame_start)
+        except ZeroDivisionError:self.fps = 160
+        self.fpss.append(self.fps)
+        if display:
+            print("FPS:",self.fps)
+
     def end_game(self):
         """All the comes after the main game_loop"""
         mixer.music.stop()
@@ -146,32 +167,16 @@ class Game():
         input(f"Press ENTER to exit.\n") # Hide input from the whole game
         print(COLORS['default'],CLEAR)
 
-    def game_loop(self):
-        """This is what loops for every game tick.
-        It is run by the run_game method."""
-        self.frame_start = time()
-        self.move_all()
-        self.rendering()
-        self.curr_map.print_all()
-        self.run_fps()
-    
-    def run_fps(self):
-        self.frames += 1
-        self.tick = (self.tick + 1)%MAX_TICK
-        self.f_time = time()
-        print("FPS:",1/(self.f_time-self.frame_start))
-        self.fpss.append(self.f_time)
-
     def play_theme(self):
         if len(self.themes)>0:
             mixer.music.load(self.themes[0])
             mixer.music.play(-1)
     def add_theme(self,path:str):
         assert len(path) > 4, "Not a valid audio file name."
-        self.themes.insert(0,self.folder + path)
+        self.themes.insert(0,path)
     def add_sound(self, path:str,sound_name:str=""):
         assert len(path) > 4, "Not a valid audio file name."
-        new_sound = mixer.Sound(self.folder + path)
+        new_sound = mixer.Sound(path)
         if len(sound_name)>0:
             self.sounds[sound_name] = new_sound
         else:
@@ -198,7 +203,7 @@ class Game():
     def move_all(self):
         id_tracker = []
         self.objs.update_objs = []
-        in_range = self.curr_map.window[1] + W_HEI + (WGC_Y*2)
+        in_range = self.curr_map.camera_y + W_HEI + (WGC_Y*2)
         for obj in self.objs.objs:
             if obj.origy > in_range:
                 break
@@ -251,32 +256,28 @@ class Game():
                     self.key_dict[obj.move][key](obj)
         self.run_acts(obj)
         # CAMERA MOVING:
+        move_x = 0
+        move_y = 0
         if "x" in self.camera_follow:
-            if self.curr_map.width > self.curr_map.window[0] + W_WID < obj.origx + WGC_X + obj.width():
-                self.move_camera(1)
-            elif self.curr_map.window[0] + WGC_X > obj.origx:
-                if self.curr_map.window[0] > 0:
-                    self.move_camera(-1)
+            if self.curr_map.width > self.curr_map.end_camera_x < obj.origx + WGC_X + obj.width():
+                move_x = 1
+            elif self.curr_map.camera_x + WGC_X > obj.origx and self.curr_map.camera_x > 0:
+                move_x = -1
         if "y" in self.camera_follow:
-            if self.curr_map.height > self.curr_map.window[1] + W_HEI < obj.origy + WGC_Y:
-                self.move_camera(0,1)
-            elif self.curr_map.window[1] + WGC_Y > obj.origy - obj.height():
-                if self.curr_map.window[1] > 0:
-                    self.move_camera(0,-1)
+            if self.curr_map.height > self.curr_map.end_camera_y < obj.origy + WGC_Y:
+                move_y = 1
+            elif self.curr_map.camera_y + WGC_Y > obj.origy - obj.height() and self.curr_map.camera_y > 0:
+                move_y = -1
+        self.move_camera(move_x,move_y)
         # GAME-ENDING CHECKS:
         if obj.hp <= 0 or obj.origy == self.curr_map.width -1:
             self.quit = True
-            self.kill_obj(obj)
-
-    def can_move_camera(self,x=0,y=0,obj=None):
-        pass    
+            self.kill_obj(obj) 
     def move_camera(self,x=0,y=0):
-        self.curr_map.window[0] += x
-        self.curr_map.window[1] += y
-        self.curr_map.start_window_y += y
-        self.curr_map.end_window_y += y
-        self.curr_map.start_window_x += x
-        self.curr_map.end_window_x += x
+        self.curr_map.camera_x += x
+        self.curr_map.camera_y += y
+        self.curr_map.end_camera_y += y
+        self.curr_map.end_camera_x += x
     def kill_obj(self,obj,sound:bool=False): # DEATH
         if sound:
             self.play_sound("death")
@@ -404,6 +405,9 @@ class Game():
     def act_switch_sprite(self,obj,arg):
         # ARG: dictionary of old img key and new img value
         self.set_sprite(obj,arg[obj.img])
+    def act_switch_geom(self,obj,arg):
+        obj.geom = arg[obj.geom]
+        self.set_sprite(obj,obj.img)
     def act_switch_theme(self,obj,arg):
         mixer.music.stop()
         self.add_theme(arg[-1])
@@ -621,35 +625,37 @@ class Game():
         # Clear the render area the sprite is currently at.
         for y in range(obj.origy-obj.height(),obj.origy+1):
             for x in range(obj.origx-1,obj.origx + obj.width()+1):
+                self.curr_map.set_xy_bool(x-self.curr_map.camera_x,y-self.curr_map.camera_y,True)
                 self.curr_map.set_xy_rend(x,y,BLANK)
                 char = self.curr_map.get_xy_geom(x,y)
-                if len(char) > 1:
-                    char = char[CLENGTH+1]
-                if char == obj.char:
+                if obj.char in char:
                     self.curr_map.set_xy_geom(x,y,BLANK)
         # Render the area the sprite currently takes up as if it weren't there
         min_y = obj.origy - obj.height()
-        #if min_y < self.curr_map.start_window_y:
-        #    min_y = self.curr_map.start_window_y
         max_y = obj.origy + self.objs.max_height
-        #if max_y > self.curr_map.end_window_y:
-        #    max_y = self.curr_map.end_window_y
-        min_x = obj.origx - self.objs.max_width
-        #if min_x < self.curr_map.start_window_x:
-        #    min_x = self.curr_map.start_window_x
-        max_x = obj.origx + self.objs.max_width
-        #if max_x > self.curr_map.end_window_x:
-        #    max_x = self.curr_map.start_window_x
-
-        i = 0
+        min_x = obj.origx - self.objs.max_width 
+        max_x = obj.origx + self.objs.max_width 
+        i = len(self.objs.objs)//2
         c_obj = self.objs.objs[i]
-        while c_obj.origy < min_y or (c_obj.origx < min_x and c_obj.origy >= min_y):
-            i += 1
-            c_obj = self.objs.objs[i]
+        i_change = i-1
+        while i_change > 1:
+            if c_obj.origy < min_y or (c_obj.origx < min_x and c_obj.origy == min_y):
+                i += i_change
+            else:
+                i -= i_change
+            i_change = i_change//2
+            try:c_obj = self.objs.objs[i]
+            except:
+                print("Len:",len(self.objs.objs),"I_change:",i_change,"I:",i)
+                assert False
         while i < len(self.objs.objs)-1 and self.objs.objs[i].origy <= max_y:
             if min_x <= c_obj.origx <= max_x:
-                self.objs.add_to_update_objs(c_obj)
-                # The main object will be at the center of this search.
+                if self.curr_map.check_range_bool(c_obj.origx-self.curr_map.camera_x,
+                    c_obj.origx+c_obj.width()-self.curr_map.camera_x,
+                    c_obj.origy-c_obj.height()+1-self.curr_map.camera_y,
+                    c_obj.origy+1-self.curr_map.camera_y):
+                    self.objs.add_to_update_objs(c_obj)
+                    # The main object will be at the center of this search.
             i += 1
             c_obj = self.objs.objs[i]
         
@@ -669,7 +675,22 @@ class Game():
         self.curr_map.empty_map(self.curr_map.rend_map)
         self.curr_map.empty_map(self.curr_map.geom_map)
         for obj in self.objs.objs:
-            self.render_obj(obj)
+            #self.add_to_update_objs(obj)
+            ypos = obj.origy - obj.height()
+            chars = [SIGN]
+            if obj.geom == "skeleton":
+                chars.append(BLANK)
+            for row in obj.sprite:
+                xpos = obj.origx
+                for char in row:
+                    dont_skip = True
+                    for check_char in chars:
+                        if check_char in char:
+                            dont_skip = False
+                    if dont_skip:
+                        self.curr_map.set_xy_rend(xpos,ypos, char)
+                    xpos += 1
+                ypos += 1
             self.geom_set_dict[obj.geom](obj)
             # Geometry is all-in-all static, and otherwise
             # changed by object movement alone.
@@ -677,44 +698,37 @@ class Game():
         """This creates the output AND geometry
         maps out of all object sprites. NOT for initializing
         objects (not that you asked)."""
-        #start_range_y = self.curr_map.window[1] - (WGC_Y*3)
-        end_range_y = self.curr_map.window[1] + W_HEI + (WGC_Y*3)
-        #start_range_x = self.curr_map.window[0] - (WGC_X*3)
-        #end_range_x = self.curr_map.window[0] + W_WID + (WGC_X*3)
+        #start_range_y = self.curr_map.camera_y
+        end_range_y = self.curr_map.end_camera_y + (WGC_Y*3)
+        #start_range_x = self.curr_map.camera_x - (WGC_X*3)
+        #end_range_x = self.curr_map.camera_x + W_WID + (WGC_X*3)
+        #self.objs.update_objs.reverse()
         for obj in self.objs.update_objs:
             if obj.origy < end_range_y:
                 self.render_obj(obj)
             else:
                 break
+        #self.objs.update_objs = []
     def render_obj(self,obj):
         # Print a sprite at its origin.
-        ypos = obj.origy - obj.height()
-        substance = False
-        if obj.geom != "skeleton":
-            for row in obj.sprite:
-                substance = False
-                xpos = obj.origx
-                for char in row:
-                    if SIGN not in char:
-                        self.curr_map.set_xy_rend(xpos, ypos, char)
-                        substance = True
-                    elif substance:
-                        break
-                    xpos += 1
-                ypos += 1     
-        else: # skeleton
-            for row in obj.sprite:
-                xpos = obj.origx
-                substance = False
-                for char in row:
-                    if SIGN not in char:
-                        if BLANK not in char:
-                            self.curr_map.set_xy_rend(xpos, ypos, char)
-                        substance = True
-                    elif substance:
-                        break
-                    xpos += 1
-                ypos += 1
+        ypos = obj.origy - obj.height() - self.curr_map.camera_y
+        chars = [SIGN]
+        if obj.geom == "skeleton":
+            chars.append(BLANK)
+        for row in obj.sprite:
+            xpos = obj.origx - self.curr_map.camera_x
+            for char in row:
+                if self.curr_map.get_xy_bool(xpos, ypos):
+                    dont_skip = True
+                    for check_char in chars:
+                        if check_char in char:
+                            dont_skip = False
+                    if dont_skip:
+                        self.curr_map.set_xy_rend(xpos+self.curr_map.camera_x,
+                            ypos+self.curr_map.camera_y, char)
+                        #self.curr_map.set_xy_bool(xpos, ypos, False)
+                xpos += 1
+            ypos += 1
         # Add any text above the object sprite
         if obj.txt > -1:
             txt = self.objs.texts[obj.txt]
@@ -734,17 +748,17 @@ class Map():
             # Map of the final screen. 1D list of strings.
         self.rend_map = [] # Map of what will be rendered
             # UPDATE: GETTING PHASED OUT.
+        self.bool_map = [[True for x in range(W_WID)] for y in range(W_HEI)]
         self.overlay = [[BLANK for x in range(W_WID)] for y in range(W_HEI)]
             # Optional overlay of the game.
         self.use_overlay = False
-        self.window = [0,0] # X,Y, AS IT SHOULD BE >:D
+        self.camera_x = 0
+        self.camera_y = 0 # start_window_y
+        self.end_camera_y = W_HEI
+        self.end_camera_x = W_WID
         self.print_map = ""
             # These are the map coordinates of the 
             # top-left-most char shown in the window.
-        self.start_window_y = self.window[1]
-        self.end_window_y = self.window[1] + W_HEI + (WGC_Y*3)
-        self.start_window_x = self.window[0] - (WGC_X*3)
-        self.end_window_x = self.window[0] + W_WID + (WGC_X*3)
         self.file_name = ""
 
     def set_path(self,path):
@@ -794,7 +808,7 @@ class Map():
         """ Appends the proper area of self.rend_map to self.print_map,
         and prints print_map to game window."""
         self.print_map = default_color
-        [[self.add_to_print("".join(self.rend_map[row][self.window[0]:self.window[0] + W_WID]))] for row in range(self.window[1],self.window[1]+W_HEI)]
+        [[self.add_to_print("".join(self.rend_map[row][self.camera_x:self.end_camera_x]))] for row in range(self.camera_y,self.end_camera_y)]
         print(f"{RETURN}{self.print_map}")
     def add_to_print(self,text):
         self.print_map = self.print_map + default_color + text + "\n"
@@ -814,6 +828,21 @@ class Map():
     def get_xy_rend(self,x,y):
         try: return self.rend_map[y][x]
         except: return BLANK
+    def set_xy_bool(self,x,y,newbool):
+        try: self.bool_map[y][x] = newbool
+        except: pass
+    def get_xy_bool(self,x,y):
+        try: return self.bool_map[y][x]
+        except: return False
+    def check_range_bool(self,start_x,end_x,start_y,end_y):
+        for y in range(start_y,end_y):
+            for x in range(start_x,end_x):
+                try:
+                    if self.bool_map[y][x]:
+                        return True
+                except:
+                    pass
+        return False
 
 class Acts():
     def __init__(self):
@@ -923,7 +952,6 @@ class Objs():
         return char
     
     def set_sprite_color(self,obj):
-        prev_char = SIGN
         chars = [SIGN]
         if obj.geom == "skeleton":
             chars.append(BLANK)
@@ -935,7 +963,7 @@ class Objs():
                     if check_char in char:
                         skip = True
                 if not skip:
-                    char = obj.color + char
+                    char = obj.color + char # This is not an empty character (BLANK or SIGN)
                 if x != obj.width() -1:
                     if obj.sprite[y][x+1] == chars[-1] or obj.sprite[y][x+1] == chars[0]:
                         char = char + default_color
