@@ -50,3 +50,9 @@ def flip_sprite_old(self):
             if self.array[y][x] in FLIP_CHARS.keys():
                 self.array[y][x] = FLIP_CHARS[self.array[y][x]]
             self.array[y][self.width()-x-1] = hold
+
+def add_color(self,obj,char,row=1):
+    if char != SIGN:
+        if char != "_" or row != 0:
+            char = obj.color + char + self.default_color
+    return char

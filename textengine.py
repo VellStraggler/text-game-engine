@@ -43,6 +43,7 @@ COLORS = {"default":ccode+"49m","white":ccode+"47m",
         "cyan":ccode+"46m","yellow":ccode+"43m",
         "green":ccode+"42m","magenta":ccode+"45m",}
 CLENGTH = len(COLORS["default"])
+default_color = COLORS['default']
 
 class Game():
     """
@@ -96,8 +97,6 @@ class Game():
                             {"up arrow":self.move_up,"left arrow":self.move_left,
                             "down arrow":self.move_down,"right arrow":self.move_right,
                             ".":self.run_interacts}}
-        
-        self.default_color = COLORS["default"]
 
     def run_game(self):
         """Combine the map and the objs and begin the main game loop."""
@@ -124,7 +123,7 @@ class Game():
     def init_map(self,first=True):
         """All that comes before the main game_loop"""
         if first:
-            print(CLEAR,self.default_color)
+            print(CLEAR,default_color)
             self.start_time = time()
             self.play_theme()
         self.init_objs()
@@ -162,10 +161,6 @@ class Game():
         self.f_time = time()
         print("FPS:",1/(self.f_time-self.frame_start))
         self.fpss.append(self.f_time)
-
-    def set_default_color(self,color):
-        self.default_color = color
-        self.objs.default_color = color
 
     def play_theme(self):
         if len(self.themes)>0:
@@ -700,7 +695,7 @@ class Game():
                 substance = False
                 xpos = obj.origx
                 for char in row:
-                    if char != SIGN:
+                    if SIGN not in char:
                         self.curr_map.set_xy_rend(xpos, ypos, char)
                         substance = True
                     elif substance:
@@ -712,7 +707,7 @@ class Game():
                 xpos = obj.origx
                 substance = False
                 for char in row:
-                    if char != SIGN:
+                    if SIGN not in char:
                         if BLANK not in char:
                             self.curr_map.set_xy_rend(xpos, ypos, char)
                         substance = True
@@ -798,14 +793,11 @@ class Map():
     def print_all(self):
         """ Appends the proper area of self.rend_map to self.print_map,
         and prints print_map to game window."""
-        self.print_map = ""
+        self.print_map = default_color
         [[self.add_to_print("".join(self.rend_map[row][self.window[0]:self.window[0] + W_WID]))] for row in range(self.window[1],self.window[1]+W_HEI)]
         print(f"{RETURN}{self.print_map}")
     def add_to_print(self,text):
-        self.print_map = self.print_map + text + "\n"
-    def print_all_old(self):
-        print(RETURN)
-        [[print("".join(self.rend_map[row][self.window[0]:self.window[0] + W_WID]))] for row in range(self.window[1],self.window[1]+W_HEI)]
+        self.print_map = self.print_map + default_color + text + "\n"
 
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
@@ -861,7 +853,6 @@ class Objs():
         self.max_height= 0 
         self.max_width = 0
         self.max_id = 0
-        self.default_color = COLORS['default']
 
     def get_sprites(self,path):
         """Takes the sprite file path and stores the sprites in
@@ -928,26 +919,43 @@ class Objs():
     
     def add_color(self,obj,char,row=1):
         if char != SIGN:
-            if char != "_" or row != 0:
-                char = obj.color + char + self.default_color
+            char = obj.color + char + default_color
         return char
+    
+    def set_sprite_color(self,obj):
+        prev_char = SIGN
+        chars = [SIGN]
+        if obj.geom == "skeleton":
+            chars.append(BLANK)
+        for y in range(obj.height()):
+            for x in range(obj.width()):
+                char = obj.sprite[y][x]
+                skip = False
+                for check_char in chars:
+                    if check_char in char:
+                        skip = True
+                if not skip:
+                    char = obj.color + char
+                if x != obj.width() -1:
+                    if obj.sprite[y][x+1] == chars[-1] or obj.sprite[y][x+1] == chars[0]:
+                        char = char + default_color
+                obj.sprite[y][x] = char
+            obj.sprite[y][-1] = char + default_color
 
-    def get_flipped_sprite(self,obj):
+
+    def get_flipped_sprite(self,obj,sprite):
         """ Returns a vertically mirrored
         2D sprite of the given sprite"""
-
         new_sprite = []
-        for row in range(len(obj.sprite)):
+        for row in range(len(sprite)):
             line = []
-            for x in range(len(obj.sprite[row])):
-                char = obj.sprite[row][len(obj.sprite[row])-x-1]
-                if len(char) > 1:
-                    char = char[len(char)//2]
+            for x in range(len(sprite[row])):
+                char = sprite[row][len(sprite[row])-x-1]
                 if char in FLIP_CHARS:
                     char = FLIP_CHARS[char]
-                char = self.add_color(obj,char,row)
                 line.append(char)
             new_sprite.append(line)
+        self.set_sprite_color(obj)
         return new_sprite
 
     def set_sprite(self,obj,new_img):
@@ -955,10 +963,7 @@ class Objs():
         obj.sprite = []
         for row in self.sprites[obj.img]:
             obj.sprite.append(list(row)) # Make a list copy
-        if len(obj.get_char(0,0)) == 1:
-            for y in range(len(obj.sprite)):
-                for x in range(len(obj.sprite[y])):
-                    obj.sprite[y][x] = self.add_color(obj,obj.sprite[y][x],y)
+        self.set_sprite_color(obj)
         obj.rotate = 0
 
     def find_obj_index(self,obj):
@@ -982,7 +987,7 @@ class Objs():
         if obj.animate == "flip":
             original = obj.img
             flip_img = reversed(obj.img)
-            self.sprites[flip_img] = self.get_flipped_sprite(obj)
+            self.sprites[flip_img] = self.get_flipped_sprite(obj,self.sprites[obj.img])
             obj.animate = {"w":obj.img,"a":flip_img,"s":obj.img,"d":original}
         elif obj.animate == None:
             obj.animate = {"w":obj.img,"a":obj.img,"s":obj.img,"d":obj.img}
@@ -995,7 +1000,7 @@ class Objs():
             facing_up = obj.img + "-w"
             facing_down = obj.img + "-s"
             facing_left = obj.img + "-a"
-            self.sprites[facing_left] = self.get_flipped_sprite(obj)
+            self.sprites[facing_left] = self.get_flipped_sprite(obj,self.sprites[obj.img])
             obj.animate = {"w":facing_up,"a":facing_left,"s":facing_down,"d":obj.img}
         obj.id = self.max_id
         self.max_id+=1
@@ -1010,7 +1015,7 @@ class Objs():
     color=None,data=dict()):
         """Creates an Obj and appends it to the objs list."""
         if color == None:
-            color = self.default_color
+            color = default_color
         obj = self.Obj(img, char, x,y, geom, move,xspeed,yspeed,
             hp,face_right,face_down,grav,dmg,enemy_chars,dmg_dirs,
             animate,txt,max_jump,color,data)

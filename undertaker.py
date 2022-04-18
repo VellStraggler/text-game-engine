@@ -8,7 +8,7 @@ g.objs.get_sprites("under/sprites.txt")
 g.objs.get_texts("under/text.txt")
 g.camera_follow = ["x","y"]
 g.folder = "under/"
-g.set_default_color(color_by_num(54))
+tx.default_color = color_by_num(54)
 g.add_theme('menu.wav')
 wood = 52
 
@@ -26,14 +26,14 @@ g.acts.new("start game","touch","X","switch_theme",["Y","theme.wav"])
 g.acts.new("start game","touch","X","switch_map",["Y","under/map1.txt"])
 
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",
-    xspeed=100, yspeed=20,animate="sneaky",color=240)
+    xspeed=50, yspeed=20,animate="sneaky",color=240)
 g.objs.append_obj(player)
 g.objs.new("face","L")
 g.objs.new("face","q",geom="skeleton")
-g.objs.new("door-closed","d",geom="skeleton")
-g.objs.new("door-locked","D",geom="skeleton")
+g.objs.new("door-closed","d",geom="skeleton",color=wood)
+g.objs.new("door-locked","D",geom="skeleton",color=wood)
 g.objs.new("wall-side","w",color=245)
-g.objs.new("wall","f",color=245)
+g.objs.new("wall","f",color=245,geom="skeleton")
 g.objs.new("wall-back","b",color=245)
 g.objs.new("wall-block","J",color=245)
 g.objs.new("father","u",geom="line",color=240)
