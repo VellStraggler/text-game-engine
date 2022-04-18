@@ -801,9 +801,11 @@ class Map():
         self.print_map = ""
         [[self.add_to_print("".join(self.rend_map[row][self.window[0]:self.window[0] + W_WID]))] for row in range(self.window[1],self.window[1]+W_HEI)]
         print(f"{RETURN}{self.print_map}")
-
     def add_to_print(self,text):
         self.print_map = self.print_map + text + "\n"
+    def print_all_old(self):
+        print(RETURN)
+        [[print("".join(self.rend_map[row][self.window[0]:self.window[0] + W_WID]))] for row in range(self.window[1],self.window[1]+W_HEI)]
 
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
