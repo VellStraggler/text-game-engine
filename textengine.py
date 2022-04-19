@@ -620,20 +620,20 @@ class Game():
     # These functions are put into geom_set_dict, for quicker lookup than if statements.
     def geom_all(self,obj):
         [[self.curr_map.set_xy_geom(x, y, obj.char) 
-        for x in range(obj.origx, obj.origx + obj.width())]
+        for x in range(obj.origx, min([obj.origx + obj.width(), len(self.curr_map.geom_map[y])]) )]
         for y in range(obj.origy - obj.height() +1,obj.origy +1)]
     def geom_complex(self,obj):
         # Based on all characters of a sprite that are not blank.
         [[self.curr_map.set_xy_geom(x + obj.origx, obj.origy - y, obj.char) 
-        for x in range(obj.width()) 
+        for x in range( min([obj.width(), len(self.curr_map.geom_map[y])-obj.origx]) ) 
         if BLANK not in obj.sprite[y][x]]
         for y in range(obj.height())]
     def geom_line(self,obj):
         [self.curr_map.set_xy_geom(x + obj.origx, obj.origy, obj.char)
-        for x in range(obj.width())]
+        for x in range( min([obj.width(), len(self.curr_map.geom_map[-1])-obj.origx]) )]
     def geom_skeleton(self,obj):
         [self.curr_map.set_xy_geom(x + obj.origx, obj.origy, obj.char)
-        for x in range(obj.width())
+        for x in range( min([obj.width(), len(self.curr_map.geom_map[-1])-obj.origx]) )
         if BLANK not in obj.sprite[-1][x]]
     def geom_none(self,obj):
         pass
@@ -643,7 +643,7 @@ class Game():
         the updated objects list."""
         # Clear the render area the sprite is currently at.
         for y in range(obj.origy-obj.height(),obj.origy+1):
-            for x in range(obj.origx-1,obj.origx + obj.width()+1):
+            for x in range(obj.origx-1, min([obj.origx + obj.width()+1, len(self.curr_map.geom_map[y])]) ):
                 self.curr_map.set_xy_bool(x-self.curr_map.camera_x,y-self.curr_map.camera_y,True)
                 self.curr_map.set_xy_rend(x,y,BLANK)
                 char = self.curr_map.get_xy_geom(x,y)
@@ -663,10 +663,7 @@ class Game():
             else:
                 i -= i_change
             i_change = i_change//2
-            try:c_obj = self.objs.objs[i]
-            except:
-                print("Len:",len(self.objs.objs),"I_change:",i_change,"I:",i)
-                assert False
+            c_obj = self.objs.objs[i]
         while i < len(self.objs.objs)-1 and self.objs.objs[i].origy <= max_y:
             if min_x <= c_obj.origx <= max_x:
                 if self.curr_map.check_range_bool(c_obj.origx-self.curr_map.camera_x,
@@ -706,7 +703,7 @@ class Game():
                     for check_char in chars:
                         if check_char in char:
                             dont_skip = False
-                    if dont_skip:
+                    if dont_skip and xpos<self.curr_map.width:
                         self.curr_map.set_xy_rend(xpos,ypos, char)
                     xpos += 1
                 ypos += 1
@@ -730,21 +727,20 @@ class Game():
         #self.objs.update_objs = []
     def render_obj(self,obj):
         # Print a sprite at its origin.
-        ypos = obj.origy - obj.height() - self.curr_map.camera_y
+        ypos = obj.origy - obj.height()
         chars = [SIGN]
         if obj.geom == "skeleton":
             chars.append(BLANK)
         for row in obj.sprite:
-            xpos = obj.origx - self.curr_map.camera_x
+            xpos = obj.origx
             for char in row:
-                if self.curr_map.get_xy_bool(xpos, ypos):
+                if self.curr_map.get_xy_bool(xpos - self.curr_map.camera_x, ypos - self.curr_map.camera_y):
                     dont_skip = True
                     for check_char in chars:
                         if check_char in char:
                             dont_skip = False
-                    if dont_skip:
-                        self.curr_map.set_xy_rend(xpos+self.curr_map.camera_x,
-                            ypos+self.curr_map.camera_y, char)
+                    if dont_skip and xpos<self.curr_map.width:
+                        self.curr_map.set_xy_rend(xpos,ypos, char)
                         #self.curr_map.set_xy_bool(xpos, ypos, False)
                 xpos += 1
             ypos += 1
@@ -838,33 +834,29 @@ class Map():
 
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
-        try: self.geom_map[y][x] = char
-        except: pass
+        self.geom_map[y][x] = char
     def get_xy_geom(self,x,y):
         """Returns what character is at this position."""
-        try: return self.geom_map[y][x]
-        except: return BLANK
+        return self.geom_map[y][x]
     def set_xy_rend(self,x,y,char):
         """Sets char at a given position on map"""
-        try: self.rend_map[y][x] = char
-        except: pass
+        self.rend_map[y][x] = char
     def get_xy_rend(self,x,y):
-        try: return self.rend_map[y][x]
-        except: return BLANK
+        return self.rend_map[y][x]
     def set_xy_bool(self,x,y,newbool):
-        try: self.bool_map[y][x] = newbool
-        except: pass
+        #x = min([x,len(self.bool_map[y])-1])
+        self.bool_map[y][x] = newbool
     def get_xy_bool(self,x,y):
-        try: return self.bool_map[y][x]
-        except: return False
+        y = min([y,len(self.bool_map)-1])
+        x = min([x,len(self.bool_map[-1])-1])
+        return self.bool_map[y][x]
     def check_range_bool(self,start_x,end_x,start_y,end_y):
+        end_y = min([end_y,len(self.bool_map)-1])
+        end_x = min([end_x,len(self.bool_map[-1])-1])
         for y in range(start_y,end_y):
             for x in range(start_x,end_x):
-                try:
-                    if self.bool_map[y][x]:
-                        return True
-                except:
-                    pass
+                if self.bool_map[y][x]:
+                    return True
         return False
 
 class Acts():
@@ -1156,6 +1148,20 @@ class Objs():
                     sprite[y][-((x*2)+2)] = self.sprite[x][(y*2)]
                     sprite[y][-((x*2)+1)] = self.sprite[x][(y*2)+1]
             self.sprite = sprite
+
+def move_cursor(x=0,y=0):
+    """Moves the cursor from its current position"""
+    if x < 0:
+        x *= -1
+        print(f"\033[{x}D",end='',flush=True)
+    elif x > 0:
+        print(f"\033[{x}C",end="",flush=True)
+    if y < 0:
+        y *= -1
+        #print(f"\033[{y}B",end='')
+        print(f"\033[{y}A",end="",flush=True)
+    elif y > 0:
+        print("\n"*y,flush=True)
 
 def color_by_num(x):
     return ("\033[48;5;" + str(x) + "m")
