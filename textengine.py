@@ -57,7 +57,7 @@ class Game():
         # A pointer to the current map being played.
         self.objs = Objs()
         self.acts = Acts()
-        self.speeches = []
+        self.texts = []
         self.quit = False
         self.camera_follow = []
 
@@ -87,6 +87,7 @@ class Game():
                             "switch_map":self.act_switch_map,
                             "switch_theme":self.act_switch_theme,
                             "switch_geometry":self.act_switch_geom,
+                            "message":self.act_display_msg,
                             "kill":self.act_kill,
                             "up_score":self.up_score}   
         self.key_dict = {"wasd":
@@ -135,6 +136,7 @@ class Game():
         self.frame_start = time()
         self.move_all()
         self.rendering()
+        self.add_overlay()
         display = False
         if self.fps > self.fps_min:
             self.curr_map.print_all()
@@ -250,10 +252,9 @@ class Game():
 
     def player_actions(self,obj):
         # PLAYER MOVEMENT:
-        if obj.move in self.key_dict.keys(): # "wasd" or "dirs"
-            for key in self.key_dict[obj.move].keys():
-                if is_pressed(key):
-                    self.key_dict[obj.move][key](obj)
+        for key in self.key_dict[obj.move].keys():
+            if is_pressed(key):
+                self.key_dict[obj.move][key](obj)
         self.run_acts(obj)
         # CAMERA MOVING:
         move_x = 0
@@ -286,6 +287,14 @@ class Game():
         obj.live = False
         self.set_sprite(obj,"dead")
         obj.move = None
+
+    def get_texts(self,path):
+        path = DIRPATH + "/" + path
+        with open(path, 'r',encoding='utf-8') as file:
+            line = file.readline()[:-1]
+            while(line):
+                self.texts.append(line)
+                line = file.readline()[:-1]
 
     # Synonymous functions
     def move_left(self,obj):
@@ -412,6 +421,16 @@ class Game():
         mixer.music.stop()
         self.add_theme(arg[-1])
         self.play_theme()
+    def act_display_msg(self,obj,arg):
+        arg = arg[-1]
+        if arg == int(arg):
+            try:
+                msg = self.texts[arg]
+            except IndexError:
+                msg = ""
+        else:
+            msg = arg
+        self.curr_map.overlay.add(msg)
     def act_rotate(self,obj,arg):
         obj.rotate_right()
         self.objs.sprites[obj.img] = obj.sprite
@@ -731,32 +750,40 @@ class Game():
             ypos += 1
         # Add any text above the object sprite
         if obj.txt > -1:
-            txt = self.objs.texts[obj.txt]
+            txt = self.texts[obj.txt]
             out_y = obj.origy - obj.height() - 2
             out_x = obj.origx + (obj.width())//2 - len(txt)//2
             [self.curr_map.set_xy_rend(out_x+i,out_y,txt[i]) for i in range(len(txt))]
+
+    def add_overlay(self):
+        i = 0
+        for string in self.curr_map.overlay:
+            #placement on screen is based on index in the overlay
+            x = self.curr_map.camera_x + (W_WID - len(string))//2
+            y = self.curr_map.camera_y + W_HEI - i - 1
+            for char in string:
+                if char != BLANK:
+                    self.curr_map.set_xy_rend(x, y,char)
+                x += 1
+            i += 1
 
 class Map():
     """Three arrays are stored in a Map object: the wasd input 
     map, the output map, and a geom map.
     Set the map path upon initialization"""
     def __init__(self):
+        self.sparse_map = list() # Made to store user-made map. 1D list of strings.
+        self.rend_map = [] # Map of what will be rendered. 3-Dimensional.
         self.geom_map = [] # For checking collision.
+        self.bool_map = [[True for x in range(W_WID)] for y in range(W_HEI)]
+        self.print_map = ""
+        self.overlay = set()
         self.height = W_HEI
         self.width = W_WID
-        self.sparse_map = list() # Made to store user-made map.
-            # Map of the final screen. 1D list of strings.
-        self.rend_map = [] # Map of what will be rendered
-            # UPDATE: GETTING PHASED OUT.
-        self.bool_map = [[True for x in range(W_WID)] for y in range(W_HEI)]
-        self.overlay = [[BLANK for x in range(W_WID)] for y in range(W_HEI)]
-            # Optional overlay of the game.
-        self.use_overlay = False
         self.camera_x = 0
         self.camera_y = 0 # start_window_y
         self.end_camera_y = W_HEI
         self.end_camera_x = W_WID
-        self.print_map = ""
             # These are the map coordinates of the 
             # top-left-most char shown in the window.
         self.file_name = ""
@@ -764,10 +791,6 @@ class Map():
     def set_path(self,path):
         self.store_map(self.sparse_map,path)
         self.empty_map(self.rend_map)
-
-    def set_overlay(self,path):
-        self.use_overlay = True
-        self.store_map(self.overlay,path)
 
     def empty_map(self,map:list):
         """ Create a blank map of size self.width by self.height.
@@ -878,7 +901,7 @@ class Objs():
         self.usr_objs = [] # These are all the original objects.
         self.sprites = {"dead":[[str(" ")]]}
         # Sprites are stored as rows of strings, so that color codes may be appended.
-        self.texts = []
+        #self.texts = []
         self.max_height= 0 
         self.max_width = 0
         self.max_id = 0
@@ -932,14 +955,6 @@ class Objs():
             return start + end
         else:
             return start[:-1] + end
-
-    def get_texts(self,path):
-        path = DIRPATH + "/" + path
-        with open(path, 'r',encoding='utf-8') as file:
-            line = file.readline()[:-1]
-            while(line):
-                self.texts.append(line)
-                line = file.readline()[:-1]
 
     def add_to_update_objs(self,obj):
         """Adds an object to the list of objects that will be updated

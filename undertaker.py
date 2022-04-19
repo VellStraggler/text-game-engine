@@ -1,15 +1,14 @@
 import textengine as tx
-from textengine import color_by_num
 
 g = tx.Game()
 g.curr_map.set_path("under/menu.txt")
-g.curr_map.set_overlay("under/overlay.txt")
+#g.get_texts("under/text.txt")
 g.objs.get_sprites("under/sprites.txt")
-g.objs.get_texts("under/text.txt")
 g.camera_follow = ["x","y"]
-tx.default_color = color_by_num(54)
 g.add_theme('under/menu.wav')
 wood = 52
+wall = 235
+robe = 239
 
 g.objs.new("title","Z",color=232)
 g.objs.new("cursor","X",move="wasd",yspeed=30,xspeed=30)
@@ -25,28 +24,28 @@ g.acts.new("start game","touch","X","switch_theme",["Y","under/theme.wav"])
 g.acts.new("start game","touch","X","switch_map",["Y","under/map1.txt"])
 
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",
-    xspeed=100, yspeed=20,animate="sneaky",color=240)
+    xspeed=100, yspeed=20,animate="sneaky",color=robe)
 g.objs.append_obj(player)
 g.objs.new("face","L")
 g.objs.new("face","q",geom="skeleton")
 g.objs.new("door-closed","d",geom="line",color=wood)
 g.objs.new("door-locked","D",geom="line",color=wood)
-g.objs.new("wall-side","w",color=245)
-g.objs.new("wall","f",color=245,geom="skeleton")
-g.objs.new("wall-back","b",color=245)
-g.objs.new("wall-block","J",color=245)
-g.objs.new("father","u",geom="line",color=240)
+g.objs.new("wall-side","w",color=wall)
+g.objs.new("wall","f",color=wall,geom="skeleton")
+g.objs.new("wall-back","b",color=wall)
+g.objs.new("wall-block","J",color=wall)
+g.objs.new("father","u",geom="line",color=robe)
 g.objs.new("jack",'t',geom="line")
 g.objs.new("fence","x",geom="line")
 g.objs.new("fence-side","z")
 g.objs.new("piano","p",geom="line",color=wood)
-g.objs.new("couch","C",geom="complex")
+g.objs.new("couch","C",geom="complex",color=wood)
 g.objs.new("carpet","G",geom=None)
 g.objs.new("plant","P",geom="line",color=58)
 g.objs.new("key","k",geom=None)
 g.objs.new("bedside","t",geom="line",color=wood)
 g.objs.new("bookshelf","B",geom="line",color=wood)
-g.objs.new("curtain","W",geom="skeleton",color=232)
+g.objs.new("curtain","W",geom="skeleton",color=wall+5)
 g.objs.new("window","v",color=192)
 g.objs.new("stair-flat","s",geom=None)
 g.objs.new("stair-wall","S",geom=None)
@@ -56,6 +55,7 @@ doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"
 door_geom = {"skeleton":"line","line":"skeleton"}
 plants = {"plant":"plant1","plant1":"plant"}
 
+g.acts.new("message","touch","X","message",["B",1])
 g.acts.new(char="d",effect="sound",arg="under/door_close.wav")
 g.acts.new(char="d",effect="switch_sprite",arg=doors)
 g.acts.new(char="d",effect="switch_geometry",arg=door_geom)
