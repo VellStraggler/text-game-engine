@@ -68,11 +68,12 @@ class Game():
         self.tick = 0
         self.fps = 0
         self.fpss = []
-        self.display_fps = "FPS: "
+        self.display_fps = ""
         self.start_time = 0
         self.fps_min = 30
         self.game_speed = 1 # General actions can be called at 1/second.
         self.total = 0
+        self.no_updates = False
 
         self.geom_set_dict= {"all":self.geom_all,
                             "complex":self.geom_complex,
@@ -99,12 +100,16 @@ class Game():
                             "down arrow":self.move_down,"right arrow":self.move_right,
                             ".":self.run_interacts}}
 
-    def run_game(self):
+    def run_game(self,debug=True):
         """Combine the map and the objs and begin the main game loop."""
         self.init_map()
-        while(not self.quit):
-            self.game_loop()
-        self.end_game()
+        if debug:
+            while(not self.quit):
+                self.game_loop_debug()
+            self.end_game()
+        else:
+            while(not self.quit):
+                self.game_loop()
 
     def switch_map(self,index):
         if self.map_index >= len(self.map_list):
@@ -113,7 +118,7 @@ class Game():
         self.curr_map = self.map_list[self.map_index]
         # Reset Objects.
         self.objs.objs = list()
-        for obj in self.objs.usr_objs:
+        for obj in self.objs.obj_pallete:
             obj.origx = 0
             obj.origy = 0
             self.objs.objs.append(obj)
@@ -129,6 +134,7 @@ class Game():
             self.play_theme()
         self.init_objs()
         self.init_rendering()
+        self.curr_map.print_all(self.display_fps)
 
     def game_loop(self):
         """This is what loops for every game tick.
@@ -137,16 +143,29 @@ class Game():
         self.move_all()
         self.rendering()
         self.add_overlay()
-        if self.fps > self.fps_min:
+        if not self.no_updates:
             self.curr_map.print_all(self.display_fps)
-        self.run_fps()
+            self.no_updates = True
+
+    def game_loop_debug(self):
+        self.frame_start = time()
+        self.move_all()
+        self.rendering()
+        self.add_overlay()
+        if self.fps > self.fps_min and not self.no_updates:
+            self.curr_map.print_all(self.display_fps)
+            self.no_updates = True
+            self.run_fps(True)
+        else:
+            self.run_fps()
     
-    def run_fps(self):
+    def run_fps(self,with_avg=False):
         self.frames += 1
         self.tick = (self.tick + 1)%MAX_TICK
         if time() != self.frame_start:
             self.fps = 1/(time()-self.frame_start)
-            self.fpss.append(self.fps)
+            if with_avg:
+                self.fpss.append(self.fps)
         else:
             self.fps = 999
         self.display_fps = "FPS:" + str(self.fps)
@@ -195,8 +214,7 @@ class Game():
 
     def move_all(self):
         id_tracker = []
-        self.objs.render_objs = []
-        in_range = self.curr_map.camera_y + W_HEI + (WGC_Y*2)
+        in_range = self.curr_map.end_camera_y + (WGC_Y*2)
         for obj in self.objs.objs:
             if obj.origy > in_range:
                 break
@@ -266,6 +284,8 @@ class Game():
             self.quit = True
             self.kill_obj(obj) 
     def move_camera(self,x=0,y=0):
+        if x!=0 or y!= 0:
+            self.no_updates = False
         self.curr_map.camera_x += x
         self.curr_map.camera_y += y
         self.curr_map.end_camera_y += y
@@ -273,7 +293,6 @@ class Game():
     def kill_obj(self,obj,sound:bool=False): # DEATH
         if sound:
             self.play_sound("death")
-        self.add_to_render_objs(obj)
         obj.set_origin(0,0)
         obj.live = False
         self.set_sprite(obj,"dead")
@@ -290,16 +309,19 @@ class Game():
     # Synonymous functions
     def move_left(self,obj):
         self.set_sprite(obj,obj.animate["a"])
+        obj.face_right = False
         if time() - obj.move_time["a"] > 1/obj.xspeed:
             obj.move_time["a"] = time()
             self.move_obj(obj,-1)
     def move_right(self,obj):
         self.set_sprite(obj,obj.animate["d"])
+        obj.face_right = True
         if time() - obj.move_time["d"] > 1/obj.xspeed:
             obj.move_time["d"] = time()
             self.move_obj(obj,1)
     def move_down(self,obj):
         self.set_sprite(obj,obj.animate["s"])
+        obj.face_down = True
         if time() - obj.move_time["s"] > 1/obj.yspeed:
             obj.move_time["s"] = time()
             if obj.grav:
@@ -307,6 +329,7 @@ class Game():
             self.move_obj(obj,0,1)
     def move_up(self,obj):
         self.set_sprite(obj,obj.animate["w"])
+        obj.face_down = False
         if time() - obj.move_time["w"] > 1/obj.yspeed:
             obj.move_time["w"] = time()
             if not obj.grav:
@@ -328,35 +351,39 @@ class Game():
             obj.move_time["i"] = time()
             xs,xf,ys,yf = self.set_xy_limits(obj)
             for act in self.acts.acts:
-                if not act.locked:
-                    if act.kind == "interact":
-                        i_char = act.char
-                        if obj.char == i_char:
-                            self.act_set_dict[act.effect](obj,act.arg)
+                if not act.locked and act.kind == "interact":
+                    if obj.char == act.char:
+                        self.act_set_dict[act.effect](obj,act.arg)
+                    else:
+                        if obj.face_down:
+                            if act.char in self.curr_map.geom_map[yf][xs:xf]: #BELOW
+                                i=self.objs.find_obj_index(obj)+1
+                                found = False
+                                while not found and i < len(self.objs.objs):
+                                    i_obj = self.objs.objs[i]
+                                    if act.char == i_obj.char and i_obj.origy == yf and xs <= i_obj.origx+i_obj.width() and xf >= i_obj.origx:
+                                        found = True
+                                        self.act_set_dict[act.effect](i_obj,act.arg)
+                                    else:
+                                        i+=1
                         else:
-                            if obj.face_down:
-                                if i_char in self.curr_map.geom_map[yf+1][xs:xf]: #BELOW
+                            if act.char in self.curr_map.geom_map[ys-1][xs:xf]: #ABOVE
+                                i=self.objs.find_obj_index(obj)
+                                found = False
+                                while not found and i > -1:
+                                    i_obj = self.objs.objs[i]
+                                    if act.char == i_obj.char and i_obj.origy and ys-1 and xs <= i_obj.origx+i_obj.width() and xf >= i_obj.origx:
+                                        found = True
+                                        self.act_set_dict[act.effect](i_obj,act.arg)
+                                    else:
+                                        i-=1
+                        """for y in range(ys,yf):
+                            if obj.face_right:
+                                if self.curr_map.geom_map[y][xf] == act.char: #RIGHT
                                     pass
                             else:
-                                if i_char in self.curr_map.geom_map[ys-1][xs:xf]: #ABOVE
-                                    i=0
-                                    found = False
-                                    while self.objs.objs[i].id != obj.id and not found:
-                                        i_obj = self.objs.objs[i]
-                                        if i_char != i_obj.char:
-                                            i+=1
-                                        elif i_obj.origy != ys-1 or (i_obj.origx+i_obj.width()) < xs:
-                                            i+=1
-                                        else:
-                                            found = True
-                                    self.act_set_dict[act.effect](i_obj,act.arg)
-                            for y in range(ys,yf):
-                                if obj.face_right:
-                                    if self.curr_map.geom_map[y][xf] == i_char: #RIGHT
-                                        pass
-                                else:
-                                    if self.curr_map.geom_map[y][xs-1] == i_char: #LEFT
-                                        pass
+                                if self.curr_map.geom_map[y][xs-1] == act.char: #LEFT
+                                    pass"""
 
     def reload_screen(self,obj):
         self.init_rendering()
@@ -364,10 +391,10 @@ class Game():
     def set_xy_limits(self,obj):
         """Used in run_acts and run_interacts"""
         xs = obj.origx
-        xf = xs+obj.width()
+        xf = min([xs+obj.width(),self.curr_map.width])
         if obj.geom in ["all","complex"]:
-            ys = obj.origy - obj.height() + 1
-            yf = ys+obj.height()
+            yf = obj.origy + 1
+            ys = yf - obj.height()
         else:
             ys = obj.origy
             yf = ys+1
@@ -394,16 +421,14 @@ class Game():
                     for char in self.curr_map.geom_map[ys-1][xs:xf]:
                         bubble.add(char)
                     for y in range(ys,yf):
-                        try:bubble.add(self.curr_map.geom_map[y][xs-1])
-                        except:pass
-                        try:bubble.add(self.curr_map.geom_map[y][xf])
-                        except:pass
+                        bubble.add(self.curr_map.geom_map[y][xs-1])
+                        bubble.add(self.curr_map.geom_map[y][xf])
                     if act.arg[0] in bubble:
                         self.act_set_dict[act.effect](obj,act.arg)
 
     # These functions are put into act_set_dict, for quicker lookup than if statements.
     def act_switch_sprite(self,obj,arg):
-        # ARG: dictionary of old img key and new img value
+        """ARG: dictionary of old img key and new img value"""
         self.set_sprite(obj,arg[obj.img])
     def act_switch_geom(self,obj,arg):
         obj.geom = arg[obj.geom]
@@ -519,38 +544,31 @@ class Game():
         """Check if there are any characters in the area that 
         the obj would take up. Takes literal change in x and y.
         Returns True if character can move in that diRECTion."""
-        ys,yf = move_y + obj.origy - obj.height() + 1, move_y + obj.origy + 1
-        xs,xf = move_x + obj.origx,move_x + obj.origx + obj.width()
+        yf = move_y + obj.origy + 1
+        ys = yf - obj.height()
+        xs = move_x + obj.origx
+        xf = xs + obj.width()
         if move_x > 0:      xs = obj.origx + obj.width()
         elif move_x < 0:    xf = obj.origx
-        if move_y > 0:      ys = obj.origy + 1
-        elif move_y < 0:    yf = obj.origy - obj.height() + 1
-        if obj.geom == "all":
-            for y in range(ys,yf):
-                for x in range(xs,xf):
-                    try:
-                        if BLANK not in self.curr_map.geom_map[y][x]:
-                            return False
-                    except: return False
-        elif obj.geom == "line" or obj.geom == "skeleton":
+        if obj.geom not in ["line","skeleton"]:
+            if move_y < 0:
+                yf = obj.origy - obj.height() + 1
+            elif move_y > 0:
+                ys = obj.origy + 1
+        else:
+            ys = yf - 1
+        for y in range(ys,yf):
             for x in range(xs,xf):
                 try:
-                    if BLANK not in self.curr_map.geom_map[obj.origy+move_y][x]:
+                    if BLANK not in self.curr_map.geom_map[y][x]:
                         return False
                 except: return False
-        elif obj.geom == "complex":
-            for y in range(ys,yf):
-                for x in range(xs,xf):
-                    try:
-                        if BLANK not in self.curr_map.geom_map[y][x]:
-                            return False
-                    except: return False
         return True
     def move_map_char(self,obj,move_x,move_y):
         """Similar to self.set_xy, only applies to objs.objs."""
+        self.add_to_render_objs(obj)
         newx = obj.origx + move_x
         newy = obj.origy + move_y
-        self.add_to_render_objs(obj)
         obj = self.objs.objs.pop(self.objs.find_obj_index(obj))
         obj.origy = newy
         obj.origx = newx
@@ -591,7 +609,7 @@ class Game():
         # Based on all characters of a sprite that are not blank.
         [[self.curr_map.set_xy_geom(x + obj.origx, obj.origy - y, obj.char) 
         for x in range( min([obj.width(), len(self.curr_map.geom_map[y])-obj.origx]) ) 
-        if BLANK not in obj.sprite[y][x]]
+        if SIGN not in obj.sprite[y][x]]
         for y in range(obj.height())]
     def geom_line(self,obj):
         [self.curr_map.set_xy_geom(x + obj.origx, obj.origy, obj.char)
@@ -599,7 +617,7 @@ class Game():
     def geom_skeleton(self,obj):
         [self.curr_map.set_xy_geom(x + obj.origx, obj.origy, obj.char)
         for x in range( min([obj.width(), len(self.curr_map.geom_map[-1])-obj.origx]) )
-        if BLANK not in obj.sprite[-1][x]]
+        if SIGN not in obj.sprite[-1][x]]
     def geom_none(self,obj):
         pass
 
@@ -607,49 +625,22 @@ class Game():
         """Adds everything in the rows of a moved object into
         the updated objects list."""
         # Clear the render area the sprite is currently at.
-        chars = [SIGN]
-        if obj.geom == "skeleton":
-            chars.append(BLANK)
-        for y in range(obj.origy-obj.height()+1,obj.origy+1):
-            for x in range( obj.origx, min([obj.origx + obj.width(), self.curr_map.width ]) ):
-                try:char = obj.sprite[y-obj.origy][x-obj.origx]
-                except: char = BLANK
-                dont_skip = True
-                for check_char in chars:
-                    if check_char in char:
-                        dont_skip = False
-                if dont_skip:
-                    self.curr_map.remove_xy_rend(x,y,obj.layer,char)
-                
-                char = self.curr_map.get_xy_geom(x,y)
-                if obj.char in char:
-                    self.curr_map.set_xy_geom(x,y,BLANK)
+        start_y = obj.origy-obj.height()+1
+        for y in range(start_y,obj.origy+1):
+            start_x = find_non_matching(obj.sprite[y-start_y],SIGN) + obj.origx
+            for x in range(start_x, min([obj.origx + obj.width(), self.curr_map.width ])):
+                char = obj.sprite[y-start_y][x-obj.origx]
+                if SIGN not in char:
+                    self.curr_map.remove_xy_rend(x,y,char)
+        self.remove_geom(obj)
         # Render the objects that the sprite area currently takes up.
-        self.objs.render_objs.append(obj)
-        """min_y = obj.origy - obj.height()
-        #max_y = obj.origy + self.objs.max_height
-        min_x = obj.origx - self.objs.max_width 
-        #max_x = obj.origx + self.objs.max_width 
-        i = len(self.objs.objs)//2
-        c_obj = self.objs.objs[i]
-        i_change = i-1
-        while i_change > 1:
-            if c_obj.origy < min_y or (c_obj.origx < min_x and c_obj.origy == min_y):
-                i += i_change
-            else:
-                i -= i_change
-            i_change = i_change//2
-            c_obj = self.objs.objs[i]
-        while i < len(self.objs.objs)-1 and self.objs.objs[i].origy <= max_y:
-            if min_x <= c_obj.origx <= max_x:
-                if self.curr_map.check_range_bool(c_obj.origx-self.curr_map.camera_x,
-                    c_obj.origx+c_obj.width()-self.curr_map.camera_x,
-                    c_obj.origy-c_obj.height()+1-self.curr_map.camera_y,
-                    c_obj.origy+1-self.curr_map.camera_y):
-                    self.objs.add_to_render_objs(c_obj)
-                    # The main object will be at the center of this search.
-            i += 1
-            c_obj = self.objs.objs[i]"""
+        self.objs.render_objs.add(obj)
+    
+    def remove_geom(self,obj):
+        for y in range(obj.origy-obj.height()+1,obj.origy+1):
+            for x in range(obj.origx, min([obj.origx + obj.width(), self.curr_map.width ])):
+                if obj.char in self.curr_map.get_xy_geom(x,y):
+                    self.curr_map.set_xy_geom(x,y,BLANK)
         
     def set_sprite(self,obj,new_img):
         self.add_to_render_objs(obj)
@@ -658,7 +649,6 @@ class Game():
 
     def flip_sprite(self,obj):
         assert obj.animate not in [None,"flip"], "This object is not animated."
-        self.add_to_render_objs(obj)
         obj.face_right = not obj.face_right
         if obj.face_right:
             self.set_sprite(obj,obj.animate["d"])
@@ -666,48 +656,35 @@ class Game():
     def init_rendering(self):
         self.curr_map.clear_rend_map()
         self.curr_map.clear_map(self.curr_map.geom_map)
+        self.no_updates = False
         for obj in self.objs.objs:
             self.render_obj(obj)
             self.geom_set_dict[obj.geom](obj)
             # Geometry is all-in-all static, and otherwise
             # changed by object movement alone.
+        self.objs.render_objs = set()
     def rendering(self):
         """This creates the output AND geometry
         maps out of all object sprites. NOT for initializing
         objects (not that you asked)."""
-        #start_range_y = self.curr_map.camera_y
         end_range_y = self.curr_map.end_camera_y + (WGC_Y*3)
-        for obj in self.objs.render_objs:
-            if obj.origy < end_range_y: self.render_obj(obj)
-            else:   break
-        self.init_rendering() # BAD BAD BAD BAD BAD BAD
+        if len(self.objs.render_objs) > 0:
+            self.no_updates = False
+            for obj in self.objs.render_objs:
+                if obj.origy < end_range_y: self.render_obj(obj)
+                else:   break
+            self.objs.render_objs = set()
     def render_obj(self,obj):
         # Print a sprite at its origin.
-        ypos = obj.origy - obj.height()
-        chars = [SIGN]
-        if obj.geom == "skeleton":
-            chars.append(BLANK)
-        # find the deepest layer in the sprite area.
-        obj.layer = 0
-        x_end = min([obj.origx + obj.width(),self.curr_map.width])
-        for y in range(obj.origy-obj.height(),obj.origy+1):
-            for x in range(obj.origx,x_end):
-                if len(self.curr_map.rend_map[y][x]) > obj.layer:
-                    obj.layer = len(self.curr_map.rend_map[y][x])
-        # This may leave empty points in a layer,
-        # so these must be removed after movement.
-        y_start = obj.origy-obj.height()+1
-        for y in range(y_start,obj.origy+1):
-            for x in range(obj.origx,x_end):
-                char = obj.sprite[y-y_start][x-obj.origx]
-                dont_skip = True
-                for check_char in chars:
-                    if check_char in char:
-                        dont_skip = False
-                if dont_skip and x<self.curr_map.width:
-                    while obj.layer > len(self.curr_map.rend_map[y][x]) - 1:
+        end_x = min([obj.origx + obj.width(),self.curr_map.width])
+        start_y = obj.origy-obj.height()+1
+        for y in range(start_y,obj.origy+1):
+            for x in range(obj.origx,end_x):
+                char = obj.sprite[y-start_y][x-obj.origx]
+                if SIGN not in char:
+                    if self.curr_map.rend_map[y][x][-1] != BLANK:
                         self.curr_map.rend_map[y][x].append(BLANK)
-                    self.curr_map.rend_map[y][x][obj.layer] = char
+                    self.curr_map.rend_map[y][x][-1] = char
         # Add any text above the object sprite
         if obj.txt > -1:
             txt = self.texts[obj.txt]
@@ -799,14 +776,16 @@ class Map():
 
     def print_all(self,fps):
         """Displays the proper area of self.rend_map."""
-        self.print_map = default_color
+        self.print_map = ""
+        self.line = []
         for row in range(self.camera_y,self.end_camera_y):
-            self.print_map += default_color
+            self.line.append(default_color)
             [self.print_get_row(self.rend_map[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)]
-            self.print_map += "\n"
+            self.line.append("\n")
+        self.print_map = "".join(self.line)
         print(f"{RETURN}{self.print_map}{fps}")
     def print_get_row(self,char):
-        self.print_map += char
+        self.line.append(char)
 
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
@@ -820,16 +799,15 @@ class Map():
             self.rend_map[y][x][z] = char
         else:
             self.rend_map[y][x].append(char)
-    def remove_xy_rend(self,x,y,z,char):
-        if len(self.rend_map[y][x]) == 1:
-            self.rend_map[y][x] = [BLANK]
-        else:
-            if z < len(self.rend_map[y][x]):
-                #if self.rend_map[y][x][z] == char:
-                self.rend_map[y][x].pop(z)
-                while self.rend_map[y][x][-1] == BLANK and len(self.rend_map[y][x]) > 1:
-                    self.rend_map[y][x].pop(-1)
-                # Remove blanks between object layers.
+    def remove_xy_rend(self,x,y,char):
+        if len(self.rend_map[y][x]) > 1:
+            for z in range(len(self.rend_map[y][x])):
+                if self.rend_map[y][x][z] == char:
+                    self.rend_map[y][x].pop(z)
+                    break
+        elif self.rend_map[y][x][0] == char: # Only one layer.
+            self.rend_map[y][x][0] = BLANK
+
             
     def get_xy_rend(self,x,y,z=-1):
         return self.rend_map[y][x][z]
@@ -861,10 +839,10 @@ class Objs():
     def __init__(self):
         self.inventory = []
         self.objs = [] # Stores objects. Each includes a sprites key
-        self.render_objs = []
+        self.render_objs = set()
         # This is an ordered list of objs that moved or changed form. It is emptied 
         # at the start of every frame, and is what the rendering function is based on.
-        self.usr_objs = [] # These are all the original objects.
+        self.obj_pallete = set() # These are all the original objects.
         self.sprites = {"dead":[[str(" ")]]}
         # Sprites are stored as rows of strings, so that color codes may be appended.
         #self.texts = []
@@ -922,11 +900,6 @@ class Objs():
         else:
             return start[:-1] + end
     
-    def add_color(self,obj,char,row=1):
-        if char != SIGN:
-            char = obj.color + char + default_color
-        return char
-    
     def set_sprite_color(self,obj):
         chars = [SIGN]
         if obj.geom == "skeleton":
@@ -934,12 +907,10 @@ class Objs():
         for y in range(obj.height()):
             for x in range(obj.width()):
                 char = obj.sprite[y][x]
-                skip = False
-                for check_char in chars:
-                    if check_char in char:
-                        skip = True
-                if not skip:
+                if chars[0] not in char and chars[-1] not in char:
                     char = obj.color + char # This is not an empty character (BLANK or SIGN)
+                else:
+                    char = SIGN # Turn BLANKS into SIGNS, so no BLANKS need to be skipped.
                 if x != obj.width() -1:
                     if obj.sprite[y][x+1] == chars[-1] or obj.sprite[y][x+1] == chars[0]:
                         char = char + default_color
@@ -1010,7 +981,7 @@ class Objs():
         self.max_id+=1
         obj.i = len(self.objs)
         self.objs.append(obj)
-        self.usr_objs.append(obj)
+        self.obj_pallete.add(obj)
 
     def new(self,img, char, x=0,y=0, geom = "all",
     move = None, xspeed = 1, yspeed = 1, hp =1,face_right=True,
@@ -1066,7 +1037,7 @@ class Objs():
             self.enemy_chars = enemy_chars
             self.dmg_dirs = dmg_dirs
             self.animate = animate # Edited in the objs.append_obj function
-            if type(color) == type(420):
+            if type(color) == type(42):
                 self.color = color_by_num(color)
             else:
                 self.color = color # The literal escape code, not the number.
@@ -1150,3 +1121,9 @@ def print_color_numbers():
         print(f"{color}{x}{spaces}{COLORS['default']}",end="")
         if (x-15)%6 == 0:
             print()
+
+def find_non_matching(string,bad_c):
+    for c in range(len(string)):
+        if string[c]!=bad_c:
+            return c
+    return 0
