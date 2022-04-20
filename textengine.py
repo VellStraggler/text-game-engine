@@ -9,7 +9,7 @@ from math import log
 DIRPATH = dirname(__file__)
 # Required to run program in Python3 terminal.
 BLANK = ' '
-SIGN = '$'
+SKIP = '$'
 CLEAR = "\033[2J"
 CUR = '\033[A\033[F'
 ZER = '\033[H'
@@ -353,7 +353,7 @@ class Game():
             for act in self.acts.acts:
                 if not act.locked and act.kind == "interact":
                     if obj.char == act.char:
-                        self.act_set_dict[act.effect](obj,act.arg)
+                        self.act_set_dict[act.effect](obj,act.arg) #act on oneself
                     else:
                         if obj.face_down:
                             if act.char in self.curr_map.geom_map[yf][xs:xf]: #BELOW
@@ -372,18 +372,28 @@ class Game():
                                 found = False
                                 while not found and i > -1:
                                     i_obj = self.objs.objs[i]
-                                    if act.char == i_obj.char and i_obj.origy and ys-1 and xs <= i_obj.origx+i_obj.width() and xf >= i_obj.origx:
+                                    if act.char == i_obj.char and i_obj.origy == ys-1 and xs <= i_obj.origx+i_obj.width() and xf >= i_obj.origx:
                                         found = True
                                         self.act_set_dict[act.effect](i_obj,act.arg)
                                     else:
                                         i-=1
-                        """for y in range(ys,yf):
+                        for y in range(ys,yf):
                             if obj.face_right:
                                 if self.curr_map.geom_map[y][xf] == act.char: #RIGHT
-                                    pass
+                                    i=self.objs.find_obj_index(obj)
+                                    found = False
+                                    while not found and i > -1:
+                                        i_obj = self.objs.objs[i]
+                                        if act.char == i_obj.char and ys<=i_obj.origy<yf and xf < i_obj.origx:
+                                            found = True
+                                            self.act_set_dict[act.effect](i_obj,act.arg)
+                                        else:
+                                            i-=1
+                                    self.act_set_dict[act.effect](i_obj,act.arg)
                             else:
                                 if self.curr_map.geom_map[y][xs-1] == act.char: #LEFT
-                                    pass"""
+                                    #self.act_set_dict[act.effect](i_obj,act.arg)
+                                    pass
 
     def reload_screen(self,obj):
         self.init_rendering()
@@ -609,7 +619,7 @@ class Game():
         # Based on all characters of a sprite that are not blank.
         [[self.curr_map.set_xy_geom(x + obj.origx, obj.origy - y, obj.char) 
         for x in range( min([obj.width(), len(self.curr_map.geom_map[y])-obj.origx]) ) 
-        if SIGN not in obj.sprite[y][x]]
+        if SKIP not in obj.sprite[y][x]]
         for y in range(obj.height())]
     def geom_line(self,obj):
         [self.curr_map.set_xy_geom(x + obj.origx, obj.origy, obj.char)
@@ -617,7 +627,7 @@ class Game():
     def geom_skeleton(self,obj):
         [self.curr_map.set_xy_geom(x + obj.origx, obj.origy, obj.char)
         for x in range( min([obj.width(), len(self.curr_map.geom_map[-1])-obj.origx]) )
-        if SIGN not in obj.sprite[-1][x]]
+        if SKIP not in obj.sprite[-1][x]]
     def geom_none(self,obj):
         pass
 
@@ -627,10 +637,10 @@ class Game():
         # Clear the render area the sprite is currently at.
         start_y = obj.origy-obj.height()+1
         for y in range(start_y,obj.origy+1):
-            start_x = find_non_matching(obj.sprite[y-start_y],SIGN) + obj.origx
+            start_x = find_non(obj.sprite[y-start_y],SKIP) + obj.origx
             for x in range(start_x, min([obj.origx + obj.width(), self.curr_map.width ])):
                 char = obj.sprite[y-start_y][x-obj.origx]
-                if SIGN not in char:
+                if SKIP not in char:
                     self.curr_map.remove_xy_rend(x,y,char)
         self.remove_geom(obj)
         # Render the objects that the sprite area currently takes up.
@@ -676,15 +686,29 @@ class Game():
             self.objs.render_objs = set()
     def render_obj(self,obj):
         # Print a sprite at its origin.
-        end_x = min([obj.origx + obj.width(),self.curr_map.width])
-        start_y = obj.origy-obj.height()+1
-        for y in range(start_y,obj.origy+1):
-            for x in range(obj.origx,end_x):
+        start_y = obj.origy+1-obj.height()
+        end_y = min([obj.origy+1,self.curr_map.height-1])
+        start_x = find_non(obj.sprite[-1],SKIP) + obj.origx
+        go_behind = False
+        for x in range(start_x,start_x+obj.width()):
+            if self.curr_map.rend_map[end_y][x][-1] != BLANK or self.curr_map.geom_map[end_y][x] != BLANK:
+                go_behind = True
+        # The layer count of the spot directly below the current object origin.
+        # We want the current object to always be behind this.
+        for y in range(start_y,end_y):
+            start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
+            end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.curr_map.width-1])+1
+            for x in range(start_x,end_x):
                 char = obj.sprite[y-start_y][x-obj.origx]
-                if SIGN not in char:
+                if SKIP not in char:
                     if self.curr_map.rend_map[y][x][-1] != BLANK:
-                        self.curr_map.rend_map[y][x].append(BLANK)
-                    self.curr_map.rend_map[y][x][-1] = char
+                        if go_behind:
+                            self.curr_map.rend_map[y][x].insert(-1,char)
+                        else:
+                            self.curr_map.rend_map[y][x].append(char)
+                    else:
+                        self.curr_map.rend_map[y][x][-1] = char
+
         # Add any text above the object sprite
         if obj.txt > -1:
             txt = self.texts[obj.txt]
@@ -838,14 +862,12 @@ class Acts():
 class Objs():
     def __init__(self):
         self.inventory = []
-        self.objs = [] # Stores objects. Each includes a sprites key
-        self.render_objs = set()
-        # This is an ordered list of objs that moved or changed form. It is emptied 
-        # at the start of every frame, and is what the rendering function is based on.
+        self.objs = []
+        self.render_objs = set() #These objects need to be updated exactly
+        #once per frame, thus the set. 
         self.obj_pallete = set() # These are all the original objects.
         self.sprites = {"dead":[[str(" ")]]}
         # Sprites are stored as rows of strings, so that color codes may be appended.
-        #self.texts = []
         self.max_height= 0 
         self.max_width = 0
         self.max_id = 0
@@ -862,8 +884,8 @@ class Objs():
         with open(path, 'r',encoding='utf-8') as file:
             line = file.readline()[:-1] # Removes "\n".
             while(line):
-                if line[0] == SIGN and line[-1] == SIGN:
-                # Begins and ends with SIGN
+                if line[0] == SKIP and line[-1] == SKIP:
+                # Begins and ends with SKIP
                     if curr_img != None: # If this isn't the first img
                         if len(curr_sprite[0]) > self.max_width:
                             self.max_width = len(curr_sprite[0])
@@ -871,7 +893,7 @@ class Objs():
                             self.max_height = height
                         self.sprites[curr_img] = curr_sprite
                         curr_sprite = []
-                    curr_img = line[1:-1] # Remove SIGNs
+                    curr_img = line[1:-1] # Remove SKIPs
                     height = 0
                 else:
                     line = self.replace_spaces(line)
@@ -881,7 +903,7 @@ class Objs():
 
     def replace_spaces(self,line:str):
         """All spaces before and after other characters are replaced
-        by the constant SIGN."""
+        by the constant SKIP."""
         s1 = True
         s2 = True
         start = ""
@@ -889,11 +911,11 @@ class Objs():
         for x in range((len(line)+1)//2):
             char = line[x]
             if char != BLANK or not s1: s1 = False
-            else:   char = SIGN
+            else:   char = SKIP
             start = start + char
             char = line[len(line)-x-1]
             if char != BLANK or not s2: s2 = False
-            else:   char = SIGN
+            else:   char = SKIP
             end = char + end
         if len(line)%2==0:
             return start + end
@@ -901,16 +923,16 @@ class Objs():
             return start[:-1] + end
     
     def set_sprite_color(self,obj):
-        chars = [SIGN]
+        chars = [SKIP]
         if obj.geom == "skeleton":
             chars.append(BLANK)
         for y in range(obj.height()):
             for x in range(obj.width()):
                 char = obj.sprite[y][x]
                 if chars[0] not in char and chars[-1] not in char:
-                    char = obj.color + char # This is not an empty character (BLANK or SIGN)
+                    char = obj.color + char # This is not an empty character (BLANK or SKIP)
                 else:
-                    char = SIGN # Turn BLANKS into SIGNS, so no BLANKS need to be skipped.
+                    char = SKIP # Turn BLANKS into SKIPS, so no BLANKS need to be skipped.
                 if x != obj.width() -1:
                     if obj.sprite[y][x+1] == chars[-1] or obj.sprite[y][x+1] == chars[0]:
                         char = char + default_color
@@ -1122,8 +1144,13 @@ def print_color_numbers():
         if (x-15)%6 == 0:
             print()
 
-def find_non_matching(string,bad_c):
+def find_non(string,bad_c):
     for c in range(len(string)):
         if string[c]!=bad_c:
             return c
     return 0
+def rfind_non(string,bad_c):
+    for c in range(len(string)-1,-1,-1):
+        if string[c]!=bad_c:
+            return c
+    return len(string)-1
