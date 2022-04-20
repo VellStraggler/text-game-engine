@@ -56,3 +56,17 @@ def add_color(self,obj,char,row=1):
         if char != "_" or row != 0:
             char = obj.color + char + self.default_color
     return char
+
+def add_to_sparse(self,x,y,char):
+        obj = self.objs.copy(self.obj_from_char(char),x,y)
+        i = 0
+        max = len(self.objs.objs)
+        while i < max-1:
+            if self.objs.objs[i].origy < y:
+                i+=1
+            elif self.objs.objs[i].origy == y and self.objs.objs[i].origx < x:
+                i+=1
+            else:
+                self.objs.objs.insert(i,obj)
+                i = max
+        self.curr_map.sparse_map.insert(0,[x,y,char])
