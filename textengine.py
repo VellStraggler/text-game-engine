@@ -31,6 +31,10 @@ WGC_Y = W_HEI//2 - 5
 
 SPACES = ' ' * 50
 S_LINE = ' ' * W_WID
+BUBBLE = [["/","⎺","\\"],["|"],["\\","_","/"]]
+# /⎺⎺⎺⎺⎺⎺⎺\
+#| message |
+# \_______/
 
 # Dictionary of chars (keys) and their opposites (values)
 FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
@@ -465,7 +469,7 @@ class Game():
         self.curr_map.set_disp_msg(msg)
     def act_rotate(self,obj,arg):
         obj.rotate_right()
-        self.objs.sprites[obj.img] = obj.sprite
+        self.objs.set_sprite(obj,obj.img)
         obj.animate = {"w":obj.img,"a":obj.img,"s":obj.img,"d":obj.img}
     def act_quit(self,obj,arg):
         self.quit = True
@@ -749,8 +753,18 @@ class Map():
         self.clear_rend_map()
 
     def set_disp_msg(self,new_msg):
-        self.disp_msg = default_color+new_msg
-        self.msg_timer = time() + len(self.disp_msg)/20
+        self.msg_timer = time() + len(new_msg)/20
+        self.disp_msg =[[default_color+BUBBLE[0][0]],
+                        [default_color+BUBBLE[1][0]],
+                        [default_color+BUBBLE[2][0]]]
+        new_msg = BLANK + new_msg + BLANK
+        for c in new_msg:
+            self.disp_msg[0].append(BUBBLE[0][1])
+            self.disp_msg[1].append(c)
+            self.disp_msg[2].append(BUBBLE[2][1])
+        self.disp_msg[0].append(BUBBLE[0][2])
+        self.disp_msg[1].append(BUBBLE[1][0])
+        self.disp_msg[2].append(BUBBLE[2][2])
 
     def clear_map(self,map):
         """ Create a blank map of size self.width by self.height.
@@ -802,15 +816,25 @@ class Map():
         """Displays the proper area of self.rend_map."""
         self.line = [default_color]
         [self.p2([self.p1(self.rend_map[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
-        [self.p3(i) for i in range(len(self.disp_msg))]
+        self.add_message()
         self.print_map = "".join(self.line)
         print(f"{RETURN}{self.print_map}{fps}")
     def p1(self,char):
         self.line.append(char)
     def p2(self,line):
         self.line.append(default_color+"\n")
-    def p3(self,i):
-        self.line[int(len(self.line)*(28.5/30))-(len(self.disp_msg)//2)+i]=self.disp_msg[i]
+    def add_message(self):
+        if len(self.disp_msg) > 0:
+            start = int(len(self.line)*((W_HEI-len(self.disp_msg)+.5)/W_HEI))
+            row_down = int(len(self.line)*(1/W_HEI))
+            half_msg_len = len(self.disp_msg[0])//2-1
+            i = start
+            for row in self.disp_msg:
+                for c in row:
+                    self.line[i-half_msg_len]=str(c)
+                    i += 1
+                start += row_down
+                i = start
     def display_timer(self):
         if len(self.disp_msg) > 0:
             if self.msg_timer < time():

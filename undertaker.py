@@ -56,7 +56,6 @@ doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"
 door_geom = {"skeleton":"line","line":"skeleton"}
 plants =    {"plant":"plant1","plant1":"plant"}
 
-g.acts.new("test_message","touch","g","message",["p",1])
 g.acts.new(char="d",effect="sound",arg="under/door_close.wav")
 g.acts.new(char="d",effect="switch_sprite",arg=doors)
 g.acts.new(char="d",effect="switch_geometry",arg=door_geom)
@@ -66,9 +65,10 @@ g.acts.new("unlock_door","interact","D","switch_geometry",door_geom,True)
 g.acts.new(char="P",effect="sound",arg="under/bink_sound.wav")
 g.acts.new(char="P",effect="switch_sprite",arg=plants)
 g.acts.new("","location","g","switch_map",[235,15,"under/map1.txt"])
-g.acts.new(char="p",effect="sound",arg="under/piano.wav")
+g.acts.new("play_piano","interact","p","message",[1])
+g.acts.new("play_piano",char="p",effect="sound",arg="under/piano.wav")
 g.acts.new(char="k",effect="unlock",arg="unlock_door")
 g.acts.new(char="k",effect="kill")
-g.acts.new(char="k",effect="sound",arg="under/bink_sound.wav")
+g.acts.new(char="k",effect="sound",arg="under/key.wav")
 
 g.run_game(debug=False)
