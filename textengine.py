@@ -142,7 +142,6 @@ class Game():
         self.frame_start = time()
         self.move_all()
         self.rendering()
-        self.add_overlay()
         if not self.no_updates:
             self.curr_map.print_all(self.display_fps)
             self.no_updates = True
@@ -151,7 +150,6 @@ class Game():
         self.frame_start = time()
         self.move_all()
         self.rendering()
-        self.add_overlay()
         if self.fps > self.fps_min and not self.no_updates:
             self.curr_map.print_all(self.display_fps)
             self.no_updates = True
@@ -293,7 +291,7 @@ class Game():
     def kill_obj(self,obj,sound:bool=False): # DEATH
         if sound:
             self.play_sound("death")
-        obj.set_origin(0,0)
+        self.teleport_obj(obj,0,0)
         obj.live = False
         self.set_sprite(obj,"dead")
         obj.move = None
@@ -361,14 +359,14 @@ class Game():
                                 found = False
                                 while not found and i < len(self.objs.objs):
                                     i_obj = self.objs.objs[i]
-                                    if act.char == i_obj.char and i_obj.origy == yf and xs <= i_obj.origx+i_obj.width() and xf >= i_obj.origx:
+                                    if act.char == i_obj.char and (i_obj.origy-i_obj.height()+1==yf or i_obj.origy==yf) and xs <= i_obj.origx+i_obj.width() and xf >= i_obj.origx:
                                         found = True
                                         self.act_set_dict[act.effect](i_obj,act.arg)
                                     else:
                                         i+=1
                         else:
                             if act.char in self.curr_map.geom_map[ys-1][xs:xf]: #ABOVE
-                                i=self.objs.find_obj_index(obj)
+                                i=self.objs.find_obj_index(obj)-1
                                 found = False
                                 while not found and i > -1:
                                     i_obj = self.objs.objs[i]
@@ -382,18 +380,24 @@ class Game():
                                 if self.curr_map.geom_map[y][xf] == act.char: #RIGHT
                                     i=self.objs.find_obj_index(obj)
                                     found = False
-                                    while not found and i > -1:
+                                    while not found and i < len(self.objs.objs):
                                         i_obj = self.objs.objs[i]
                                         if act.char == i_obj.char and ys<=i_obj.origy<yf and xf < i_obj.origx:
                                             found = True
                                             self.act_set_dict[act.effect](i_obj,act.arg)
                                         else:
-                                            i-=1
-                                    self.act_set_dict[act.effect](i_obj,act.arg)
+                                            i+=1
                             else:
                                 if self.curr_map.geom_map[y][xs-1] == act.char: #LEFT
-                                    #self.act_set_dict[act.effect](i_obj,act.arg)
-                                    pass
+                                    i=self.objs.find_obj_index(obj)
+                                    found = False
+                                    while not found and i > 0:
+                                        i_obj = self.objs.objs[i]
+                                        if act.char == i_obj.char and ys<=i_obj.origy<yf and xs < i_obj.origx+i_obj.width():
+                                            found = True
+                                            self.act_set_dict[act.effect](i_obj,act.arg)
+                                        else:
+                                            i+=1
 
     def reload_screen(self,obj):
         self.init_rendering()
@@ -716,18 +720,6 @@ class Game():
             out_x = obj.origx + (obj.width())//2 - len(txt)//2
             [self.curr_map.set_xy_rend(out_x+i,out_y,txt[i]) for i in range(len(txt))]
 
-    def add_overlay(self):
-        i = 0
-        for string in self.curr_map.overlay:
-            #placement on screen is based on index in the overlay
-            x = self.curr_map.camera_x + (W_WID - len(string))//2
-            y = self.curr_map.camera_y + W_HEI - i - 1
-            for char in string:
-                if char != BLANK:
-                    self.curr_map.set_xy_rend(x, y,char)
-                x += 1
-            i += 1
-
 class Map():
     """Three arrays are stored in a Map object: the wasd input 
     map, the output map, and a geom map.
@@ -800,16 +792,15 @@ class Map():
 
     def print_all(self,fps):
         """Displays the proper area of self.rend_map."""
-        self.print_map = ""
-        self.line = []
-        for row in range(self.camera_y,self.end_camera_y):
-            self.line.append(default_color)
-            [self.print_get_row(self.rend_map[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)]
-            self.line.append("\n")
+        self.line = [default_color]
+        [self.p2([self.p1(self.rend_map[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
         self.print_map = "".join(self.line)
         print(f"{RETURN}{self.print_map}{fps}")
-    def print_get_row(self,char):
+    def p1(self,char):
         self.line.append(char)
+    def p2(self,line):
+        self.line.append(default_color+"\n")
+        
 
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
@@ -1076,10 +1067,6 @@ class Objs():
             self.score = 0
             self.live = True
             self.data = data
-
-        def set_origin(self,x,y):
-            self.origx = x
-            self.origy = y
 
         def get_origin(self):
             return [self.origx,self.origy]

@@ -2,7 +2,7 @@ import textengine as tx
 
 g = tx.Game()
 g.curr_map.set_path("under/menu.txt")
-#g.get_texts("under/text.txt")
+g.get_texts("under/text.txt")
 g.objs.get_sprites("under/sprites.txt")
 g.camera_follow = ["x","y"]
 g.add_theme('under/menu.wav')
@@ -54,7 +54,7 @@ g.objs.new("table","T",geom="line",color=wood)
 
 doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"door-open"}
 door_geom = {"skeleton":"line","line":"skeleton"}
-plants = {"plant":"plant1","plant1":"plant"}
+plants =    {"plant":"plant1","plant1":"plant"}
 
 g.acts.new("message","touch","X","message",["B",1])
 g.acts.new(char="d",effect="sound",arg="under/door_close.wav")
@@ -68,7 +68,7 @@ g.acts.new(char="P",effect="switch_sprite",arg=plants)
 g.acts.new("","location","g","switch_map",[235,15,"under/map1.txt"])
 g.acts.new(char="p",effect="sound",arg="under/piano.wav")
 g.acts.new(char="k",effect="unlock",arg="unlock_door")
-g.acts.new(char="k",effect="sound",arg="under/bink_sound.wav")
 g.acts.new(char="k",effect="kill")
+g.acts.new(char="k",effect="sound",arg="under/bink_sound.wav")
 
 g.run_game(debug=True)
