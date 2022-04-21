@@ -134,6 +134,7 @@ class Game():
             self.play_theme()
         self.init_objs()
         self.init_rendering()
+        self.curr_map.display_timer()
         self.curr_map.print_all(self.display_fps)
 
     def game_loop(self):
@@ -142,8 +143,9 @@ class Game():
         self.frame_start = time()
         self.move_all()
         self.rendering()
+        self.curr_map.display_timer()
         if not self.no_updates:
-            self.curr_map.print_all(self.display_fps)
+            self.curr_map.print_all()
             self.no_updates = True
 
     def game_loop_debug(self):
@@ -460,7 +462,7 @@ class Game():
                 msg = ""
         else:
             msg = arg
-        self.curr_map.overlay.add(msg)
+        self.curr_map.set_disp_msg(msg)
     def act_rotate(self,obj,arg):
         obj.rotate_right()
         self.objs.sprites[obj.img] = obj.sprite
@@ -739,10 +741,16 @@ class Map():
             # These are the map coordinates of the 
             # top-left-most char shown in the window.
         self.file_name = ""
+        self.disp_msg = ""
+        self.msg_timer = 0
 
     def set_path(self,path):
         self.store_user_map(path)
         self.clear_rend_map()
+
+    def set_disp_msg(self,new_msg):
+        self.disp_msg = default_color+new_msg
+        self.msg_timer = time() + len(self.disp_msg)/20
 
     def clear_map(self,map):
         """ Create a blank map of size self.width by self.height.
@@ -790,16 +798,23 @@ class Map():
         self.height = y
         self.width = maxwidth
 
-    def print_all(self,fps):
+    def print_all(self,fps=""):
         """Displays the proper area of self.rend_map."""
         self.line = [default_color]
         [self.p2([self.p1(self.rend_map[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
+        [self.p3(i) for i in range(len(self.disp_msg))]
         self.print_map = "".join(self.line)
         print(f"{RETURN}{self.print_map}{fps}")
     def p1(self,char):
         self.line.append(char)
     def p2(self,line):
         self.line.append(default_color+"\n")
+    def p3(self,i):
+        self.line[int(len(self.line)*(28.5/30))-(len(self.disp_msg)//2)+i]=self.disp_msg[i]
+    def display_timer(self):
+        if len(self.disp_msg) > 0:
+            if self.msg_timer < time():
+                self.disp_msg = ""
         
 
     def set_xy_geom(self,x,y,char):

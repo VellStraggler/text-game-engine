@@ -24,7 +24,7 @@ g.acts.new("start game","touch","X","switch_theme",["Y","under/theme.wav"])
 g.acts.new("start game","touch","X","switch_map",["Y","under/map1.txt"])
 
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",
-    xspeed=100, yspeed=20,animate="sneaky",color=robe)
+    xspeed=50, yspeed=20,animate="sneaky",color=robe)
 g.objs.append_obj(player)
 g.objs.new("face","L")
 g.objs.new("face","q",geom="skeleton")
@@ -56,7 +56,7 @@ doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"
 door_geom = {"skeleton":"line","line":"skeleton"}
 plants =    {"plant":"plant1","plant1":"plant"}
 
-g.acts.new("message","touch","X","message",["B",1])
+g.acts.new("test_message","touch","g","message",["p",1])
 g.acts.new(char="d",effect="sound",arg="under/door_close.wav")
 g.acts.new(char="d",effect="switch_sprite",arg=doors)
 g.acts.new(char="d",effect="switch_geometry",arg=door_geom)
@@ -71,4 +71,4 @@ g.acts.new(char="k",effect="unlock",arg="unlock_door")
 g.acts.new(char="k",effect="kill")
 g.acts.new(char="k",effect="sound",arg="under/bink_sound.wav")
 
-g.run_game(debug=True)
+g.run_game(debug=False)
