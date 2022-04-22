@@ -27,7 +27,7 @@ g.acts.new("start game","touch","X","change_theme",["Y","under/menu.wav"])
 g.acts.new("start game","touch","X","change_map",["Y","under/map1.txt"])
 
 player = g.objs.Obj("grimm","g",geom="line",move="wasd",
-    xspeed=200, yspeed=20,animate="sneaky",color=robe)
+    xspeed=50, yspeed=20,animate="sneaky",color=robe)
 g.objs.append_obj(player)
 g.objs.new("face","L")
 g.objs.new("face","q",geom="skeleton")
@@ -77,4 +77,4 @@ g.acts.new(char="k",effect="lock",arg="unlocked")
 g.acts.new(char="k",effect="kill")
 g.acts.new(char="k",effect="sound",arg="under/key.wav")
 
-g.run_game(debug=True)
+g.run_game(debug=False)

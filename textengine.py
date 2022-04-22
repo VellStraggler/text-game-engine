@@ -20,7 +20,7 @@ RIT = '\033[1C'
 MAX_TICK = 16
 
 W_WID = 120
-W_HEI = 28
+W_HEI = 29
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (W_HEI+INFO_HEI)
@@ -68,7 +68,6 @@ class Game():
         self.themes = []
         self.sounds = dict()
 
-        self.frames = 0
         self.tick = 0
         self.fps = 0
         self.fpss = []
@@ -153,11 +152,11 @@ class Game():
         if not self.no_updates:
             self.curr_map.print_all()
             self.no_updates = True
-
     def game_loop_debug(self):
         self.frame_start = time()
         self.move_all()
         self.rendering()
+        self.curr_map.display_timer()
         if self.fps > self.fps_min and not self.no_updates:
             self.curr_map.print_all(self.display_fps)
             self.no_updates = True
@@ -166,7 +165,6 @@ class Game():
             self.run_fps()
     
     def run_fps(self,with_avg=False):
-        self.frames += 1
         self.tick = (self.tick + 1)%MAX_TICK
         if time() != self.frame_start:
             self.fps = 1/(time()-self.frame_start)
@@ -180,9 +178,9 @@ class Game():
         """All the comes after the main game_loop"""
         mixer.music.stop()
         self.play_sound("quit")
-        self.total = self.frames/(time()-self.start_time)
-        end_game = COLORS['default']+SPACES+"Game Over!\nAverage FPS: "+str(self.total)+"\n"
-        input(f"{end_game}Press ENTER to exit.\n{COLORS['default']}") # Hide input from the whole game
+        fps_avg = str(sum(self.fpss)/len(self.fpss))
+        end_game = CLEAR+default_color+SPACES+"Game Over!\nAverage FPS: "+fps_avg+"\n"
+        input(f"{end_game}Press ENTER to exit.\n{default_color}") # Hide input from the whole game
         print(CLEAR)
 
     def play_theme(self):
@@ -829,8 +827,10 @@ class Map():
         self.line = [default_color]
         [self.p2([self.p1(self.rend_map[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
         self.add_message()
+        self.add_fps(fps)
+        self.line.pop(-1)#An extra \n needed removing.
         self.print_map = "".join(self.line)
-        print(f"{RETURN}{self.print_map}{fps}")
+        print(f"{RETURN}{self.print_map}")
     def p1(self,char):
         self.line.append(char)
     def p2(self,line):
@@ -851,6 +851,12 @@ class Map():
         if len(self.disp_msg) > 0:
             if self.msg_timer < time():
                 self.disp_msg = ""
+    def add_fps(self,fps):
+        if len(fps) > 0:
+            i = int(len(self.line)*((W_HEI-1)/W_HEI))+1
+            for c in fps:
+                self.line[i]=c
+                i +=1
         
 
     def set_xy_geom(self,x,y,char):
