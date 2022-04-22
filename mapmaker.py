@@ -3,8 +3,8 @@ import keyboard as keys
 from tkinter import *
 import tkinter.font as font
 from os.path import exists
-WID = 110
-HEI = 30
+WID = 120
+HEI = 28
 BLANK = " "
 QUIT = "esc"
 START = '1.0'

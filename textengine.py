@@ -5,6 +5,9 @@ from os.path import dirname
 import random
 from time import time,sleep
 from math import log
+import os
+os.system("")
+#ALLOWS A WINDOWS TERMINAL TO SOMEHOW UNDERSTAND ESCAPE CODES!! :D
 
 DIRPATH = dirname(__file__)
 # Required to run program in Python3 terminal.
@@ -15,14 +18,11 @@ CUR = '\033[A\033[F'
 ZER = '\033[H'
 RIT = '\033[1C'
 MAX_TICK = 16
-# Default animation dictionary for a given object.
 
-# Move the cursor up by one. Not Windows Terminal compatible.
-W_WID = 110
-W_HEI = 30
+W_WID = 120
+W_HEI = 28
 # Based on the Windows Terminal window at default size.
-# UPDATE: add function to detect window dimensions/set them.
-INFO_HEI=3
+INFO_HEI=2
 RETURN = CUR * (W_HEI+INFO_HEI)
 WGC_X = W_WID//2 - 5
 WGC_Y = W_HEI//2 - 5
@@ -84,14 +84,16 @@ class Game():
                             "line":self.geom_line,
                             "skeleton":self.geom_skeleton,
                             None:self.geom_none}
-        self.act_set_dict = {"switch_sprite":self.act_switch_sprite,
+        self.act_set_dict = {"change_sprite":self.act_change_sprite,
+                            "change_color":self.act_change_color,
                             "rotate":self.act_rotate,
                             "quit":self.act_quit,
                             "sound":self.act_sound,
                             "unlock":self.act_unlock,
-                            "switch_map":self.act_switch_map,
-                            "switch_theme":self.act_switch_theme,
-                            "switch_geometry":self.act_switch_geom,
+                            "lock":self.act_lock,
+                            "change_map":self.act_change_map,
+                            "change_theme":self.act_change_theme,
+                            "change_geometry":self.act_change_geom,
                             "message":self.act_display_msg,
                             "kill":self.act_kill,
                             "up_score":self.up_score}   
@@ -115,7 +117,7 @@ class Game():
             while(not self.quit):
                 self.game_loop()
 
-    def switch_map(self,index):
+    def change_map(self,index):
         if self.map_index >= len(self.map_list):
             self.map_index = 0
         self.map_index = index
@@ -128,7 +130,7 @@ class Game():
             self.objs.objs.append(obj)
     
     def next_map(self):
-        self.switch_map(self.map_index + 1)
+        self.change_map(self.map_index + 1)
 
     def init_map(self,first=True):
         """All that comes before the main game_loop"""
@@ -189,9 +191,11 @@ class Game():
             mixer.music.play(-1)
     def add_theme(self,path:str):
         assert len(path) > 4, "Not a valid audio file name."
+        path = DIRPATH + "\\" + path
         self.themes.insert(0,path)
     def add_sound(self, path:str,sound_name:str=""):
         assert len(path) > 4, "Not a valid audio file name."
+        path = DIRPATH + "\\" + path
         new_sound = mixer.Sound(path)
         if len(sound_name)>0:
             self.sounds[sound_name] = new_sound
@@ -447,13 +451,16 @@ class Game():
                         self.act_set_dict[act.effect](obj,act.arg)
 
     # These functions are put into act_set_dict, for quicker lookup than if statements.
-    def act_switch_sprite(self,obj,arg):
+    def act_change_sprite(self,obj,arg):
         """ARG: dictionary of old img key and new img value"""
         self.set_sprite(obj,arg[obj.img])
-    def act_switch_geom(self,obj,arg):
+    def act_change_color(self,obj,arg):
+        obj.set_color(arg[obj.color])
+        self.set_sprite(obj,obj.img)
+    def act_change_geom(self,obj,arg):
         obj.geom = arg[obj.geom]
         self.set_sprite(obj,obj.img)
-    def act_switch_theme(self,obj,arg):
+    def act_change_theme(self,obj,arg):
         mixer.music.stop()
         self.add_theme(arg[-1])
         self.play_theme()
@@ -484,7 +491,12 @@ class Game():
         for targ_act in self.acts.acts:
             if targ_act.name == arg:
                 targ_act.locked = False
-    def act_switch_map(self,obj,arg:list):
+    def act_lock(self,obj,arg):
+        # ARG: name of acts to unlock
+        for targ_act in self.acts.acts:
+            if targ_act.name == arg:
+                targ_act.locked = True
+    def act_change_map(self,obj,arg:list):
         # The last item in ARG is the file_name
         # Find the map in map_list, or create it
         file_name = arg[-1]
@@ -504,7 +516,7 @@ class Game():
             self.map_list.append(map)
             index = len(self.map_list) - 1
         self.curr_map = map
-        self.switch_map(index)
+        self.change_map(index)
         self.init_map(False)
     def act_kill(self,obj,arg):
         # Make sure this is the last act of that object.
@@ -1089,10 +1101,7 @@ class Objs():
             self.enemy_chars = enemy_chars
             self.dmg_dirs = dmg_dirs
             self.animate = animate # Edited in the objs.append_obj function
-            if type(color) == type(42):
-                self.color = color_by_num(color)
-            else:
-                self.color = color # The literal escape code, not the number.
+            self.color = self.set_color(color)
             # "flip" is default, mirrors the image for every change between right and left.
             # Otherwise, if it's not None it becomes a dictionary: {w,a,s,d:sprite images.}
 
@@ -1107,6 +1116,12 @@ class Objs():
             self.live = True
             self.data = data
 
+        def set_color(self,color):
+            if type(color) == type(42):
+                self.color = color_by_num(color)
+            else:
+                self.color = color # The literal escape code, not the number.
+            return self.color
         def get_origin(self):
             return [self.origx,self.origy]
     
