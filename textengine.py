@@ -1,16 +1,15 @@
 from keyboard import is_pressed,wait
 from pygame import mixer
-import numpy as np
+#import numpy as np
 from os.path import dirname
-import random
+from os import system
+from random import randint
 from time import time,sleep
 from math import log
-import os
-os.system("")
+system("")
 #ALLOWS A WINDOWS TERMINAL TO SOMEHOW UNDERSTAND ESCAPE CODES!! :D
-
 DIRPATH = dirname(__file__)
-# Required to run program in Python3 terminal.
+
 BLANK = ' '
 SKIP = '$'
 CLEAR = "\033[2J"
@@ -31,7 +30,7 @@ WGC_Y = W_HEI//2 - 5
 
 SPACES = ' ' * 50
 S_LINE = ' ' * W_WID
-BUBBLE = [["/","⎺","\\"],["|"],["\\","_","/"]]
+BUBBLE = [["╱","⎺","╲"],["|"],["╲","_","╱"]]
 # /⎺⎺⎺⎺⎺⎺⎺\
 #| message |
 # \_______/
@@ -46,7 +45,7 @@ ccode = "\033[0;39;"
 COLORS = {"default":ccode+"49m","white":ccode+"47m",
         "cyan":ccode+"46m","yellow":ccode+"43m",
         "green":ccode+"42m","magenta":ccode+"45m",}
-default_color = COLORS['default']
+DEFAULT_COLOR = COLORS['default']
 
 class Game():
     """
@@ -71,17 +70,19 @@ class Game():
         self.tick = 0
         self.fps = 0
         self.fpss = []
-        self.display_fps = ""
+        self.display_data = ""
         self.start_time = 0
         self.fps_min = 30
         self.game_speed = 1 # General actions can be called at 1/second.
         self.total = 0
         self.no_updates = False
+        self.default_color = DEFAULT_COLOR
 
         self.geom_set_dict= {"all":self.geom_all,
                             "complex":self.geom_complex,
                             "line":self.geom_line,
                             "skeleton":self.geom_skeleton,
+                            "background":self.geom_none,
                             None:self.geom_none}
         self.act_set_dict = {"change_sprite":self.act_change_sprite,
                             "change_color":self.act_change_color,
@@ -95,6 +96,7 @@ class Game():
                             "change_geometry":self.act_change_geom,
                             "message":self.act_display_msg,
                             "kill":self.act_kill,
+                            "teleport":self.act_teleport,
                             "up_score":self.up_score}   
         self.key_dict = {"wasd":
                             {"w":self.move_up,"s":self.move_down,
@@ -134,13 +136,13 @@ class Game():
     def init_map(self,first=True):
         """All that comes before the main game_loop"""
         if first:
-            print(CLEAR,default_color)
+            print(CLEAR,self.default_color)
             self.start_time = time()
             self.play_theme()
         self.init_objs()
         self.init_rendering()
         self.curr_map.display_timer()
-        self.curr_map.print_all(self.display_fps)
+        self.curr_map.print_all()
 
     def game_loop(self):
         """This is what loops for every game tick.
@@ -158,7 +160,7 @@ class Game():
         self.rendering()
         self.curr_map.display_timer()
         if self.fps > self.fps_min and not self.no_updates:
-            self.curr_map.print_all(self.display_fps)
+            self.curr_map.print_all(self.display_data)
             self.no_updates = True
             self.run_fps(True)
         else:
@@ -171,16 +173,16 @@ class Game():
             if with_avg:
                 self.fpss.append(self.fps)
         else:
-            self.fps = 999
-        self.display_fps = "FPS:" + str(self.fps)
+            self.fps = 999.000
+        self.display_data = "FPS:" + str(round(self.fps,3)) + BLANK
 
     def end_game(self):
         """All the comes after the main game_loop"""
         mixer.music.stop()
         self.play_sound("quit")
         fps_avg = str(sum(self.fpss)/len(self.fpss))
-        end_game = CLEAR+default_color+SPACES+"Game Over!\nAverage FPS: "+fps_avg+"\n"
-        input(f"{end_game}Press ENTER to exit.\n{default_color}") # Hide input from the whole game
+        end_game = CLEAR+self.default_color+SPACES+"Game Over!\nAverage FPS: "+fps_avg+"\n"
+        input(f"{end_game}Press ENTER to exit.\n{self.default_color}") # Hide input from the whole game
         print(CLEAR)
 
     def play_theme(self):
@@ -284,23 +286,20 @@ class Game():
                 move_y = 1
             elif self.curr_map.camera_y + WGC_Y > obj.origy - obj.height() and self.curr_map.camera_y > 0:
                 move_y = -1
-        self.move_camera(move_x,move_y)
+        self.curr_map.move_camera(move_x,move_y)
+        coords = "("+str(obj.origx)+","+str(obj.origy)+")"
+        self.display_data += coords
         # GAME-ENDING CHECKS:
         if obj.hp <= 0 or obj.origy == self.curr_map.width -1:
             self.quit = True
             self.kill_obj(obj) 
-    def move_camera(self,x=0,y=0):
-        if x!=0 or y!= 0:
-            self.no_updates = False
-        self.curr_map.camera_x += x
-        self.curr_map.camera_y += y
-        self.curr_map.end_camera_y += y
-        self.curr_map.end_camera_x += x
+    
     def kill_obj(self,obj,sound:bool=False): # DEATH
         if sound:
             self.play_sound("death")
         self.teleport_obj(obj,0,0)
         obj.live = False
+        obj.geom = None
         self.set_sprite(obj,"dead")
         obj.move = None
 
@@ -353,6 +352,8 @@ class Game():
                 return obj
 
     def run_interacts(self,obj):
+        """This is run when a player's given interact button is pressed.
+        Objects without geometry cannot be presently acted upon."""
         if time() - obj.move_time["i"] > 1/self.game_speed:
             obj.move_time["i"] = time()
             xs,xf,ys,yf = self.set_xy_limits(obj)
@@ -386,26 +387,26 @@ class Game():
                         for y in range(ys,yf):
                             if obj.face_right:
                                 if self.curr_map.geom_map[y][xf] == act.char: #RIGHT
-                                    i=self.objs.find_obj_index(obj)
+                                    i=self.objs.find_obj_index(obj)+1
                                     found = False
                                     while not found and i < len(self.objs.objs):
                                         i_obj = self.objs.objs[i]
-                                        if act.char == i_obj.char and ys<=i_obj.origy<yf and xf < i_obj.origx:
+                                        if act.char == i_obj.char and ys<=i_obj.origy<yf and xf <= i_obj.origx:
                                             found = True
                                             self.act_set_dict[act.effect](i_obj,act.arg)
                                         else:
                                             i+=1
                             else:
                                 if self.curr_map.geom_map[y][xs-1] == act.char: #LEFT
-                                    i=self.objs.find_obj_index(obj)
+                                    i=self.objs.find_obj_index(obj)-1
                                     found = False
-                                    while not found and i > 0:
+                                    while not found and i > -1:
                                         i_obj = self.objs.objs[i]
-                                        if act.char == i_obj.char and ys<=i_obj.origy<yf and xs < i_obj.origx+i_obj.width():
+                                        if act.char == i_obj.char and ys<=i_obj.origy<yf and xs <= i_obj.origx+i_obj.width():
                                             found = True
                                             self.act_set_dict[act.effect](i_obj,act.arg)
                                         else:
-                                            i+=1
+                                            i-=1
 
     def reload_screen(self,obj):
         self.init_rendering()
@@ -495,30 +496,51 @@ class Game():
             if targ_act.name == arg:
                 targ_act.locked = True
     def act_change_map(self,obj,arg:list):
-        # The last item in ARG is the file_name
+        # The last item in ARG is the file_name of the new map
+        # The second-to-last item is the file_name of the old map
         # Find the map in map_list, or create it
+        prev_map = DIRPATH + "\\" + arg[-2]
         file_name = arg[-1]
-        index = 0
+        full_name = DIRPATH + "\\" + file_name
+        self.add_to_render_objs(obj)
         map_not_found = True
-        while map_not_found and index < len(self.map_list):
-            map = self.map_list[index]
-            if map.file_name == file_name:
-                self.curr_map = map
-                map_not_found = False
-            else:
-                index += 1
+        if prev_map == self.curr_map.file_name:
+            index = 0
+            while map_not_found and index < len(self.map_list):
+                map = self.map_list[index]
+                if map.file_name == full_name:
+                    self.curr_map = map
+                    map_not_found = False
+                else:
+                    index += 1
         if map_not_found:
         # Create new map, initialize it, and add it to the map list.
             map = Map()
             map.set_path(file_name)
             self.map_list.append(map)
             index = len(self.map_list) - 1
-        self.curr_map = map
-        self.change_map(index)
-        self.init_map(False)
+            self.curr_map = map
+            self.change_map(index)
+            self.init_map(False)
+        if len(arg)>5:#Includes new character location
+            obj.origx = arg[2]
+            obj.origy = arg[3]
+            self.objs.append_obj_ordered(obj)
+            #if map_not_found:
+            #    self.curr_map.center_camera(arg[2],arg[3])
+            #    map centering function doesn't work.
+            self.add_to_render_objs(obj)
+        if len(arg)==7: #color at index 4
+            self.set_default_color(arg[4])
+            for obj in self.objs.objs:
+                self.set_sprite(obj,obj.img)
+            self.reload_screen(obj)
     def act_kill(self,obj,arg):
         # Make sure this is the last act of that object.
         self.kill_obj(obj)
+    def act_teleport(self,obj,arg):
+        """Arg is a list of x,y coords"""
+        self.teleport_obj(obj,arg[-2],arg[-1])
     def up_score(self,obj,arg):
         obj.score += arg[-1]        
 
@@ -550,16 +572,21 @@ class Game():
         except: pass
         return False
 
+    def set_default_color(self,color):
+        self.default_color = color
+        self.curr_map.default_color =color
+        self.objs.default_color = color
     def teleport_obj(self,obj,x:int=0,y:int=0):
         """Moves an object to a given location if no geometry is there."""
-        move_x = obj.origx - x
-        move_y = obj.origy - y
+        move_x = x - obj.origx
+        move_y = y - obj.origy
         if x > obj.origx:
             move_x *= -1
         if y < obj.origy:
             move_y *= -1
         if self.can_move(obj,move_x,move_y):
             self.move_map_char(obj,move_x,move_y)
+        self.curr_map.center_camera(obj.origx+obj.width()//2,obj.origy-obj.height()//2)
     def move_obj(self,obj,move_x = 0,move_y = 0):
         """Moves a single object move_x and move_y amount OR LESS."""
         while move_x != 0 or move_y != 0:
@@ -602,13 +629,7 @@ class Game():
         obj = self.objs.objs.pop(self.objs.find_obj_index(obj))
         obj.origy = newy
         obj.origx = newx
-        i = 0
-        while i < len(self.objs.objs):#-1
-            if (self.objs.objs[i].origy < newy) or (self.objs.objs[i].origy == newy and self.objs.objs[i].origx < newx):
-                i+=1
-            else:
-                self.objs.objs.insert(i,obj)
-                i = len(self.objs.objs)
+        self.objs.append_obj_ordered(obj)
 
     def init_objs(self):
         """Initializes all objects, referring to objs.objs made
@@ -709,25 +730,54 @@ class Game():
         start_y = obj.origy+1-obj.height()
         end_y = min([obj.origy+1,self.curr_map.height-1])
         start_x = find_non(obj.sprite[-1],SKIP) + obj.origx
-        go_behind = False
-        for x in range(start_x,start_x+obj.width()):
-            if self.curr_map.rend_map[end_y][x][-1] != BLANK or self.curr_map.geom_map[end_y][x] != BLANK:
-                go_behind = True
-        # The layer count of the spot directly below the current object origin.
-        # We want the current object to always be behind this.
-        for y in range(start_y,end_y):
-            start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
-            end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.curr_map.width-1])+1
-            for x in range(start_x,end_x):
-                char = obj.sprite[y-start_y][x-obj.origx]
-                if SKIP not in char:
-                    if self.curr_map.rend_map[y][x][-1] != BLANK:
-                        if go_behind:
-                            self.curr_map.rend_map[y][x].insert(-1,char)
-                        else:
+        if obj.geom!="background":
+            thing_behind = False
+            thing_ahead = False
+            for x in range(start_x,start_x+obj.width()):
+                if len(self.curr_map.rend_map[end_y-2][x]) > 1:
+                    thing_behind = True
+                    # If the row above the baseline of an object has a thickness greater than one, something is behind the object.
+                if len(self.curr_map.rend_map[end_y][x]) > 1:
+                    thing_ahead = True
+                if len(self.curr_map.rend_map[end_y-1][x]) > 1:
+                    thing_ahead = True
+                    # If the row below the baseline of an object has a thickness greater than one, something is in front.
+                """If something is ahead and behind, we will insert under the top layer. When there are just two layers and until we hit three or one, we will append.
+                If nothing is ahead, we will always append. Same if nothing is behind.
+                """
+            if not thing_ahead:
+                for y in range(start_y,end_y):
+                    start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
+                    end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.curr_map.width-1])+1
+                    for x in range(start_x,end_x):
+                        char = obj.sprite[y-start_y][x-obj.origx]
+                        if SKIP not in char:
                             self.curr_map.rend_map[y][x].append(char)
-                    else:
-                        self.curr_map.rend_map[y][x][-1] = char
+            else:
+                obj_ahead_found = thing_behind
+                for y in range(start_y,end_y):
+                    start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
+                    end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.curr_map.width-1])+1
+                    # Don't attempt to print out of bounds
+                    for x in range(start_x,end_x):
+                        char = obj.sprite[y-start_y][x-obj.origx]
+                        layers = len(self.curr_map.rend_map[y][x])
+                        if layers == 3 or layers == 1:
+                            obj_ahead_found = True
+                        if SKIP not in char: # If this is not a blank character
+                            if layers > 1 and obj_ahead_found:
+                                    self.curr_map.rend_map[y][x].insert(-1,char)
+                            else:
+                                self.curr_map.rend_map[y][x].append(char)
+        else: # Add to background. Working!
+            for y in range(start_y,end_y):
+                start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
+                end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.curr_map.width-1])+1
+                for x in range(start_x,end_x):
+                    char = obj.sprite[y-start_y][x-obj.origx]
+                    if SKIP not in char: # If this is not a blank character
+                        if self.curr_map.rend_map[y][x][0] == BLANK:
+                            self.curr_map.rend_map[y][x][0] = char
 
         # Add any text above the object sprite
         if obj.txt > -1:
@@ -757,16 +807,17 @@ class Map():
         self.file_name = ""
         self.disp_msg = ""
         self.msg_timer = 0
+        self.default_color = DEFAULT_COLOR
 
     def set_path(self,path):
         self.store_user_map(path)
         self.clear_rend_map()
 
     def set_disp_msg(self,new_msg):
-        self.msg_timer = time() + len(new_msg)/20
-        self.disp_msg =[[default_color+BUBBLE[0][0]],
-                        [default_color+BUBBLE[1][0]],
-                        [default_color+BUBBLE[2][0]]]
+        self.msg_timer = time() + 2 + len(new_msg)/10
+        self.disp_msg =[[self.default_color+BUBBLE[0][0]],
+                        [self.default_color+BUBBLE[1][0]],
+                        [self.default_color+BUBBLE[2][0]]]
         new_msg = BLANK + new_msg + BLANK
         for c in new_msg:
             self.disp_msg[0].append(BUBBLE[0][1])
@@ -822,19 +873,19 @@ class Map():
         self.height = y
         self.width = maxwidth
 
-    def print_all(self,fps=""):
+    def print_all(self,data=""):
         """Displays the proper area of self.rend_map."""
-        self.line = [default_color]
+        self.line = [self.default_color]
         [self.p2([self.p1(self.rend_map[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
         self.add_message()
-        self.add_fps(fps)
+        self.add_data(data)
         self.line.pop(-1)#An extra \n needed removing.
         self.print_map = "".join(self.line)
         print(f"{RETURN}{self.print_map}")
     def p1(self,char):
         self.line.append(char)
     def p2(self,line):
-        self.line.append(default_color+"\n")
+        self.line.append(self.default_color+"\n")
     def add_message(self):
         if len(self.disp_msg) > 0:
             start = int(len(self.line)*((W_HEI-len(self.disp_msg)+.5)/W_HEI))
@@ -851,14 +902,14 @@ class Map():
         if len(self.disp_msg) > 0:
             if self.msg_timer < time():
                 self.disp_msg = ""
-    def add_fps(self,fps):
-        if len(fps) > 0:
+    def add_data(self,data):
+        if len(data) > 0:
             i = int(len(self.line)*((W_HEI-1)/W_HEI))+1
-            for c in fps:
-                self.line[i]=c
+            for c in data:
+                try:self.line[i]=c
+                except:pass
                 i +=1
         
-
     def set_xy_geom(self,x,y,char):
         """Sets char at a given position on map"""
         self.geom_map[y][x] = char
@@ -879,10 +930,27 @@ class Map():
                     break
         elif self.rend_map[y][x][0] == char: # Only one layer.
             self.rend_map[y][x][0] = BLANK
-
             
     def get_xy_rend(self,x,y,z=-1):
         return self.rend_map[y][x][z]
+
+    def move_camera(self,x=0,y=0):
+        if x!=0 or y!= 0:
+            self.no_updates = False
+        self.camera_x += x
+        self.camera_y += y
+        self.end_camera_y += y
+        self.end_camera_x += x
+    def center_camera(self,x=W_WID//2,y=W_HEI//2):
+        """Takes a coordinate and centers the camera on that point.
+        NOT FUNCTIONAL."""
+        x = min([x,self.width-(W_WID//2)-1])
+        y = min([y,self.height-(W_HEI//2)-1])
+        self.no_updates = False
+        self.camera_x = max([x-(W_WID//2)-1,0])
+        self.camera_y = max([y-(W_HEI//2)-1,0])
+        self.end_camera_y = self.camera_x + W_HEI
+        self.end_camera_x = self.camera_y + W_WID
 
 class Acts():
     def __init__(self):
@@ -914,11 +982,12 @@ class Objs():
         self.render_objs = set() #These objects need to be updated exactly
         #once per frame, thus the set. 
         self.obj_pallete = set() # These are all the original objects.
-        self.sprites = {"dead":[[str(" ")]]}
+        self.sprites = {"dead":[[BLANK]]}
         # Sprites are stored as rows of strings, so that color codes may be appended.
         self.max_height= 0 
         self.max_width = 0
         self.max_id = 0
+        self.default_color = DEFAULT_COLOR
 
     def get_sprites(self,path):
         """Takes the sprite file path and stores the sprites in
@@ -945,9 +1014,18 @@ class Objs():
                     height = 0
                 else:
                     line = self.replace_spaces(line)
+                    line = self.ms_gothic(line)
+                    # Windows Terminal does not presently support longer lines.
                     curr_sprite.append(list(line))
                     height +=1
                 line = file.readline()[:-1] # Removes the \n
+    def ms_gothic(self,line):
+        line_dict = {'/':'╱','\\':'╲','│':'|'}
+        line = [x for x in line]
+        for x in range(len(line)):
+            if line[x] in line_dict.keys():
+                line[x] = line_dict[line[x]]
+        return "".join(line)
 
     def replace_spaces(self,line:str):
         """All spaces before and after other characters are replaced
@@ -983,9 +1061,9 @@ class Objs():
                     char = SKIP # Turn BLANKS into SKIPS, so no BLANKS need to be skipped.
                 if x != obj.width() -1:
                     if obj.sprite[y][x+1] == chars[-1] or obj.sprite[y][x+1] == chars[0]:
-                        char = char + default_color
+                        char = char + self.default_color
                 obj.sprite[y][x] = char
-            obj.sprite[y][-1] = char + default_color
+            obj.sprite[y][-1] = char + self.default_color
 
 
     def get_flipped_sprite(self,obj,sprite):
@@ -1021,8 +1099,19 @@ class Objs():
         return -1
     
     def append_objs(self,objs:list=[]):
-        """Add a list of objects to self.objs."""
+        """Add a list of objects to self.objs. Not checked for order."""
         [self.append_obj(obj) for obj in objs]
+
+    def append_obj_ordered(self,obj):
+        """This is for a ready-made object who must be placed in the right spot
+        within the objs list."""
+        i = 0
+        while i < len(self.objs):#-1
+            if (self.objs[i].origy < obj.origy) or (self.objs[i].origy == obj.origx and self.objs[i].origx < obj.origx):
+                i+=1
+            else:
+                self.objs.insert(i,obj)
+                i = len(self.objs)
             
     def append_obj(self,obj,rotate=0):
         """Important object initialization happens here."""
@@ -1060,7 +1149,7 @@ class Objs():
     color=None,data=dict()):
         """Creates an Obj and appends it to the objs list."""
         if color == None:
-            color = default_color
+            color = self.default_color
         obj = self.Obj(img, char, x,y, geom, move,xspeed,yspeed,
             hp,face_right,face_down,grav,dmg,enemy_chars,dmg_dirs,
             animate,txt,max_jump,color,data)
@@ -1095,7 +1184,7 @@ class Objs():
                 #wasd: controls, i:interact, g:gravity (falling)
 
             self.img = img
-            self.geom = geom # Options of: None, line, complex, skeleton, or all.
+            self.geom = geom # Options of: None, line, complex, skeleton, background, or all.
             self.origx = x
             self.origy = y
             self.char = char
