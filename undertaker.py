@@ -4,12 +4,11 @@ from time import sleep
 os.system("")
 
 g = tx.Game()
-#tx.default_color = tx.color_by_num(34)
-g.curr_map.set_path("under/menu.txt")
+g.set_map_path("under/menu.txt")
+g.set_sprite_path("under/sprites.txt")
 g.get_texts("under/text.txt")
-g.objs.get_sprites("under/sprites.txt")
+g.set_theme('under/menu.wav')
 g.camera_follow = ["x","y"]
-g.add_theme('under/menu.wav')
 wood = 52
 wall = 235
 robe = 239
@@ -24,12 +23,11 @@ g.acts.new("","touch","X","sound",["V","under/move_cursor2.wav"])
 g.acts.new("quit game","touch","X","sound",["Q","under/move_cursor2.wav"])
 g.acts.new("quit game","touch","X","quit",["Q"])
 g.acts.new("start game","touch","X","sound",["Y","under/move_cursor2.wav"])
-g.acts.new("start game","touch","X","change_theme",["Y","under/menu.wav"])
+g.acts.new("start game","touch","X","change_theme",["Y","under/theme.wav"])
 g.acts.new("start game","touch","X","change_map",["Y","under/menu.txt","under/map1.txt"])
 
-player = g.objs.Obj("grimm","g",geom="line",move="wasd",
-    xspeed=50, yspeed=20,animate="sneaky",color=robe)
-g.objs.append_obj(player)
+g.objs.new("grimm","g",geom="line",move="wasd",xspeed=50, yspeed=20,animate="sneaky",color=robe)
+
 g.objs.new("face","L")
 g.objs.new("face","q",geom="skeleton")
 g.objs.new("door-closed","d",geom="line",color=wood)
@@ -72,9 +70,10 @@ g.acts.new("unlocked","interact","D","message",[3])
 g.acts.new("unlock_door","interact","D","change_geometry",door_geom,True)
 g.acts.new(char="P",effect="sound",arg="under/bink_sound.wav")
 g.acts.new("light-switch",char="P",effect="change_color",arg=lights)
-g.acts.new("","location","g","change_map",[235,15,235,43,"under/map1.txt","under/upstairs.txt"])
+g.acts.new("","location","g","change_map",[235,15,235,45,"under/map1.txt","under/upstairs.txt"])
 g.acts.new("","location","g","change_map",[235,47,235,18,"under/upstairs.txt","under/map1.txt"])
-g.acts.new("","location","g","change_map",[79,78,48,33,tx.color_by_num(70),"under/map1.txt","under/outside.txt"])
+g.acts.new("","location","g","change_map",[79,78,48,33,"under/map1.txt","under/outside.txt"])
+g.acts.new("","location","g","change_map",[48,32,79,77,"under/outside.txt","under/map1.txt"])
 g.acts.new("play_piano","interact","p","message",[1])
 g.acts.new("play_piano",char="p",effect="sound",arg="under/piano.wav")
 g.acts.new(char="k",effect="unlock",arg="unlock_door")

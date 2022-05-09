@@ -70,3 +70,17 @@ def add_to_sparse(self,x,y,char):
                 self.objs.objs.insert(i,obj)
                 i = max
         self.curr_map.sparse_map.insert(0,[x,y,char])
+
+def move_cursor(x=0,y=0):
+    """Moves the cursor from its current position"""
+    if x < 0:
+        x *= -1
+        print(f"\033[{x}D",end='',flush=True)
+    elif x > 0:
+        print(f"\033[{x}C",end="",flush=True)
+    if y < 0:
+        y *= -1
+        #print(f"\033[{y}B",end='')
+        print(f"\033[{y}A",end="",flush=True)
+    elif y > 0:
+        print("\n"*y,flush=True)
