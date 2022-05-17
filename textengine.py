@@ -82,13 +82,17 @@ class Game():
 
         self.tick = 0
         self.fps = 0
-        self.fpss = []
+        self.display_fps = 0
+        self.fps_list = []
         self.display_data = ""
         self.start_time = 0
         self.fps_min = 30
+        self.fps_max = 60
+        self.fps_timer = 0
+        self.fps_timer_wait = 0.25
+
         self.game_speed = 1 # General actions can be called at 1/second.
         self.total = 0
-        self.no_updates = False
 
         self.geom_set_dict= {"all":self.geom_all,
                             "complex":self.geom_complex,
@@ -187,36 +191,35 @@ class Game():
         self.move_all()
         self.render_all()
         self.map.display_timer()
-        #if not self.no_updates:
-        self.map.print_all()
-        #self.no_updates = True
+        if self.fps <= self.fps_max:
+            self.map.print_all()
+        self.run_frame_counter()
     def game_loop_debug(self):
         self.frame_start = time()
         self.move_all()
         self.render_all()
         self.map.display_timer()
-        if self.fps > self.fps_min:# and not self.no_updates:
-            self.map.print_all(self.display_data)
-            self.no_updates = True
-            self.run_fps(True)
-        else:
-            self.run_fps()
+        self.map.print_all(self.display_data)
+        self.run_frame_counter(True)
 
-    def run_fps(self,with_avg=False):
+    def run_frame_counter(self,with_avg=False):
         self.tick = (self.tick + 1)%MAX_TICK
         if time() != self.frame_start:
-            self.fps = 1/(time()-self.frame_start)
+            self.fps = round(1/(time()-self.frame_start),2)
             if with_avg:
-                self.fpss.append(self.fps)
+                self.fps_list.append(self.fps)
+            if time() >= self.fps_timer:
+                self.fps_timer = time() + self.fps_timer_wait
+                self.display_fps = self.fps
         else:
-            self.fps = 999.000 # Cosmetic only.
-        self.display_data = "FPS:" + str(round(self.fps,3)) + " Map: " + self.map_name[self.map_name.rfind("/")+1:]
+            self.fps = 999.00 # Cosmetic only.
+        self.display_data = "FPS:" + str(self.display_fps) + " Map: " + self.map_name[self.map_name.rfind("/")+1:]
 
     def end_game(self):
         """All the comes after the main game_loop"""
         mixer.music.stop()
         self.play_sound("quit")
-        fps_avg = str(sum(self.fpss)/len(self.fpss))
+        fps_avg = str(sum(self.fps_list)/len(self.fps_list))
         end_game = CLEAR+SPACES+"Game Over!\nAverage FPS: "+fps_avg+"\n"
         input(f"{end_game}Press ENTER to exit.\n{DEFAULT_COLOR}") # Hide input from the whole game
         print(CLEAR)
@@ -257,16 +260,15 @@ class Game():
             self.sounds[key].play()
 
     def move_all(self):
-        id_tracker = []
+        id_tracker = set()
         in_range = self.map.end_camera_y + (WGC_Y*2)
         for obj in self.objs.objs:
             if obj.origy > in_range:
                 break
             else:
-                id_tracker.append(obj.id)
-                if len(id_tracker) != len(set(id_tracker)):
-                    id_tracker = list(set(id_tracker))
-                elif not obj.simple:
+                id_tracker_len = len(id_tracker)
+                id_tracker.add(id(obj)) #Checks if we've looked at this object already
+                if not obj.simple and len(id_tracker) != id_tracker_len:
                     if obj.move in ["wasd","dirs"]:
                         self.player_actions(obj)
                     elif obj.move == "leftright":
@@ -724,7 +726,6 @@ class Game():
     def init_render_all(self):
         self.map.init_rend()
         self.map.init_geom()
-        self.no_updates = False
         for obj in self.objs.objs:
             self.render_obj(obj)
             self.geom_set_dict[obj.geom](obj)
@@ -737,7 +738,6 @@ class Game():
         objects (not that you asked)."""
         end_range_y = self.map.end_camera_y + (WGC_Y*3)
         if len(self.objs.render_objs) > 0:
-            self.no_updates = False
             for obj in self.objs.render_objs:
                 if obj.origy < end_range_y:
                     self.render_obj(obj)
@@ -957,15 +957,12 @@ class Map():
         return self.rend[y][x][z]
 
     def move_camera(self,x=0,y=0):
-        if x!=0 or y!= 0:
-            self.no_updates = False
         self.camera_x += x
         self.camera_y += y
         self.end_camera_y += y
         self.end_camera_x += x
     def center_camera(self,x,y):
         """Takes a coordinate and centers the camera on that point."""
-        self.no_updates = False
         half_wid = W_WID//2
         half_hei = W_HEI//2
         if x + half_wid >= self.width:
@@ -1014,7 +1011,6 @@ class Objs():
         self.sprites = dict()
         self.max_sprite_height= 1
         self.max_sprite_width = 1
-        self.max_id = 0
         self.default_color = DEFAULT_COLOR
     
     def set_sprite_color(self,obj):
@@ -1068,8 +1064,8 @@ class Objs():
         if not found."""
         i=0
         while i < len(self.objs):
-            currid = self.objs[i].id
-            if obj.id == currid:
+            currid = id(self.objs[i])
+            if id(obj) == currid:
                 return i
             i+= 1
         return -1
@@ -1078,16 +1074,13 @@ class Objs():
         within the objs list."""
         i = 0
         placed = False
-        rowfound = False
         while i < len(self.objs) and not placed:
             next_obj = self.objs[i]
-            if (next_obj.origy < obj.origy) or (next_obj.origy == obj.origy and next_obj.origx < obj.origx):
-                i+=1
-            else:
-                self.objs.insert(i,obj)
+            if (next_obj.origy > obj.origy) or (next_obj.origy == obj.origy and next_obj.origx >= obj.origx):
                 placed = True
-        if not placed:
-            self.objs.insert(len(self.objs)//2,obj)
+            else:
+                i+=1
+        self.objs.insert(i,obj)
     def append_objs(self,objs:list=[]):
         """Add a list of objects to self.objs. Not checked for order."""
         [self.append_obj(obj) for obj in objs]
@@ -1114,8 +1107,6 @@ class Objs():
             facing_left = obj.img + "-a"
             self.sprites[facing_left] = self.get_flipped_sprite(self.sprites[obj.img],obj)
             obj.animate = {"w":facing_up,"a":facing_left,"s":facing_down,"d":obj.img}
-        obj.id = self.max_id
-        self.max_id+=1
         obj.i = len(self.objs)
         self.objs.append(obj)
     def add_to_pallete(self,obj):
@@ -1177,10 +1168,7 @@ class Objs():
             self.animate = animate # Edited in the objs.append_obj function
             self.color = self.set_color(color)
             # "flip" is default, mirrors the image for every change between right and left.
-            # Otherwise, if it's not None it becomes a dictionary: {w,a,s,d:sprite images.}
-
-            self.id = 0
-            
+            # Otherwise, if it's not None it becomes a dictionary: {w,a,s,d:sprite images.}            
             self.txt = txt # line number from textsheet
             self.face_right = face_right # Left: False, Right: True
             self.face_down = face_down # Up: False, Down: True
