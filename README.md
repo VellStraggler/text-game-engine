@@ -81,3 +81,4 @@ Only WAV files work for playing sound or music. MP3 will probably not work.
 There is a MAX SPEED for any given object. It is about 100 spaces per second.
 Every line of any map file must have SOMETHING in it (such as a space).
 The escape codes used in this engine are SCO sequences.
+icoconverter.com is a great website to create an icon for a SHORTCUT to your Python executable.

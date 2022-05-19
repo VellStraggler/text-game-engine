@@ -3,8 +3,8 @@ import keyboard as keys
 from tkinter import *
 import tkinter.font as font
 from os.path import exists
-WID = 110
-HEI = 30
+WID = 120
+HEI = 29
 BLANK = " "
 QUIT = "esc"
 START = '1.0'
@@ -220,7 +220,8 @@ class MapMaker():
         self.update_win()
 
     def create_window(self):
-        self.win.geometry("940x700+250+25")
+        window_geometry = str(int(WID * 8.5))+"x700+250+25"
+        self.win.geometry(window_geometry)
         canvas = Canvas(self.win)
         canvas.master.title('TXTEngine MapEditor (Ver: 1.1)')
 
