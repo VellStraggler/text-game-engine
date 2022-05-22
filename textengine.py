@@ -773,22 +773,22 @@ class Game():
                 covered = False
                 for bobj in objs_ahead:
                     back_x = x - bobj.origx
-                    back_y = y - bobj.origy
+                    back_y = y - bobj.origy + bobj.height()
                     # Check if part of the bobj is at this coordinate
-                    if -1 < back_x < bobj.width():
+                    if -1 < back_x < bobj.width() and -1 < back_y < bobj.height():
                         covered = True
                 char = obj.sprite[y-start_y][x-obj.origx]
                 if SKIP not in char: # If this is not a blank character
                     if covered:
-                        index = max([len(self.map.rend[y][x])-2,1])
+                        index = max([len(self.map.rend[y][x])-1,1])
                         self.map.rend[y][x].insert(index,char)
                     else:
                         self.map.rend[y][x].append(char)
     def find_objs_ahead(self,obj):
         objs_ahead = list()
-        i = self.objs.find_obj_index(obj) +1
+        i = self.objs.find_obj_index(obj) + 1
         bobj = self.objs.objs[i]
-        while bobj.origy - bobj.height() < obj.origy and i < len(self.objs.objs):
+        while bobj.origy - bobj.height() < obj.origy + (obj.height()*2) and i < len(self.objs.objs)-1:
             if bobj.origx + bobj.width() > obj.origx:
                 if bobj.origx < obj.origx + obj.width():
                     objs_ahead.append(bobj)
