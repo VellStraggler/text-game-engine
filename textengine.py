@@ -24,13 +24,13 @@ ZER = '\033[H'
 RIT = '\033[1C'
 MAX_TICK = 16
 
-W_WID = 120
+W_WID = 115
 W_HEI = 29
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (W_HEI+INFO_HEI)
-WGC_X = W_WID//2 - 5
-WGC_Y = W_HEI//2 - 5
+WGC_X = W_WID//2 - 5 
+WGC_Y = W_HEI//2 
 # WINDOW GUIDE CUSHION, the breathing room between the sprite between
 # the window follows and the edge of the window.
 
@@ -299,7 +299,7 @@ class Game():
                         self.take_dmg(obj,e_char)
         if is_pressed("q"):
             self.quit = True
-        if is_pressed("p"):
+        if is_pressed("p"):#pausing
             mixer.music.set_volume(.25)
             wait("p")
             sleep(.5)
@@ -320,7 +320,7 @@ class Game():
             elif self.map.camera_x + WGC_X > obj.origx and self.map.camera_x > 0:
                 move_x = -1
         if "y" in self.camera_follow:
-            if self.map.height > self.map.end_camera_y < obj.origy + WGC_Y:
+            if self.map.height > self.map.end_camera_y < obj.origy - obj.height() + WGC_Y:
                 move_y = 1
             elif self.map.camera_y + WGC_Y > obj.origy - obj.height() and self.map.camera_y > 0:
                 move_y = -1
@@ -537,6 +537,7 @@ class Game():
         arg = [old_map,new_map].
         Find the map in map_dict, or create it. Also centers camera
         on the actor object."""
+        self.map.print_to_black()
         from_map_name = DIRPATH + arg[-2] # the map to leave
         if from_map_name == self.map.file_name: # if we are in the map to leave
             to_map_name = DIRPATH + arg[-1]
@@ -791,7 +792,8 @@ class Game():
         while bobj.origy - bobj.height() < obj.origy + (obj.height()*2) and i < len(self.objs.objs)-1:
             if bobj.origx + bobj.width() > obj.origx:
                 if bobj.origx < obj.origx + obj.width():
-                    objs_ahead.append(bobj)
+                    if bobj.geom != "background":
+                        objs_ahead.append(bobj)
             i+=1
             bobj = self.objs.objs[i]
         return objs_ahead
@@ -956,8 +958,19 @@ class Map():
         self.add_message()
         self.add_data(data)
         self.line.pop(-1)#An extra \n needed removing.
-        self.print_map = "".join(self.line)
-        print(f"{RETURN}{self.print_map}")
+        self.print_map = RETURN + "".join(self.line)
+        print(self.print_map)
+    def print_to_black(self):
+        """Clears the screen line by line. Moves
+        theme volume from 0 to 100%."""
+        print(RETURN,end="")
+        volume = 0
+        for line in range(W_HEI):
+            print(S_LINE)
+            mixer.music.set_volume(volume)
+            sleep(.03)
+            volume += 1/W_HEI
+        mixer.music.set_volume(1)
     def p1(self,char):
         self.line.append(char)
     def p2(self,line):
