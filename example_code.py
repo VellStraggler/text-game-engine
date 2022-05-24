@@ -1,10 +1,10 @@
 import textengine as tx
 
 g = tx.Game()
-g.curr_map.set_path('example/example_map.txt')
-g.objs.get_sprites('example/spritesheet.txt')
+g.set_map_path('example/example_map.txt')
+g.set_sprite_path('example/spritesheet.txt')
 
-g.objs.new('playerframe1','p',move = "wasd",geom = "line")
+g.objs.new('playerframe1','p',move = "wasd",geom = "line",xspeed=10,yspeed=5)
 g.objs.new('tree','t',geom = "line")
 g.objs.new('cottage','c',geom = "line")
 g.objs.new('wall','w',geom = "all")
