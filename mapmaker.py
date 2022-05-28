@@ -267,7 +267,7 @@ class MapMaker():
         sprite_msg.grid(row=3,column=5)
 
         s = IntVar()
-        self.sprite_width = Scale(self.win, variable=s, from_=1, to=10, orient=HORIZONTAL)  
+        self.sprite_width = Scale(self.win, variable=s, from_=1, to=15, orient=HORIZONTAL)  
         self.sprite_width.grid(row=3,column=6)
 
         blanks_msg = Message(self.win,text="Replace chars:")

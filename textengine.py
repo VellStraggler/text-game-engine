@@ -24,13 +24,13 @@ ZER = '\033[H'
 RIT = '\033[1C'
 MAX_TICK = 16
 
-W_WID = 120
+W_WID = 100
 W_HEI = 29
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (W_HEI+INFO_HEI)
-WGC_X = W_WID//2 - 5
-WGC_Y = W_HEI//2 - 5
+WGC_X = W_WID//2 - 5 
+WGC_Y = W_HEI//2 
 # WINDOW GUIDE CUSHION, the breathing room between the sprite between
 # the window follows and the edge of the window.
 
@@ -130,27 +130,73 @@ class Game():
         the sprites dictionary. Interpret the sprites for
         parts that are empty."""
         path = DIRPATH + path
-        curr_img = None
+        name = None
         curr_sprite = []
         height = 0
+        color_coded = False
+        code_below = False
+        color_code = [""]
         # Adds parent directory of running program
         with open(path, 'r',encoding='utf-8') as file:
             line = file.readline()[:-1] # Removes "\n".
             while(line):
-                if line[0] == SKIP and line[-1] == SKIP:
-                # Begins and ends with SKIP
-                    if curr_img != None: # If this isn't the first img
+                if line[0] == SKIP:
+                    # Add the previous sprite to the sprites dictionary.
+                    if name != None: # If this isn't the first img
                         if len(curr_sprite[0]) > self.max_sprite_width:
                             self.max_sprite_width = len(curr_sprite[0])
                         if height > self.max_sprite_height:
                             self.max_sprite_height = height
-
-                        self.sprites[curr_img] = curr_sprite
-
+                        if color_coded:
+                            if code_below: # The second half of the sprite is actually the color code
+                                half_len = len(curr_sprite)//2
+                                for row in range(half_len):
+                                    colored_line = []
+                                    for i in range(len(curr_sprite[0])):
+                                        color = color_code[int(curr_sprite[half_len][i])]
+                                        char = curr_sprite[row][i]
+                                        colored_line.append(color + char)
+                                    curr_sprite[row] = colored_line
+                                    curr_sprite.pop(half_len)
+                            else: # Each character has its color code before it. Difficult for artist to read.
+                                true_len = len(curr_sprite[0])//2
+                                # Assumes every line is the same length
+                                for row in range(len(curr_sprite)):
+                                    colors_only = []
+                                    chars_only = []
+                                    for half_i in range(true_len):
+                                        color = color_code[int(curr_sprite[row][(half_i*2)])]
+                                        char = curr_sprite[row][(half_i*2)+1]
+                                        colors_only.append(color)
+                                        chars_only.append(char)
+                                    chars_only = replace_spaces(chars_only)
+                                    colored_line = []
+                                    for i in range(true_len):
+                                        colored_line.append(colors_only[i] + chars_only[i])
+                                    curr_sprite[row] = colored_line
+                        self.sprites[name] = curr_sprite # If color coded and if not.
                         curr_sprite = []
-                    curr_img = line[1:-1] # Remove SKIPs
-                    height = 0
-                else:
+                    skips = find_count(line,SKIP)
+                    # if skips == 1: end of file (do nothing)
+                    if skips == 2: # Regular Sprite
+                        color_coded = False
+                        name = line[1:-1] # Remove SKIPs
+                        height = 0
+                    elif skips >= 3: # Color-coded Sprite
+                        #$sprite-name$color0,color1$
+                        #0H1E0Y1 0T1H0E1R0E
+                        color_coded = True
+                        inds = find_indices(line,SKIP)
+                        name = line[1:inds[1]]
+                        code_below = False
+                        if skips == 4:
+                            if line[inds[2]+1:inds[3]] == "below":  code_below = True
+                        colors_raw = line[inds[1]+1:inds[2]]
+                        colors_raw = colors_raw.split(",")
+                        color_code = [""]
+                        for num in colors_raw:
+                            color_code.append(color_by_num(int(num)))
+                else: # Append to the current sprite image.
                     line = replace_spaces(line)
                     line = ms_gothic(line)
                     curr_sprite.append(list(line))
@@ -299,7 +345,7 @@ class Game():
                         self.take_dmg(obj,e_char)
         if is_pressed("q"):
             self.quit = True
-        if is_pressed("p"):
+        if is_pressed("p"):#pausing
             mixer.music.set_volume(.25)
             wait("p")
             sleep(.5)
@@ -320,7 +366,7 @@ class Game():
             elif self.map.camera_x + WGC_X > obj.origx and self.map.camera_x > 0:
                 move_x = -1
         if "y" in self.camera_follow:
-            if self.map.height > self.map.end_camera_y < obj.origy + WGC_Y:
+            if self.map.height > self.map.end_camera_y < obj.origy - obj.height() + WGC_Y:
                 move_y = 1
             elif self.map.camera_y + WGC_Y > obj.origy - obj.height() and self.map.camera_y > 0:
                 move_y = -1
@@ -537,6 +583,7 @@ class Game():
         arg = [old_map,new_map].
         Find the map in map_dict, or create it. Also centers camera
         on the actor object."""
+        self.map.print_to_black()
         from_map_name = DIRPATH + arg[-2] # the map to leave
         if from_map_name == self.map.file_name: # if we are in the map to leave
             to_map_name = DIRPATH + arg[-1]
@@ -785,15 +832,16 @@ class Game():
                     else:
                         self.map.rend[y][x].append(char)
     def find_objs_ahead(self,obj):
-        objs_ahead = list()
-        i = self.objs.find_obj_index(obj) + 1
+        objs_ahead = set()
+        i = self.objs.find_obj_index(obj)
         bobj = self.objs.objs[i]
         while bobj.origy - bobj.height() < obj.origy + (obj.height()*2) and i < len(self.objs.objs)-1:
-            if bobj.origx + bobj.width() > obj.origx:
-                if bobj.origx < obj.origx + obj.width():
-                    objs_ahead.append(bobj)
             i+=1
             bobj = self.objs.objs[i]
+            if bobj.origx + bobj.width() > obj.origx:
+                if bobj.origx < obj.origx + obj.width():
+                    if bobj.geom != "background":
+                        objs_ahead.add(bobj)
         return objs_ahead
 
     def render_obj_old(self,obj):
@@ -914,7 +962,7 @@ class Map():
         self.init_geom()
 
     def set_disp_msg(self,new_msg):
-        self.msg_timer = time() + 2 + len(new_msg)/10
+        self.msg_timer = time() + len(new_msg)/15
         self.disp_msg =[[self.background_color+BUBBLE[0][0]],
                         [self.background_color+BUBBLE[1][0]],
                         [self.background_color+BUBBLE[2][0]]]
@@ -956,8 +1004,19 @@ class Map():
         self.add_message()
         self.add_data(data)
         self.line.pop(-1)#An extra \n needed removing.
-        self.print_map = "".join(self.line)
-        print(f"{RETURN}{self.print_map}")
+        self.print_map = RETURN + "".join(self.line)
+        print(self.print_map)
+    def print_to_black(self):
+        """Clears the screen line by line. Moves
+        theme volume from 0 to 100%."""
+        print(RETURN,end="")
+        volume = 0
+        for line in range(W_HEI):
+            print(S_LINE)
+            mixer.music.set_volume(volume)
+            sleep(.03)
+            volume += 1/W_HEI
+        mixer.music.set_volume(1)
     def p1(self,char):
         self.line.append(char)
     def p2(self,line):
@@ -1294,6 +1353,22 @@ def rfind_non(string,bad_c):
         if string[c]!=bad_c:
             return c
     return len(string)-1
+def find_count(string,character):
+    """Finds the number of times a given character occurs in a string."""
+    count = 0
+    for c in string:
+        if c == character:
+            count += 1
+    return count
+def find_indices(string,character):
+    """Returns a list of indices of the occurrences of a given character in a string."""
+    indices = list()
+    i = 0
+    for c in string:
+        if c == character:
+            indices.append(i)
+        i+=1
+    return indices
 
 def ms_gothic(line:str):
     line_dict = {'\\':'╲','│':'|','/':'╱'}
@@ -1305,15 +1380,14 @@ def ms_gothic(line:str):
 def replace_spaces(line:str):
     """All spaces before and after other characters are replaced
     by the constant SKIP."""
-    s1 = True
-    s2 = True
-    start = ""
-    end = ""
+    s1,s2 = True,True
+    start,end = "",""
     for x in range((len(line)+1)//2):
         char = line[x]
         if char != BLANK or not s1: s1 = False
         else:   char = SKIP
         start = start + char
+
         char = line[len(line)-x-1]
         if char != BLANK or not s2: s2 = False
         else:   char = SKIP
