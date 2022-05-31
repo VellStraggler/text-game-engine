@@ -12,9 +12,9 @@ from random import randint
 from time import time,sleep
 from math import log
 from pygame import mixer
-system("") # Allow the terminal to understand escape codes
 CLEAR = "\033[2J"
 print(CLEAR) # erase pygame's message.
+system("") # Allow the terminal to understand escape codes
 
 DIRPATH = dirname(__file__) + "/"
 
@@ -86,7 +86,7 @@ class Game():
         self.fps = 0
         self.display_fps = 0
         self.fps_list = []
-        self.display_data = ""
+        self.disp_data = ""
         self.start_time = 0
         self.fps_max = 60
         self.fps_timer = 0
@@ -257,15 +257,14 @@ class Game():
         self.move_all()
         self.render_all()
         self.map.display_timer()
-        if self.fps <= self.fps_max:
-            self.map.print_all()
+        self.map.print_all()
         self.run_frame_counter()
     def game_loop_debug(self):
         self.frame_start = time()
         self.move_all()
         self.render_all()
         self.map.display_timer()
-        self.map.print_all(self.display_data)
+        self.map.print_all(self.disp_data)
         self.run_frame_counter(True)
 
     def run_frame_counter(self,with_avg=False):
@@ -279,8 +278,8 @@ class Game():
                 self.display_fps = self.fps
         else:
             self.fps = 999.00 # Cosmetic only.
-        self.display_data = "FPS:" + str(self.display_fps)
-        self.display_data +=" Map: " + self.map_name[self.map_name.rfind("/")+1:]
+        self.disp_data = "FPS:" + str(self.display_fps)
+        self.disp_data +=" Map: " + self.map_name[self.map_name.rfind("/")+1:]
 
     def end_game(self):
         """All the comes after the main game_loop"""
@@ -424,7 +423,7 @@ class Game():
                 move_y = -1
         self.map.move_camera(move_x,move_y)
         coords = "("+str(obj.x)+","+str(obj.y)+")"
-        self.display_data += coords
+        self.disp_data += coords
     
     def get_objs_touching(self,obj):
         xs,xf,ys,yf = self.get_xy_range(obj)
@@ -778,6 +777,9 @@ class Game():
                         self.geom_set_dict[obj.geom](obj)
                         if obj.geom == "background" or obj.img == "dead":
                             line.pop(i)
+                        elif obj.geom == "all" and obj.simple and obj.char not in self.acts.acted_obj_chars:
+                            #This is an object that will never be used and cannot be walked through.
+                            line.pop(i)
                         else:
                             i+=1
         self.objs.render_objs = set()
@@ -1006,16 +1008,18 @@ class Map():
                     i += 1
                 start += row_down
                 i = start
+    def add_data(self,data):
+        if len(data)>0:
+            i = int(len(self.screen)*((WINDOW_HEI-1)/WINDOW_HEI))
+            self.screen[i-1] += self.background_color
+            for c in data:
+                self.screen[i]=c
+                i +=1
+            self.screen[i] += self.background_color
     def display_timer(self):
         if len(self.disp_msg) > 0:
             if self.msg_timer < time():
                 self.disp_msg = ""
-    def add_data(self,data):
-        if len(data) > 0:
-            i = int(len(self.screen)*((WINDOW_HEI-1)/WINDOW_HEI))+1
-            for c in data:
-                self.screen[i]=c
-                i +=1
     def print_to_black(self):
         """Clears the screen line by line. Moves
         theme volume from 0 to 100%."""
@@ -1077,6 +1081,7 @@ class Map():
 class Acts():
     def __init__(self):
         self.acts = []
+        self.acted_obj_chars = set()
     def new(self,name="default",kind="interact",
         char="",effect="",arg="",locked = False):
         new_act = self.Act(name,kind,char,effect,arg,locked)
@@ -1084,6 +1089,11 @@ class Acts():
             self.acts.insert(0,new_act) # Sounds must be played first.
         else:
             self.acts.append(new_act)
+        
+        self.acted_obj_chars.add(char)
+        if type(arg)==type(list()):
+            if type(arg[0]==type(str())):
+                self.acted_obj_chars.add(arg[0])
     def append(self,act):
         self.acts.append(act)
 

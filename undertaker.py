@@ -30,8 +30,6 @@ g.objs.new("grimm","A",geom="line",move="wasd",xspeed=50, yspeed=20,animate="sne
 
 g.objs.new("couch","C",color=wood)
 g.objs.sprites["couch"] = g.objs.get_flipped_sprite(g.objs.sprites["couch"])
-g.objs.new("face","L")
-g.objs.new("face","q",geom="skeleton")
 g.objs.new("door-closed","d",geom="line",color=wood)
 g.objs.new("door-locked","D",geom="line",color=wood)
 g.objs.new("wall-side","w",color=wall)
