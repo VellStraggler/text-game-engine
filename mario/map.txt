@@ -11,19 +11,19 @@
 
    
 
-                                          p       g
+                                          p       k
 
                                           b   b   b   b                                          b
 
                                                                                                  b                                                                     b                                            b
 
-                                                                                                 b                                  b                                  b    g              b                        b
+                                                                                                 b                                  b                                  b    k              b                        b
         m
-                                                g             b              g                   b                             b    b                                  b    b    b    b    b                        b
+                                                k             b              k                   b                             b    b                                  b    b    b    b    b                        b
                                                               
                                                                                                  b                        b    b    b                                                                               b
 
-                           p         g                             g   g              g    p     b                   b    b    b    b                   g                       g                         b         b                   f
+                           p         k                             k   k              k    p     b                   b    b    b    b                   k                       k                         b         b                   f
  
   b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b              b    b    b    b    b              b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    b    
 

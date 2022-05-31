@@ -1,5 +1,8 @@
 W_WID = 110
 W_HEI = 30
+
+ZER = '\033[H'
+RIT = '\033[1C'
 BLANK = " "
 def grid_patcher(array:list,map=False):
     """Makes arrays rectangular, that they are filled with arrays of
@@ -84,3 +87,66 @@ def move_cursor(x=0,y=0):
         print(f"\033[{y}A",end="",flush=True)
     elif y > 0:
         print("\n"*y,flush=True)
+
+def render_obj_old(self,obj):
+    """Print a sprite at its object's origin."""
+    start_y = obj.origy+1-obj.height()
+    end_y = min([obj.origy+1,self.map.height-1])
+    start_x = find_non(obj.sprite[-1],SKIP) + obj.origx
+    if obj.geom!="background":
+        thing_behind = False
+        thing_ahead = False
+        for x in range(start_x,start_x+obj.width()):
+            if len(self.map.rend[end_y-2][x]) > 1:
+                thing_behind = True
+                # If the row above the baseline of an object has a thickness greater than one, something is behind the object.
+            if len(self.map.rend[end_y][x]) > 1:
+                thing_ahead = True
+            if len(self.map.rend[end_y-1][x]) > 1:
+                thing_ahead = True
+                # If the row below the baseline of an object has a thickness greater than one, something is in front.
+            """If something is ahead and behind, we will insert under the top layer. When there are just two layers and until we hit three or one, we will append.
+            If nothing is ahead, we will always append. Same if nothing is behind.
+            """
+        if not thing_ahead:
+            for y in range(start_y,end_y):
+                start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
+                end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.map.width-1])+1
+                for x in range(start_x,end_x):
+                    char = obj.sprite[y-start_y][x-obj.origx]
+                    if SKIP not in char:
+                        self.map.rend[y][x].append(char)
+        else:
+            obj_ahead_found = thing_behind
+            for y in range(start_y,end_y):
+                start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
+                end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.map.width-1])+1
+                # Don't attempt to print out of bounds
+                for x in range(start_x,end_x):
+                    char = obj.sprite[y-start_y][x-obj.origx]
+                    layers = len(self.map.rend[y][x])
+                    if layers == 3 or layers == 1:
+                        obj_ahead_found = True
+                    if SKIP not in char: # If this is not a blank character
+                        if layers > 1 and obj_ahead_found:
+                                self.map.rend[y][x].insert(-1,char)
+                        else:
+                            self.map.rend[y][x].append(char)
+    else: # Add to background. Working!
+        for y in range(start_y,end_y):
+            start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.origx
+            end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.origx,self.map.width-1])+1
+            for x in range(start_x,end_x):
+                char = obj.sprite[y-start_y][x-obj.origx]
+                if SKIP not in char: # If this is not a blank character
+                    if self.map.rend[y][x][0] == BLANK:
+                        self.map.rend[y][x][0] = char
+
+    # Add any text above the object sprite
+    # Only works on static objects thus far.
+    """if obj.txt > -1:
+        txt = self.texts[obj.txt]
+        out_y = obj.origy - obj.height() - 1
+        out_x = obj.origx + (obj.width())//2 - len(txt)//2
+        [self.map.set_xy_rend(out_x+i,out_y,-1,txt[i]) for i in range(len(txt))]"""
+

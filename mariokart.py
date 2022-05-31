@@ -22,15 +22,15 @@ def game_loop(g):
     g.render_all()
     g.map.display_timer()
     g.map.print_all(g.display_data)
-    g.run_fps(True)
+    g.run_frame_counter(True)
     return g
 g.init_map()
 i=0
 b=0
 while not g.quit:
     sleep(.1)
-    g.reload_screen()
     g = game_loop(g)
+    g.init_render_all()
     for obj in g.objs.objs:
         if obj.char == "m":
             mario = obj

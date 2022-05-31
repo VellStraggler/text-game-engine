@@ -36,7 +36,8 @@ https://copypastecharacter.com/all-characters
          t                  w                        t
                             w       t
 
-There is very little you have to specify to tell the program what these characters are meant to represent. All of that will go into your **code file**. 
+There is very little you have to specify to tell the program what these characters are meant to represent. All of that will go into your **code file** except for ONE character.
+"g" is already stored as invisible geometry 1x1 in size. These only get initiated as objects, and once the map is loaded, all that is left behind is plain collidable geometry. We suggest using these as often as you can along with background objects for a faster game. We talk about background objects in "The Python Code file".
 ## 3. The Python Code file
 ### The Basics
 So much of the Text Game Engine runs in the background that you need as little as 6 lines to have a map you can move a character on. Here we use 7 (so we can have trees AND walls):
@@ -49,6 +50,22 @@ g.objs.new('wall','w')
 g.objs.new('tree','t')
 g.run_map()
 ```
+### Adding Objects
+In this engine, maps are made up of objects of all kinds. As shown in the section "The Basics", it is simple to get a quick number of objects created. But suppose you want your character to be able to walk *behind* an object. By default, object geometry (with the variable name *geom*) is set to "all", meaning nothing can go through any part of it. By setting this to "line", you can give it collision only on the bottom row of characters, like so:
+```python
+g.objs.new('tree','t',geom="line")
+```
+Here is a visual of where the geometry is drawn with almost every kind of geometry:
+
+                with "all"    with "line"   with "complex"   with "skeleton"
+       sprite:   geometry:     geometry:      geometry:        geometry:
+         /\        ####          ____           _##_             ____
+        /v \       ####          ____           ####             ____
+        /_v\       ####          ____           ####             ____
+         ||        ####          ####           _##_             _##_
+
+The exceptions not shown are "background" and None. Neither actually produce any geometry, so you might wonder about the difference. An object with "background" geometry actually gets removed after drawing on the map. It is purely a detail. This was added so that *1*, you could have things like carpets, and *2*, so that your game would not be slowed down by looping through it. This means that you can add lots and lots of background objects with very few side effects
+
 ### Adding Sounds
 Something that simplifies TGE is that certain actions taken by any object will produce the same sound. For example, when an object jumps, it looks in the g.sounds dictionary for "jump", and plays the sound stored there. There are no default sounds, so the user must add this themselves. The code to do so is very simple. Say the audio file happens to be called "jump.wav" and in a folder called "afolder". Just write this into your code file:
 ```python
@@ -76,9 +93,10 @@ Here are the sounds we intend to add.
 
 
 # DEVELOPER NOTES
-Textengine uses the module playsound version 1.2.2, NOT the latest
-Only WAV files work for playing sound or music. MP3 will probably not work.
-There is a MAX SPEED for any given object. It is about 100 spaces per second.
-Every line of any map file must have SOMETHING in it (such as a space).
-The escape codes used in this engine are SCO sequences.
-icoconverter.com is a great website to create an icon for a SHORTCUT to your Python executable.
+* Textengine uses the module playsound version 1.2.2, NOT the latest
+* Only WAV files work for playing sound or music. MP3 will probably not work.
+* There is a MAX SPEED for any given object. It is the framerate.
+* Every line of any map file must have SOMETHING in it (such as a space).
+* The escape codes used in this engine are SCO sequences.
+* icoconverter.com is a great website to create an icon for a SHORTCUT to your Python executable.
+* It is suggested that the dimensions of your sprites do not exceed the dimensions of a chunk.
