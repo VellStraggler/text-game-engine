@@ -1,6 +1,4 @@
-class Person():
-    def __init__(self,name):
-        self.name = name
-
-guy = Person("James")
-print(id(guy))
+for x in [1,4]:
+    if x == 4:
+        break
+    print(x)

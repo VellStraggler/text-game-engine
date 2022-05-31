@@ -12,15 +12,15 @@
                      Z                                                                                                       
                                                                                                                              
                                                                                                                              
-                                     AA                                                                                       
-                                     A                                                                                       
-                                     A                                                                                       
-                                     AX       Y                                                                              
-                                     A                                                                                       
-                                     A                                                                                       
-                                     A                                                                                       
-                                     A        Q                                                                              
-                                     AA                                                                                      
+                                     gg                                                                                       
+                                     g                                                                                       
+                                     g                                                                                       
+                                     gX       Y                                                                              
+                                     g                                                                                       
+                                     g                                                                                       
+                                     g                                                                                       
+                                     g        Q                                                                              
+                                     gg                                                                                      
                                                                                                                              
                                                                                                                              
                                                                                                                              
