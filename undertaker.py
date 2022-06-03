@@ -94,16 +94,29 @@ g.acts.new("","location","g","message",[25,15,"under/m/map2.txt",6])
 g.acts.new("","location","g","change_map",[62,15,40,35,"under/m/map2.txt","under/m/bedroom.txt"])
 g.acts.new("","location","g","change_map",[40,36,62,17,"under/m/bedroom.txt","under/m/map2.txt"])
 
-g.acts.new("","location","g","change_map",[79,78,48,33,"under/m/map1.txt","under/m/outside.txt"])
-
+def go_outside(obj,arg):
+    g.act_change_map(obj,arg)
+    g.set_default_color(tx.color_by_num(64))
+g.act_set_dict["go outside"] = go_outside
+g.acts.new("","location","g","go outside",[79,78,48,33,"under/m/map1.txt","under/m/outside.txt"])
 g.acts.new("","location","g","change_map",[48,31,79,77,"under/m/outside.txt","under/m/map1.txt"])
 
 g.acts.new("play_piano","interact","p","message",[1])
 g.acts.new("play_piano",char="p",effect="sound",arg="under/a/piano.wav")
-g.acts.new(char="k",effect="unlock",arg="unlock_door")
+
+def get_key(obj,arg):
+    g.act_unlock(obj,arg[0])
+    g.act_lock(obj,arg[1])
+    g.act_display_msg(obj,[2])
+    g.act_kill(obj,arg)
+    g.act_sound(obj,arg[3])
+g.act_set_dict["get key"] = get_key
+key_arg = ["unlock_door","unlocked",[2],"under/a/key.wav"]
+g.acts.new(char="k",effect="get key",arg = key_arg)
+"""g.acts.new(char="k",effect="unlock",arg="unlock_door")
 g.acts.new(char="k",effect="lock",arg="unlocked")
 g.acts.new(char="k",effect="message",arg=[2])
 g.acts.new(char="k",effect="kill")
-g.acts.new(char="k",effect="sound",arg="under/a/key.wav")
+g.acts.new(char="k",effect="sound",arg="under/a/key.wav")"""
 
 g.run_game(debug=True)

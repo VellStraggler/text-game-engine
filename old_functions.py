@@ -149,4 +149,20 @@ def render_obj_old(self,obj):
         out_y = obj.origy - obj.height() - 1
         out_x = obj.origx + (obj.width())//2 - len(txt)//2
         [self.map.set_xy_rend(out_x+i,out_y,-1,txt[i]) for i in range(len(txt))]"""
+def p2(self,screen):
+    self.screen.append("\n")
+def print_all(self,data=""):
+    """Displays the proper area of self.rend."""
+    self.screen = []
+    self.escs = 0
+    if self.color_on:
+        [self.p2([self.get_print_pixel(self.rend[row][x][-1],x) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
+    else:
+        [self.p2([self.get_print_pixel(self.rend[row][x][-1][-1],x) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
+    self.add_message()
+    data = data + " Escapes: " + str(self.escs) + " Pixels: " + str(len(self.screen))
+    self.add_data(data)
+    self.screen.pop(-1)#An extra \n needed removing.
+    self.print_map = RETURN + "".join(self.screen)
+    print(self.print_map)
 

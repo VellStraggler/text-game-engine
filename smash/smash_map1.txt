@@ -1,8 +1,4 @@
    a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a
-
-
-
-
    a
    a
    a
@@ -27,18 +23,15 @@
    a          
    a
    a
-   a                                                                                                                                                                                     q
+   a                                                                                                                                                                                     q                                a                            
    a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
-
-
-
-
-
-
-
-
-
-
-
-
-
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a
+   a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a       a      a

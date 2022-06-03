@@ -1,7 +1,7 @@
 import textengine as tx
 g = tx.Game()
-g.map.set_path("smash/smash_map1.txt")
-g.objs.get_sprites("smash/smash_sprites.txt")
+g.set_map_path("smash/smash_map1.txt")
+g.set_sprite_path("smash/smash_sprites.txt")
 g.camera_follow = ['x','y']
 
 g.objs.new("link","q",geom="line",move="leftright",grav=True,xspeed=29,

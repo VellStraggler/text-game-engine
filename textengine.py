@@ -25,8 +25,8 @@ MAX_TICK = 16
 CHUNK_WID = 32
 CHUNK_HEI = 16
 
-WINDOW_WID = 110
-WINDOW_HEI = 29
+WINDOW_WID = 120 #189 for fullscreen
+WINDOW_HEI = 29 #49 for fullscreen
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (WINDOW_HEI+INFO_HEI)
@@ -47,13 +47,10 @@ FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
     '>':'<','(':')',')':'(','◐':'◑','◑':'◐','↙':'↘','↘':'↙','כ':'c',
     'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↗','↗':'↖','⌋':'⌊',
     '⌊':'⌋'}
-# arrows: ↙↖↗↘
 
-ccode = "\033[0;39;"
-COLORS = {"default":ccode+"49m","white":ccode+"47m",
-        "cyan":ccode+"46m","yellow":ccode+"43m",
-        "green":ccode+"42m","magenta":ccode+"45m",}
-DEFAULT_COLOR = COLORS['default']
+COLOR_ESC = "\033[48;5;"
+DEFAULT_COLOR = COLOR_ESC + "16m"
+DEFAULT_TEXT  = "\033[38;5;15m"
 
 class Game():
     """
@@ -68,7 +65,7 @@ class Game():
         self.objs = self.map.objs
         self.acts = Acts()
         self.sprites = {"dead":[[" "]]}
-        geometry = self.objs.Obj("dead","g",geom="all")
+        geometry = self.objs.Obj("dead","g",geom="all") # invisible geometry: g
         self.the_dead = set()
         self.objs.pallete_objs.add(geometry)
         self.universal_objs = set()
@@ -92,7 +89,6 @@ class Game():
         self.fps_timer = 0
         self.fps_timer_wait = 0.25
         self.general_action_time = 0
-
         self.game_speed = 1 # General action calling per second.
         self.total = 0
 
@@ -876,6 +872,7 @@ class Map():
     def __init__(self,universal_objs=set()):
         self.path = ""
         self.background_color = DEFAULT_COLOR
+        self.text_color = DEFAULT_TEXT
 
         self.input_map = list() # Made to store user-made map. 1D list of strings.
         self.rend = [] # Map of what will be rendered. 3-Dimensional.
@@ -968,16 +965,17 @@ class Map():
                 self.rend[y][x] = list(BLANK) # Remove all other z-levels
 
     def print_all(self,data=""):
-        """Displays the proper area of self.rend."""
+        """Displays the proper area of self.rend. No longer includes
+        newline escapes. Appending to a new screen list is oddly faster
+        than editing a screen list."""
         self.screen = []
         if self.color_on:
-            [self.p2([self.get_print_pixel(self.rend[row][x][-1],x) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
+            [[self.get_print_pixel(self.rend[row][x][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
         else:
-            [self.p2([self.get_print_pixel(self.rend[row][x][-1][-1],x) for x in range(self.camera_x,self.end_camera_x)]) for row in range(self.camera_y,self.end_camera_y)]
+            [[self.get_print_pixel(self.rend[row][x][-1][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
         self.add_message()
         self.add_data(data)
-        self.screen.pop(-1)#len("\n"))#An extra \n needed removing.
-        self.print_map = RETURN + "".join(self.screen)
+        self.print_map = RETURN + self.text_color + "".join(self.screen)
         print(self.print_map)
     def get_print_pixel(self,color_char_pair,x):
         """Filters a colored character to not call
@@ -990,12 +988,10 @@ class Map():
             color = color_char_pair[:-1]
             char = color_char_pair[-1]
 
-        if color != self.last_used_color or x == self.camera_x:
+        if color != self.last_used_color:
             self.last_used_color = color
             char = color + char
         self.screen.append(char)
-    def p2(self,screen):
-        self.screen.append("\n")
     def add_message(self):
         if len(self.disp_msg) > 0:
             start = int(len(self.screen)*((WINDOW_HEI-len(self.disp_msg)-.5)/WINDOW_HEI))
@@ -1137,13 +1133,9 @@ class Objs():
                 char = obj.sprite[y][x]
                 if chars[-1] == char:
                     char = SKIP # Turn any BLANKS into SKIPS
-                if char != SKIP: #Happens once per line.
+                if char != SKIP:
                     char = obj.color + char
-                if x != obj.width() -1:
-                    if obj.sprite[y][x+1] == chars[-1] or obj.sprite[y][x+1] == chars[0]:
-                        char = char + self.default_color
                 obj.sprite[y][x] = char
-            #obj.sprite[y][-1] = char + self.default_color
     def get_flipped_sprite(self,sprite,obj=None):
         """ Returns a vertically mirrored
         2D sprite of the given sprite"""
@@ -1331,17 +1323,19 @@ class Objs():
             self.sprite = sprite
 
 def color_by_num(x):
-    return ("\033[48;5;" + str(x) + "m")
+    return (COLOR_ESC + str(x) + "m")
 def print_color_numbers():
     """For Debugging: Returns a sheet of all color numbers highlighted
     by their respective color."""
     spaces = " "
-    color_base = "\033[48;5;"
-    for x in range(256):
+    color_base = COLOR_ESC
+    black_words = "\033[38;5;" + str(16) + "m"
+    white_words = "\033[38;5;" + str(15) + "m"
+    for x in range(1,256):
         color = color_base + str(x) + "m"
-        try:spaces = " " * (3 - int(log(x,10)))
+        try:spaces = " " * (9 - int(log(x,10)))
         except:pass
-        print(f"{color}{x}{spaces}{COLORS['default']}",end="")
+        print(f"{black_words}{color}{x}{white_words}{x}{spaces}{spaces}",end="")
         if (x-15)%6 == 0:
             print()
 
