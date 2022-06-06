@@ -16,15 +16,15 @@ robe = 239
 g.objs.new("title","Z",color=232,geom="background")
 g.objs.new("cursor","X",move="wasd",yspeed=500,xspeed=1)
 g.objs.new("start","Y",geom="all",color=236)
-g.objs.new("help","V",geom="all",color=240)
 g.objs.new("quit","Q",geom="all",color=244)
+#g.objs.new("help","V",geom="all",color=240)
 
-g.acts.new("","touch","X","sound",["V","under/a/move_cursor2.wav"])
-g.acts.new("quit game","touch","X","sound",["Q","under/a/move_cursor2.wav"])
-g.acts.new("quit game","touch","X","quit",["Q"])
-g.acts.new("start game","touch","X","sound",["Y","under/a/move_cursor2.wav"])
-g.acts.new("start game","touch","X","change_theme",["Y","under/a/theme.wav"])
-g.acts.new("start game","touch","X","change_map",["Y","under/m/menu.txt","under/m/map1.txt"])
+g.acts.new(name="quit game",type="touch",item_char="Q",
+    func=g.act_sound,arg="under/a/move_cursor2.wav")
+g.acts.new(g.act_quit,"quit game","touch","Q")
+g.acts.new(g.act_sound,"start game","touch","Y",arg="under/a/move_cursor2.wav")
+g.acts.new(g.act_change_theme,"start game","touch","Y","under/a/theme.wav")
+g.acts.new(g.act_change_map,"start game","touch","Y","under/m/map1.txt",map="under/m/menu.txt")
 
 g.objs.new("grimm","A",geom="line",move="wasd",xspeed=50, yspeed=20,animate="sneaky")
 
@@ -69,54 +69,52 @@ doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"
 door_geom = {"skeleton":"line","line":"skeleton"}
 windows=    {"window-closed":"window-open","window-open":"window-closed"}
 lights =    {tx.color_by_num(58):tx.DEFAULT_COLOR,tx.DEFAULT_COLOR:tx.color_by_num(58)}
+grimm_open =["grimm-w-open1","grimm-w-open2","grimm-w-open3","grimm-w"]
 
-g.acts.new(char="d",effect="sound",arg="under/a/door_close.wav")
-g.acts.new(char="d",effect="change_sprite",arg=doors)
-g.acts.new(char="d",effect="change_geometry",arg=door_geom)
-g.acts.new(char="D",effect="sound",arg="under/a/door_close.wav")
-g.acts.new("","interact","U","message",[7])
-g.acts.new("unlocked","interact","D","message",[3])
-g.acts.new("unlock_door","interact","D","change_sprite",doors,True)
-g.acts.new("unlock_door","interact","D","change_geometry",door_geom,True)
-g.acts.new(char="P",effect="sound",arg="under/a/bink_sound.wav")
-g.acts.new("light-switch",char="P",effect="change_color",arg=lights)
-g.acts.new("open-curtain",char="h",effect="change_sprite",arg=windows)
-g.acts.new(char="h",effect="sound",arg="under/a/bink_sound.wav")
+def open_door(obj,arg):
+    g.act_sound(obj,arg[0])
+    g.act_change_sprite(obj,arg[1])
+    g.act_change_geom(obj,arg[2])
+door_arg = ["under/a/door_close.wav",doors,door_geom,grimm_open]
+g.acts.new(item_char="d",func=open_door,arg=door_arg)
+g.acts.new(g.act_animate,item_char="d",act_on_self=True,arg=grimm_open)
+g.acts.new(g.act_sound,item_char="D",arg="under/a/door_close.wav")
+g.acts.new(g.act_message,"not sleepy","interact","U",7)
+g.acts.new(g.act_message,"unlocked","interact","D",3)
+g.acts.new(g.act_change_sprite,"unlock_door","interact","D",doors,locked=True)
+g.acts.new(g.act_change_geom,"unlock_door","interact","D",door_geom,locked=True)
+g.acts.new(g.act_animate,"unlock_door","interact","D",act_on_self=True,arg=grimm_open,locked=True)
+g.acts.new(item_char="P",func=g.act_sound,arg="under/a/bink_sound.wav")
+g.acts.new(g.act_change_color,"light-switch",item_char="P",arg=lights)
+g.acts.new(g.act_change_sprite,"open-curtain",item_char="h",arg=windows)
+g.acts.new(item_char="h",func=g.act_sound,arg="under/a/bink_sound.wav")
 
-g.acts.new("","location","g","change_map",[228,13,25,17,"under/m/map1.txt","under/m/map2.txt"])
-g.acts.new("","location","g","sound",[228,13,"under/m/map1.txt","under/a/3steps_away.wav"])
-g.acts.new("","location","g","message",[228,14,"under/m/map1.txt",5])
+g.acts.new(g.act_change_map,"","location","A",[25,17,"under/m/map2.txt"],loc_arg=[228,13],map="under/m/map1.txt")
+g.acts.new(g.act_sound,"","location","A","under/a/3steps_away.wav",loc_arg=[228,13],map="under/m/map1.txt")
+g.acts.new(g.act_message,"","location","A",5,loc_arg=[228,14],map="under/m/map1.txt")
 
-g.acts.new("","location","g","change_map",[25,14,228,16,"under/m/map2.txt","under/m/map1.txt"])
-g.acts.new("","location","g","sound",[25,14,"under/m/map2.txt","under/a/3steps_away.wav"])
-g.acts.new("","location","g","message",[25,15,"under/m/map2.txt",6])
+g.acts.new(g.act_change_map,"","location","A",[228,16,"under/m/map1.txt"],loc_arg=[25,14],map="under/m/map2.txt")
+g.acts.new(g.act_sound,"","location","A","under/a/3steps_away.wav",loc_arg=[25,14],map="under/m/map2.txt")
+g.acts.new(g.act_message,"","location","A",6,loc_arg=[25,15],map="under/m/map2.txt")
 
-g.acts.new("","location","g","change_map",[62,15,40,35,"under/m/map2.txt","under/m/bedroom.txt"])
-g.acts.new("","location","g","change_map",[40,36,62,17,"under/m/bedroom.txt","under/m/map2.txt"])
+g.acts.new(g.act_change_map,"","location","A",[40,35,"under/m/bedroom.txt"],loc_arg=[62,15],map="under/m/map2.txt")
+g.acts.new(g.act_change_map,"","location","A",[62,17,"under/m/map2.txt"],loc_arg=[40,36],map="under/m/bedroom.txt")
 
 def go_outside(obj,arg):
     g.act_change_map(obj,arg)
     g.set_default_color(tx.color_by_num(64))
-g.act_set_dict["go outside"] = go_outside
-g.acts.new("","location","g","go outside",[79,78,48,33,"under/m/map1.txt","under/m/outside.txt"])
-g.acts.new("","location","g","change_map",[48,31,79,77,"under/m/outside.txt","under/m/map1.txt"])
+g.acts.new(go_outside,"","location","A",[48,33,"under/m/outside.txt"],loc_arg=[-1,78],map="under/m/map1.txt")
+g.acts.new(g.act_change_map,"","location","A",[79,77,"under/m/map1.txt"],loc_arg=[48,31],map="under/m/outside.txt")
 
-g.acts.new("play_piano","interact","p","message",[1])
-g.acts.new("play_piano",char="p",effect="sound",arg="under/a/piano.wav")
+g.acts.new(g.act_message,"play_piano","interact","p",1)
+g.acts.new(g.act_sound,"play_piano",item_char="p",arg="under/a/piano.wav")
 
-def get_key(obj,arg):
-    g.act_unlock(obj,arg[0])
-    g.act_lock(obj,arg[1])
-    g.act_display_msg(obj,[2])
-    g.act_kill(obj,arg)
-    g.act_sound(obj,arg[3])
-g.act_set_dict["get key"] = get_key
-key_arg = ["unlock_door","unlocked",[2],"under/a/key.wav"]
-g.acts.new(char="k",effect="get key",arg = key_arg)
-"""g.acts.new(char="k",effect="unlock",arg="unlock_door")
-g.acts.new(char="k",effect="lock",arg="unlocked")
-g.acts.new(char="k",effect="message",arg=[2])
-g.acts.new(char="k",effect="kill")
-g.acts.new(char="k",effect="sound",arg="under/a/key.wav")"""
+def get_key(obj,arg=None):
+    g.act_unlock(obj,"unlock_door")
+    g.act_lock(obj,"unlocked")
+    g.act_message(obj,2)
+    g.act_kill(obj)
+    g.act_sound(obj,"under/a/key.wav")
+g.acts.new(item_char="k",func=get_key)
 
 g.run_game(debug=True)

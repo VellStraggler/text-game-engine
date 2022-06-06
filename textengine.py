@@ -22,10 +22,11 @@ BLANK = ' '
 SKIP = '$'
 CUR = '\033[A\033[F'
 MAX_TICK = 16
+ANIMATE_FPS = 1/8
 CHUNK_WID = 32
 CHUNK_HEI = 16
 
-WINDOW_WID = 120 #189 for fullscreen
+WINDOW_WID = 120#60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
 WINDOW_HEI = 29 #49 for fullscreen
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
@@ -51,7 +52,8 @@ FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
 COLOR_ESC = "\033[48;5;"
 DEFAULT_COLOR = COLOR_ESC + "16m"
 DEFAULT_TEXT  = "\033[38;5;15m"
-
+def ex_func(obj,arg):
+    pass
 class Game():
     """
     Creates an empty map and empty sprite list.
@@ -60,6 +62,7 @@ class Game():
     def __init__(self):
         self.map_dict = {"default":Map()}
         self.map_name = "default"
+        self.full_map_name = DIRPATH + self.map_name
         self.map = self.map_dict[self.map_name]
         # A pointer to the current map being displayed.
         self.objs = self.map.objs
@@ -98,19 +101,6 @@ class Game():
                             "skeleton":self.geom_skeleton,
                             "background":self.geom_none,
                             None:self.geom_none}
-        self.act_set_dict = {"change_sprite":self.act_change_sprite,
-                            "change_color":self.act_change_color,
-                            "rotate":self.act_rotate,
-                            "quit":self.act_quit,
-                            "sound":self.act_sound,
-                            "unlock":self.act_unlock,
-                            "lock":self.act_lock,
-                            "change_map":self.act_change_map,
-                            "change_theme":self.act_change_theme,
-                            "change_geometry":self.act_change_geom,
-                            "message":self.act_display_msg,
-                            "kill":self.act_kill,
-                            "teleport":self.act_teleport}   
         self.key_dict = {"wasd":
                             {"w":self.move_up,"s":self.move_down,
                             "a":self.move_left,"d":self.move_right,
@@ -131,7 +121,7 @@ class Game():
         curr_sprite = []
         height = 0
         color_coded = False
-        code_below = False
+        where_coded = False
         color_code = [""]
         # Adds parent directory of running program
         with open(path, 'r',encoding='utf-8') as file:
@@ -145,7 +135,7 @@ class Game():
                         if height > self.max_sprite_height:
                             self.max_sprite_height = height
                         if color_coded:
-                            if code_below: # The second half of the sprite is actually the color code
+                            if where_coded: # The second half of the sprite is actually the color code
                                 half_len = len(curr_sprite)//2
                                 for row in range(half_len):
                                     colored_line = []
@@ -185,9 +175,9 @@ class Game():
                         color_coded = True
                         inds = find_indices(line,SKIP)
                         name = line[1:inds[1]]
-                        code_below = False
+                        where_coded = False
                         if skips == 4:
-                            if line[inds[2]+1:inds[3]] == "below":  code_below = True
+                            if line[inds[2]+1:inds[3]] == "below":  where_coded = True
                         colors_raw = line[inds[1]+1:inds[2]]
                         colors_raw = colors_raw.split(",")
                         color_code = [""]
@@ -208,7 +198,7 @@ class Game():
     def set_sprite(self,obj,new_img):
         self.add_to_render_objs(obj)
         self.objs.set_sprite(obj,new_img)
-        self.geom_set_dict[obj.geom](obj)
+        #self.geom_set_dict[obj.geom](obj)
     def flip_sprite(self,obj):
         assert obj.animate not in [None,"flip"], "This object is not animated."
         obj.face_right = not obj.face_right
@@ -341,7 +331,12 @@ class Game():
         for chunk in self.objs.load_chunks:
             for line in chunk.values():
                 for obj in line:
-                    if not obj.simple:
+                    if not obj.static:
+                        # ANIMATION
+                        if len(obj.animation)>1:
+                            if time() > obj.frame_time:
+                                obj.frame_time = time() + obj.framerate
+                                self.next_frame(obj)
                         self.get_objs_touching(obj)
                         if obj.move in ["wasd","dirs"]:
                             self.player_actions(obj)
@@ -399,6 +394,11 @@ class Game():
             elif is_pressed("ctrl+g"):
                 self.general_action_time = time() + self.game_speed
                 self.map.color_on = not self.map.color_on
+    def next_frame(self,obj):
+        self.set_sprite(obj,obj.animation[obj.frame])
+        obj.frame += 1
+        if obj.frame == len(obj.animation):
+            obj.animation = [obj.img]
     def player_actions(self,obj):
         # PLAYER MOVEMENT:
         for key in self.key_dict[obj.move].keys():
@@ -408,7 +408,7 @@ class Game():
         # CAMERA MOVING:
         move_x, move_y = 0,0
         if "x" in self.camera_follow:
-            if self.map.width > self.map.end_camera_x < obj.x + WINDOW_CUSHION_X + obj.width():
+            if self.map.width > self.map.end_camera_x < obj.x + WINDOW_CUSHION_X:
                 move_x = 1
             elif self.map.camera_x + WINDOW_CUSHION_X > obj.x and self.map.camera_x > 0:
                 move_x = -1
@@ -495,32 +495,33 @@ class Game():
     def run_interacts(self,obj):
         """This is run when a player's given interact button is pressed.
         Objects without geometry cannot be presently acted upon."""
-        if time() - obj.move_time["i"] > 1/self.game_speed:
+        if time() - obj.move_time["i"] > self.game_speed:
             obj.move_time["i"] = time()
             for act in self.acts.acts:
-                if not act.locked and act.kind == "interact":
-                    if obj.char == act.char:
-                        self.act_set_dict[act.effect](obj,act.arg) #act on oneself
-                    else:
+                if not act.locked and act.type == "interact":
+                    if obj.char != act.item_char:
                         if obj.face_down:
                             for tobj in obj.touching["down"]:
-                                if tobj.char == act.char:
-                                    self.act_set_dict[act.effect](tobj,act.arg)
+                                self.run_act_on_target_obj(obj,tobj,act)
                         else:
                             for tobj in obj.touching["up"]:
-                                if tobj.char == act.char:
-                                    self.act_set_dict[act.effect](tobj,act.arg)
+                                self.run_act_on_target_obj(obj,tobj,act)
                         if obj.face_right:
                             for tobj in obj.touching["right"]:
-                                if tobj.char == act.char:
-                                    self.act_set_dict[act.effect](tobj,act.arg)
+                                self.run_act_on_target_obj(obj,tobj,act)
                         else:
                             for tobj in obj.touching["left"]:
-                                if tobj.char == act.char:
-                                    self.act_set_dict[act.effect](tobj,act.arg)
+                                self.run_act_on_target_obj(obj,tobj,act)
                         for tobj in obj.touching["inside"]:
-                            if tobj.char == act.char:
-                                self.act_set_dict[act.effect](tobj,act.arg)
+                            self.run_act_on_target_obj(obj,tobj,act)
+                    else:
+                        act.func(obj,act.arg) #interact with oneself (inventory?)
+    def run_act_on_target_obj(self,obj,tobj,act):
+        if tobj.char == act.item_char:
+            if act.act_on_self:
+                act.func(obj,act.arg)
+            else:
+                act.func(tobj,act.arg)
 
     def run_acts(self,obj):
         """ Check all sides of an object for objects
@@ -528,18 +529,18 @@ class Game():
         xs,xf,ys,yf = self.get_xy_range(obj)
         for act in self.acts.acts:
             if not act.locked: 
-                if act.kind == "location":
+                if act.type == "location":
                     # ARG: LOCATION TO REACH, [X,Y] FORM
                     # To focus only on a certain x or y, set the other to -1.
-                    if ys <= act.arg[1] < yf or act.arg[1] == -1:
-                        if xs <= act.arg[0] < xf or act.arg[0] == -1:
-                            self.act_set_dict[act.effect](obj,act.arg)
-                            # Call the proper function from the act_set dictionary
-                elif act.kind == "touch":
+                    if act.map == self.map_name:
+                        if ys <= act.loc_arg[1] < yf or act.loc_arg[1] == -1:
+                            if xs <= act.loc_arg[0] < xf or act.loc_arg[0] == -1:
+                                act.func(obj,act.arg)
+                elif act.type == "touch":
                     for direction in obj.touching.values():
                         for tobj in direction:
-                            if act.arg[0] == tobj.char:
-                                self.act_set_dict[act.effect](obj,act.arg)
+                            if act.item_char == tobj.char:
+                                act.func(obj,act.arg)
 
     def get_xy_range(self,obj):
         """Finds the range around an object"""
@@ -556,33 +557,36 @@ class Game():
     def act_change_sprite(self,obj,arg):
         """ARG: dictionary of old img key and new img value"""
         self.set_sprite(obj,arg[obj.img])
-    def act_change_color(self,obj,arg):
+    def act_animate(self,obj,arg):
+        """ARG: list of frames. Default frame time of 1 fps."""
+        obj.frame = 0
+        self.set_sprite(obj,arg[obj.frame])
+        obj.animation = arg
+    def act_change_color(self,obj,arg:dict):
         obj.set_color(arg[obj.color])
         self.set_sprite(obj,obj.img)
-    def act_change_geom(self,obj,arg):
+    def act_change_geom(self,obj,arg:dict):
         obj.geom = arg[obj.geom]
         self.set_sprite(obj,obj.img)
-    def act_change_theme(self,obj,arg):
+    def act_change_theme(self,obj,arg:str):
         mixer.music.stop()
-        self.set_theme(arg[-1])
+        self.set_theme(arg)
         self.play_theme()
-    def act_display_msg(self,obj,arg):
-        arg = arg[-1]
+    def act_message(self,obj,arg):
         if arg == int(arg):
             try:msg = self.texts[arg]
             except IndexError:msg = ""
         else:msg = arg
         self.map.set_disp_msg(msg)
-    def act_rotate(self,obj,arg):
-        obj.rotate_right()
-        self.objs.set_sprite(obj,obj.img)
-        obj.animate = {"w":obj.img,"a":obj.img,"s":obj.img,"d":obj.img}
+    def act_rotate(self,obj,arg:int):
+        for i in range(arg):
+            obj.rotate_right()
+            self.objs.set_sprite(obj,obj.img)
+            obj.animate = {"w":obj.img,"a":obj.img,"s":obj.img,"d":obj.img}
     def act_quit(self,obj,arg):
         self.quit = True
-    def act_sound(self,obj,arg):
+    def act_sound(self,obj,arg:str):
         # ARG: sound path
-        if type(arg) == type(list()):
-            arg = arg[-1]
         self.add_sound(arg,arg)
         self.play_sound(arg)
     def act_unlock(self,obj,arg):
@@ -595,38 +599,38 @@ class Game():
         for targ_act in self.acts.acts:
             if targ_act.name == arg:
                 targ_act.locked = True
-    def act_kill(self,obj,arg):
-        obj.hp = 0
+    def act_kill(self,obj,arg=0):
+        obj.hp = arg
     def act_teleport(self,obj,arg):
         """Arg is a list of x,y coords"""
-        self.teleport_obj(obj,arg[-2],arg[-1])
+        self.teleport_obj(obj,arg[0],arg[1])
     def act_change_map(self,actor,arg:list):
-        """ arg = [prev_x,prev_y,new_x,new_y,old_map,new_map] or
-        arg = [old_map,new_map].
-        Find the map in map_dict, or create it. Also centers camera
-        on the actor object."""
-        from_map_name = DIRPATH + arg[-2] # the map to leave
-        if from_map_name == self.map.path: # if we are in the map to leave
-            self.map.print_to_black()
-            to_map_name = DIRPATH + arg[-1]
-            # Remove actor from present map
-            if len(arg)==6:
-                chunk = self.objs.find_obj_chunk(actor.x,actor.y)
-                line = chunk[actor.y%CHUNK_HEI]
-                line.pop(self.objs.find_obj_index(actor,chunk))
-            if to_map_name in self.map_dict.keys(): # Is map created?
-                self.map_name = to_map_name
-                self.map = self.map_dict[to_map_name]
-                self.objs = self.map.objs
-            else: # Create new map and add it to the map list.
-                self.create_new_map(to_map_name)
-            if len(arg)==6: # Add actor to new map and center camera on them.
-                actor.x = arg[2]
-                actor.y = arg[3]
-                self.map.center_camera(actor.x,actor.y)
-                self.objs.append_obj_ordered(actor)
-                self.add_to_render_objs(actor)
-            self.set_sprites_in_objs()
+        """ arg = [new_x,new_y,new_map] or arg = [new_map].
+        Find the map in map_dict, or create it. Also centers camera on the 
+        actor object. Does not care what map it's coming from."""
+        self.map.print_to_black()
+        if len(arg)>4: #str
+            new_map_path =   DIRPATH + arg
+        # Remove actor from present map
+        else: # list type
+            new_map_path =   DIRPATH + arg[-1]
+            chunk = self.objs.find_obj_chunk(actor.x,actor.y)
+            line = chunk[actor.y%CHUNK_HEI]
+            line.pop(self.objs.find_obj_index(actor,chunk))
+        if new_map_path in self.map_dict.keys(): # Is map created?
+            self.map_name = new_map_path
+            self.map = self.map_dict[new_map_path]
+            self.objs = self.map.objs
+        else: # Create new map and add it to the map list.
+            self.create_new_map(new_map_path)
+        if len(arg)<4: # Add actor to new map and center camera on them.
+            actor.x = arg[0]
+            actor.y = arg[1]
+            self.map.center_camera(actor.x,actor.y)
+            self.objs.append_obj_ordered(actor)
+            self.add_to_render_objs(actor)
+        self.set_sprites_in_objs()
+
     def create_new_map(self,path):
         """Creates the map from a given path, populating it with object sprites
         found in travel objects. Sets this new map to the game's current map."""
@@ -773,7 +777,7 @@ class Game():
                         self.geom_set_dict[obj.geom](obj)
                         if obj.geom == "background" or obj.img == "dead":
                             line.pop(i)
-                        elif obj.geom == "all" and obj.simple and obj.char not in self.acts.acted_obj_chars:
+                        elif obj.geom == "all" and obj.static and obj.char not in self.acts.acted_obj_chars:
                             #This is an object that will never be used and cannot be walked through.
                             line.pop(i)
                         else:
@@ -1078,30 +1082,30 @@ class Acts():
     def __init__(self):
         self.acts = []
         self.acted_obj_chars = set()
-    def new(self,name="default",kind="interact",
-        char="",effect="",arg="",locked = False):
-        new_act = self.Act(name,kind,char,effect,arg,locked)
-        if effect == "sound":
-            self.acts.insert(0,new_act) # Sounds must be played first.
-        else:
-            self.acts.append(new_act)
-        
-        self.acted_obj_chars.add(char)
-        if type(arg)==type(list()):
-            if type(arg[0]==type(str())):
-                self.acted_obj_chars.add(arg[0])
-    def append(self,act):
-        self.acts.append(act)
+        # This is used to find which objects are
+        # never used and can be removed as objects.
+    def new(self,func,name="default",type="interact", item_char="",
+        arg=None,map="default",act_on_self=False,locked = False, loc_arg = []):
+        if map != "default":
+            map = DIRPATH + map
+        new_act = self.Act(func,name,type,item_char,arg,map,act_on_self,locked,loc_arg)
+        self.acts.append(new_act)
+
+        self.acted_obj_chars.add(item_char)
+        self.acted_obj_chars.add(item_char)
 
     class Act():
-        def __init__(self,name="default",kind="interact",
-        char="",effect="",arg="",locked=False):
-            self.char = char # What you must be near to fulfil the act.                
-            self.arg = arg # could be the new skin,
-            self.effect = effect #teleport, item, change skin
-            self.kind = kind # location, item, survive, die, interact
-            self.locked = locked
+        def __init__(self,func,name="default",type="interact",
+        item_char="",arg=None,map="",act_on_self=False,locked=False,loc_arg = []):
+            self.func = func
             self.name = name
+            self.type = type # location, item, survive, die, interact
+            self.item_char = item_char # The char of the object that was interacted with.
+            self.act_on_self= act_on_self              
+            self.arg = arg # could be the new skin,
+            self.map = map
+            self.locked = locked
+            self.loc_arg = loc_arg
         
 class Objs():
     def __init__(self,universal_objs=set()):
@@ -1257,14 +1261,14 @@ class Objs():
         move = None, xspeed = 1,yspeed = 1,hp =1,face_right=True,
         face_down=False,grav:bool=False,dmg = 1,enemy_chars=[],dmg_dirs=[],
         animate=None,txt:int=-1,max_jump=1,color=DEFAULT_COLOR,data=dict()):
-            self.simple = False
+            self.static = False
             self.move = move # None, leftright, wasd, dirs.
             self.grav = grav
             if move == None and not grav:
-                self.simple = True
+                self.static = True
             self.xspeed = xspeed
             self.yspeed = yspeed
-            if not self.simple:
+            if not self.static:
                 #wasd: controls, i:interact, g:gravity (falling)
                 self.move_time = {"w":0,"a":0,"s":0,"d":0,"i":0,"g":0}
                 self.init_touching()
@@ -1280,7 +1284,13 @@ class Objs():
             self.dmg = dmg
             self.enemy_chars = enemy_chars
             self.dmg_dirs = dmg_dirs
+
             self.animate = animate # Edited in the objs.append_obj function
+            self.animation = [img]
+            self.framerate = ANIMATE_FPS
+            self.frame_time = 0
+            self.frame = 0
+
             self.color = self.set_color(color)
             # "flip" is default, mirrors the image for every change between right and left.
             # Otherwise, if it's not None it becomes a dictionary: {w,a,s,d:sprite images.}            
@@ -1369,6 +1379,16 @@ def find_indices(string,character):
             indices.append(i)
         i+=1
     return indices
+def linked_list(list1):
+    """Create a linked list (dict) with a closed loop ending from a given list."""
+    llist = dict()
+    if len(list1) > 1:
+        for i in range (len(list1)-1):
+            llist[list1[i]] = list1[i+1]
+        llist[list1[i+1]] = list1[i+1]
+    else:
+        llist[list1[0]] = list1[0]
+    return llist
 
 def ms_gothic(line:str):
     line_dict = {'\\':'╲','│':'|','/':'╱'}
