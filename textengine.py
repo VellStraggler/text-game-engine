@@ -1235,57 +1235,72 @@ class Objs():
     move = None, xspeed = 1, yspeed = 1, hp =1,face_right=True,
     face_down=False, grav=False,dmg = 1, enemy_chars=[],
     dmg_dirs=[], set_rotate=0, animate=None,txt=-1,max_jump=1,
-    color=None,data=dict()):
+    color="",data=dict()):
         """Creates an Obj and appends it to the objs list. This should
         only be called by the module-user (you)."""
-        if color == None:# DELETE THIS.
-            color = self.default_color# DELETE THIS.
         obj = self.Obj(img, char, x,y, geom, move,xspeed,yspeed,
             hp,face_right,face_down,grav,dmg,enemy_chars,dmg_dirs,
             animate,txt,max_jump,color,data)
         self.add_to_pallete(obj)
 
-    def copy(self,obji,newx=-1,newy=-1):
+    def copy(self,o,newx=-1,newy=-1):
         """Returns a duplicate of an object."""
-        if type(obji) == type(int()):
-            o = self.objs[obji]
-        else: # An object was given, not an index
-            o = obji
         obj = self.Obj(o.img, o.char, newx,newy, o.geom, o.move, o.xspeed, o.yspeed,
             o.hp, o.face_right, o.face_down, o.grav, o.dmg, o.enemy_chars, o.dmg_dirs,
             o.animate,o.txt,o.max_jump,o.color,o.data)
         return obj
 
+    class MirrorObj():
+        """Mirrors are on z-level 0. The base coordinates are where it copies
+        from."""
+        def __init__(self,base_x=-1,base_y=-1,color=DEFAULT_COLOR,x=-1,
+        y=-1,flip_horizontal=False,flip_vertical=False):
+            self.base_x=base_x
+            self.base_y=base_y
+            self.color = color
+            self.x = x
+            self.y = y
+            self.flip_horizontal = flip_horizontal
+            self.flip_vertical = flip_vertical
     class Obj():
         def __init__(self,img, char, x=-1,y=-1, geom = "all",
         move = None, xspeed = 1,yspeed = 1,hp =1,face_right=True,
         face_down=False,grav:bool=False,dmg = 1,enemy_chars=[],dmg_dirs=[],
-        animate=None,txt:int=-1,max_jump=1,color=DEFAULT_COLOR,data=dict()):
+        animate=None,txt:int=-1,max_jump=1,color="",data=dict()):
             self.static = False
             self.move = move # None, leftright, wasd, dirs.
             self.grav = grav
             if move == None and not grav:
                 self.static = True
+            #else:
             self.xspeed = xspeed
             self.yspeed = yspeed
+            self.direction = 0 # NOT IMPLEMENTED
+            self.velocity = 0 # NOT IMPLEMENTED
+            self.acceleration = 0 # NOT IMPLEMENTED
+            self.max_jump = max_jump
+            self.jump = 0 # based on yspeed
+
             if not self.static:
                 #wasd: controls, i:interact, g:gravity (falling)
                 self.move_time = {"w":0,"a":0,"s":0,"d":0,"i":0,"g":0}
                 self.init_touching()
                 # Store pointers to objects that are touching this one.
             self.img = img
+            self.sprite = [] # Must be set through Objs function new().
             self.geom = geom # Options of: None, line, complex, skeleton, background, or all.
             self.x = x
             self.y = y
+            self.top_x = x # NOT IMPLEMENTED
+            self.top_y = y # NOT IMPLEMENTED
             self.char = char
             self.hp = hp
-            self.max_jump = max_jump
-            self.jump = 0 # based on yspeed
-            self.dmg = dmg
             self.enemy_chars = enemy_chars
+            self.dmg = dmg
             self.dmg_dirs = dmg_dirs
 
             self.animate = animate # Edited in the objs.append_obj function
+            self.idle_animation = [img] # When doing NOTHINg. NOT IMPLEMENTED
             self.animation = [img]
             self.framerate = ANIMATE_FPS
             self.frame_time = 0
@@ -1297,7 +1312,6 @@ class Objs():
             self.txt = txt # line number from textsheet
             self.face_right = face_right # Left: False, Right: True
             self.face_down = face_down # Up: False, Down: True
-            self.sprite = [] # Must be set through Objs function new().
             self.rotate = 0 # 0 through 3
             self.data = data
 
@@ -1307,7 +1321,7 @@ class Objs():
             if type(color) == type(42):
                 self.color = color_by_num(color)
             else:
-                self.color = color # The literal escape code, not the number.
+                self.color = color # The literal escape code (or blank), not the number.
             return self.color
             
         def width(self,y=0):
@@ -1333,21 +1347,54 @@ class Objs():
             self.sprite = sprite
 
 def color_by_num(x):
+    if x < 16:
+        x = PRE_16_COLORS[x]
     return (COLOR_ESC + str(x) + "m")
+def num_by_color(x):
+    return (x[len(COLOR_ESC):-1])
 def print_color_numbers():
     """For Debugging: Returns a sheet of all color numbers highlighted
     by their respective color."""
     spaces = " "
-    color_base = COLOR_ESC
     black_words = "\033[38;5;" + str(16) + "m"
     white_words = "\033[38;5;" + str(15) + "m"
     for x in range(1,256):
-        color = color_base + str(x) + "m"
+        color = COLOR_ESC + str(x) + "m"
         try:spaces = " " * (9 - int(log(x,10)))
         except:pass
         print(f"{black_words}{color}{x}{white_words}{x}{spaces}{spaces}",end="")
         if (x-15)%6 == 0:
             print()
+PRE_16_COLORS = {1:160,2:34,3:172,4:20,5:90,6:68,7:252,8:243,
+                9:167,10:40,11:192,12:32,13:127,14:44,15:255}
+BLACK_INT = 16
+WHITE_INT = 15
+SHADE = 6
+JSHADE = 36
+def brighten_color(color_code,positive=True):
+    if positive:change = 1
+    else:change = -1
+    color = int(color_code[len(COLOR_ESC):-1])
+    if color < BLACK_INT:
+        return brighten_color(color_by_num(PRE_16_COLORS[color]))
+    elif color > 231: #MONOCHROME
+        color += change
+        if color < 232:
+            color = BLACK_INT
+        elif color > 255:
+            color = WHITE_INT
+    else:
+        root = (color-BLACK_INT)%JSHADE
+        if (root < SHADE and not positive) or root >= JSHADE - SHADE:
+            color += (change*JSHADE)
+        else:
+            color += (change*SHADE)
+
+        if color > 231:
+            color = WHITE_INT
+        elif color < BLACK_INT:
+            color = BLACK_INT
+    return color_by_num(color)
 
 def find_non(string,bad_c):
     """Returns the index of the first non-case of a character in a
