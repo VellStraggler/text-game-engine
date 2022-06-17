@@ -4,10 +4,10 @@ from time import sleep
 os.system("")
 
 g = tx.Game()
-g.set_map_path("under/m/menu.txt")
-g.set_sprite_path("under/sprites.txt")
-g.get_texts("under/text.txt")
-g.set_theme('under/a/menu.wav')
+g.set_map_path("under/m/menu")
+g.set_sprite_path("under/sprites")
+g.get_texts("under/text")
+g.set_theme('under/a/menu')
 g.camera_follow = ["x","y"]
 wood = 52
 wall = 235
@@ -17,10 +17,9 @@ g.objs.new("title","Z",color=232,geom="background")
 g.objs.new("cursor","X",move="wasd",yspeed=500,xspeed=1)
 g.objs.new("start","Y",geom="all",color=236)
 g.objs.new("quit","Q",geom="all",color=244)
-#g.objs.new("help","V",geom="all",color=240)
 
 g.acts.new(name="quit game",type="touch",item_char="Q",
-    func=g.act_sound,arg="under/a/move_cursor2.wav")
+    func=g.act_sound,arg="under/a/move_cursor2")
 g.acts.new(g.act_quit,"quit game","touch","Q")
 g.acts.new(g.act_sound,"start game","touch","Y",arg="under/a/move_cursor2.wav")
 g.acts.new(g.act_change_theme,"start game","touch","Y","under/a/theme.wav")
@@ -64,6 +63,12 @@ g.objs.new("shingles","#",geom="background")
 g.objs.new("v-roof","R",geom="line")
 g.objs.new("outer-wall","r",geom="line")
 g.objs.new("diagon-wall","a",geom="background")
+g.objs.new("mirror",">",geom="background")
+g.mirs.new_type("mirror",True,-1,False,False,False,1)
+g.mirs.new_type("water",False,18,True,False,True)
+g.mirs.new("outside","water",30,30,60,40,0,-1)
+g.mirs.new("bedroom","mirror",41,6,47,14,0,5)
+
 
 doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"door-open"}
 door_geom = {"skeleton":"line","line":"skeleton"}

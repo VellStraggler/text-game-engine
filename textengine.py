@@ -48,6 +48,9 @@ FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
     '>':'<','(':')',')':'(','◐':'◑','◑':'◐','↙':'↘','↘':'↙','כ':'c',
     'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↗','↗':'↖','⌋':'⌊',
     '⌊':'⌋'}
+H_FLIP_CHARS = {'\\':'/','/':'\\','↙':'↖','↘':'↗','כ':'c',
+    'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↙','↗':'↘',"_":"⎺",
+    "⎺":"_","'":".",".":"'","A":"V","V":"A","M":"W","W":"M"}
 
 COLOR_ESC = "\033[48;5;"
 DEFAULT_COLOR = COLOR_ESC + "16m"
@@ -62,7 +65,6 @@ class Game():
     def __init__(self):
         self.map_dict = {"default":Map()}
         self.map_name = "default"
-        self.full_map_name = DIRPATH + self.map_name
         self.map = self.map_dict[self.map_name]
         # A pointer to the current map being displayed.
         self.objs = self.map.objs
@@ -70,6 +72,7 @@ class Game():
         self.sprites = {"dead":[[" "]]}
         geometry = self.objs.Obj("dead","g",geom="all") # invisible geometry: g
         self.the_dead = set()
+        self.mirs = Mirrors()
         self.objs.pallete_objs.add(geometry)
         self.universal_objs = set()
         self.max_sprite_width = 1
@@ -116,7 +119,7 @@ class Game():
         """Take the sprite file path and store the sprites in
         the sprites dictionary. Interpret the sprites for
         parts that are empty."""
-        path = DIRPATH + path
+        path = solidify_path(path)
         name = None
         curr_sprite = []
         height = 0
@@ -190,22 +193,23 @@ class Game():
                     height +=1
                 line = file.readline()[:-1] # Removes the \n
         self.set_sprites_in_objs()
-        
+    
     def set_sprites_in_objs(self):
         self.objs.sprites = self.sprites
         self.objs.max_sprite_height = self.max_sprite_height
         self.objs.max_sprite_width = self.max_sprite_width
-    def set_sprite(self,obj,new_img):
-        self.add_to_render_objs(obj)
-        self.objs.set_sprite(obj,new_img)
-        #self.geom_set_dict[obj.geom](obj)
     def flip_sprite(self,obj):
         assert obj.animate not in [None,"flip"], "This object is not animated."
         obj.face_right = not obj.face_right
         if obj.face_right:
-            self.set_sprite(obj,obj.animate["d"])
+            img = obj.animate["d"]
         else:
-            self.set_sprite(obj,obj.animate["a"])
+            img = obj.animate["a"]
+        self.objs.set_img(obj,img)
+    def reflect_on_object(self,obj):
+        """Take a shiny object and get the text from the map
+        that it will reflect."""
+        pass
 
     def run_game(self,debug=True):
         """Combine the map and the objs and begin the main game loop."""
@@ -231,23 +235,23 @@ class Game():
         """Create objects from the pallete and place them on coordinates
         as directed by the input map."""
         for obj_data in self.map.input_map:
-            obj_x,obj_y,obj_char = obj_data[0],obj_data[1],obj_data[2]
-            parent_obj = self.objs.obj_from_char(obj_char)
-            new_obj = self.objs.copy(parent_obj,obj_x,obj_y)
+            x,y,char = obj_data[0],obj_data[1],obj_data[2]
+            parent_obj = self.objs.obj_from_char(char)
+            new_obj = self.objs.copy(parent_obj,x,y)
             self.objs.init_obj(new_obj)
 
     def game_loop(self):
         """This is what loops for every game tick.
         It is run by the run_game method."""
         self.frame_start = time()
-        self.move_all()
+        self.set_all_movement()
         self.render_all()
         self.map.display_timer()
         self.map.print_all()
         self.run_frame_counter()
     def game_loop_debug(self):
         self.frame_start = time()
-        self.move_all()
+        self.set_all_movement()
         self.render_all()
         self.map.display_timer()
         self.map.print_all(self.disp_data)
@@ -265,7 +269,7 @@ class Game():
         else:
             self.fps = 999.00 # Cosmetic only.
         self.disp_data = "FPS:" + str(self.display_fps)
-        self.disp_data +=" Map: " + self.map_name[self.map_name.rfind("/")+1:]
+        self.disp_data +=" Map: " + deconstruct_path(self.map_name)
 
     def end_game(self):
         """All the comes after the main game_loop"""
@@ -279,7 +283,7 @@ class Game():
         print(CLEAR)
 
     def get_texts(self,path):
-        path = DIRPATH + path
+        path = solidify_path(path)
         with open(path, 'r',encoding='utf-8') as file:
             line = file.readline()[:-1]
             while(line):
@@ -292,12 +296,10 @@ class Game():
             mixer.music.load(self.themes[0])
             mixer.music.play(-1)
     def set_theme(self,path:str):
-        assert len(path) > 4, "Not a valid audio file name."
-        path = DIRPATH + path
+        path = solidify_path(path,".wav")
         self.themes.insert(0,path)
     def add_sound(self, path:str,sound_name:str=""):
-        assert len(path) > 4, "Not a valid audio file name."
-        path = DIRPATH + path
+        path = solidify_path(path,".wav")
         new_sound = mixer.Sound(path)
         if len(sound_name)>0:
             self.sounds[sound_name] = new_sound
@@ -322,9 +324,9 @@ class Game():
         if key in self.sounds.keys():
             self.sounds[key].play()
 
-    def move_all(self):
-        """ Move every mobile object found in the chunks shown
-        in the camera window."""
+    def set_all_movement(self):
+        """ Set the movement of every mobile object found in the chunks
+        shown in the camera window."""
         self.general_actions()
         self.set_load_chunks()
         self.remove_the_dead()
@@ -359,7 +361,7 @@ class Game():
                                     obj.jump -= 1
                                 obj.move_time["g"] = time()
                                 if obj.jump == 0:
-                                    self.move_obj(obj,0,1)
+                                    self.set_movement(obj,0,1)
                         # DAMAGE-TAKING
                         self.take_dmg(obj)
                     if obj.hp <= 0 or obj.y == self.map.height -1: # All non-player mobs, DEATH.
@@ -395,30 +397,18 @@ class Game():
                 self.general_action_time = time() + self.game_speed
                 self.map.color_on = not self.map.color_on
     def next_frame(self,obj):
-        self.set_sprite(obj,obj.animation[obj.frame])
+        self.objs.set_img(obj,obj.animation[obj.frame])
         obj.frame += 1
         if obj.frame == len(obj.animation):
             obj.animation = [obj.img]
-    def player_actions(self,obj):
+    def player_actions(self,player):
         # PLAYER MOVEMENT:
-        for key in self.key_dict[obj.move].keys():
+        for key in self.key_dict[player.move].keys():
             if is_pressed(key):
-                self.key_dict[obj.move][key](obj)
-        self.run_acts(obj)
-        # CAMERA MOVING:
-        move_x, move_y = 0,0
-        if "x" in self.camera_follow:
-            if self.map.width > self.map.end_camera_x < obj.x + WINDOW_CUSHION_X:
-                move_x = 1
-            elif self.map.camera_x + WINDOW_CUSHION_X > obj.x and self.map.camera_x > 0:
-                move_x = -1
-        if "y" in self.camera_follow:
-            if self.map.height > self.map.end_camera_y < obj.y - obj.height() + WINDOW_CUSHION_Y:
-                move_y = 1
-            elif self.map.camera_y + WINDOW_CUSHION_Y > obj.y - obj.height() and self.map.camera_y > 0:
-                move_y = -1
-        self.map.move_camera(move_x,move_y)
-        coords = "("+str(obj.x)+","+str(obj.y)+")"
+                self.key_dict[player.move][key](player)
+        self.run_acts(player)
+        self.map.camera_star = player # UPDATE: Only needs to be done once.
+        coords = "("+str(player.x)+","+str(player.y)+")"
         self.disp_data += coords
     
     def get_objs_touching(self,obj):
@@ -451,41 +441,41 @@ class Game():
 
     # Synonymous functions
     def move_left(self,obj):
-        self.set_sprite(obj,obj.animate["a"])
+        self.objs.set_img(obj,obj.animate["a"])
         obj.face_right = False
         if time() - obj.move_time["a"] > 1/obj.xspeed:
             obj.move_time["a"] = time()
-            self.move_obj(obj,-1)
+            self.set_movement(obj,-1)
     def move_right(self,obj):
-        self.set_sprite(obj,obj.animate["d"])
+        self.objs.set_img(obj,obj.animate["d"])
         obj.face_right = True
         if time() - obj.move_time["d"] > 1/obj.xspeed:
             obj.move_time["d"] = time()
-            self.move_obj(obj,1)
+            self.set_movement(obj,1)
     def move_down(self,obj):
-        self.set_sprite(obj,obj.animate["s"])
+        self.objs.set_img(obj,obj.animate["s"])
         obj.face_down = True
         if time() - obj.move_time["s"] > 1/obj.yspeed:
             obj.move_time["s"] = time()
             if obj.grav:
                 obj.jump = 0
-            self.move_obj(obj,0,1)
+            self.set_movement(obj,0,1)
     def move_up(self,obj):
-        self.set_sprite(obj,obj.animate["w"])
+        self.objs.set_img(obj,obj.animate["w"])
         obj.face_down = False
         if time() - obj.move_time["w"] > 1/obj.yspeed:
             obj.move_time["w"] = time()
             if not obj.grav:
-                self.move_obj(obj,0,-1)
+                self.set_movement(obj,0,-1)
             elif not self.can_move(obj,0,1): # If on top of something.
                 obj.jump = obj.max_jump
-                self.move_obj(obj,0,-1)
+                self.set_movement(obj,0,-1)
                 self.play_sound("jump")
             elif obj.jump > 0:
-                self.move_obj(obj,0,-1)
+                self.set_movement(obj,0,-1)
     
     def kill_obj(self,obj,sound:bool=False): # DEATH
-        self.set_sprite(obj,"dead")
+        self.objs.set_img(obj,"dead")
         self.remove_geom(obj)
         obj.geom=None
         self.the_dead.add(obj)
@@ -556,18 +546,18 @@ class Game():
     # These functions are put into act_set_dict, for quicker lookup than if statements.
     def act_change_sprite(self,obj,arg):
         """ARG: dictionary of old img key and new img value"""
-        self.set_sprite(obj,arg[obj.img])
+        self.objs.set_img(obj,arg[obj.img])
     def act_animate(self,obj,arg):
         """ARG: list of frames. Default frame time of 1 fps."""
         obj.frame = 0
-        self.set_sprite(obj,arg[obj.frame])
+        self.objs.set_img(obj,arg[obj.frame])
         obj.animation = arg
     def act_change_color(self,obj,arg:dict):
         obj.set_color(arg[obj.color])
-        self.set_sprite(obj,obj.img)
+        self.objs.set_img(obj,obj.img)
     def act_change_geom(self,obj,arg:dict):
         obj.geom = arg[obj.geom]
-        self.set_sprite(obj,obj.img)
+        self.objs.set_img(obj,obj.img)
     def act_change_theme(self,obj,arg:str):
         mixer.music.stop()
         self.set_theme(arg)
@@ -610,16 +600,14 @@ class Game():
         actor object. Does not care what map it's coming from."""
         self.map.print_to_black()
         if len(arg)>4: #str
-            new_map_path =   DIRPATH + arg
-        # Remove actor from present map
+            path = arg
         else: # list type
-            new_map_path =   DIRPATH + arg[-1]
-            chunk = self.objs.find_obj_chunk(actor.x,actor.y)
-            line = chunk[actor.y%CHUNK_HEI]
-            line.pop(self.objs.find_obj_index(actor,chunk))
-        if new_map_path in self.map_dict.keys(): # Is map created?
-            self.map_name = new_map_path
-            self.map = self.map_dict[new_map_path]
+            path = arg[-1]
+            self.remove_render_one(actor)
+        new_map_path = solidify_path(path)
+        if path in self.map_dict.keys(): # Is map created?
+            self.map_name = deconstruct_path(path)
+            self.map = self.map_dict[path]
             self.objs = self.map.objs
         else: # Create new map and add it to the map list.
             self.create_new_map(new_map_path)
@@ -627,8 +615,8 @@ class Game():
             actor.x = arg[0]
             actor.y = arg[1]
             self.map.center_camera(actor.x,actor.y)
-            self.objs.append_obj_ordered(actor)
-            self.add_to_render_objs(actor)
+            self.set_render_one(actor)
+            self.add_render_one(actor)
         self.set_sprites_in_objs()
 
     def create_new_map(self,path):
@@ -654,64 +642,61 @@ class Game():
                         obj.hp -= enemy.dmg
 
     def set_default_color(self,color):
-        self.map.background_color =color
+        self.map.background_color = color
         self.objs.default_color = color
-    def teleport_obj(self,obj,x:int=0,y:int=0,check_to_move=True):
+    def teleport_obj(self,obj,x:int=0,y:int=0):
         """Moves an object to a given location if no geometry is there."""
-        move_x = x - obj.x
-        move_y = y - obj.y
-        if x > obj.x:   move_x *= -1
-        if y < obj.y:   move_y *= -1
-        if check_to_move:
-            if self.can_move(obj,move_x,move_y):
-                self.move_map_char(obj,move_x,move_y)
-        else:
-            self.move_map_char(obj,move_x,move_y)
+        obj.move_x = x - obj.x
+        obj.move_y = y - obj.y
+        if x > obj.x:   obj.move_x *= -1
+        if y < obj.y:   obj.move_y *= -1
         if obj.move in ["wasd","dirs"]:
             self.map.center_camera(obj.x+obj.width()//2,obj.y-obj.height()//2)
-    def move_obj(self,obj,move_x = 0,move_y = 0):
-        """Moves a single object move_x and move_y amount OR LESS."""
-        while move_x != 0 or move_y != 0:
-            if self.can_move(obj,move_x,move_y):
-                self.move_map_char(obj,move_x,move_y)
-                move_x,move_y = 0,0
+    def set_movement(self,obj,move_x = 0,move_y = 0):
+        """Start at 0, see how close we can get to move_y and move_x."""
+        max_found = False
+        obj.move_x = 0
+        obj.move_y = 0
+        x_change = 0
+        y_change = 0
+        if move_x != 0:
+            x_change = (move_x)//(abs(move_x))
+        if move_y != 0:
+            y_change = (move_y)//(abs(move_y))
+        while not max_found:
+            if not self.can_move(obj,x_change,y_change) or (obj.move_y == move_y and obj.move_x == move_x):
+                max_found = True
             else:
-                if move_x != 0: move_x += int((move_x*-1)/(abs(move_x)))
-                if move_y != 0: move_y += int((move_y*-1)/(abs(move_y)))
-                # This brings move_x and move_y 1 closer to 0
-    def can_move(self, obj, move_x = 0, move_y = 0):
+                if obj.move_x != move_x:
+                    obj.move_x += x_change
+                if obj.move_y != move_y:
+                    obj.move_y += y_change
+                elif obj.move_y == move_y and obj.move_x == move_x:
+                    max_found = True
+        if obj.move_x!=0 and obj.move_y!=0:
+            self.objs.render_objs.add(obj)
+    def can_move(self, obj,x_change,y_change=0):
         """Check if there are any characters in the area that 
         the obj would take up. Takes literal change in x and y.
         Returns True if character can move in that diRECTion."""
-        yf = move_y + obj.y + 1
+        yf = y_change + obj.y
         ys = yf - obj.height()
-        xs = move_x + obj.x
+        xs = x_change + obj.x
         xf = xs + obj.width()
-        if move_x > 0:      xs = obj.x + obj.width()
-        elif move_x < 0:    xf = obj.x
+        if x_change > 0:      xs = obj.x + obj.width()
+        elif x_change < 0:    xf = obj.x
         if obj.geom not in ["line","skeleton"]:
-            if move_y < 0:
-                yf = obj.y - obj.height() + 1
-            elif move_y > 0:
+            if y_change < 0:
+                yf = obj.y - obj.height()
+            elif y_change > 0:
                 ys = obj.y + 1
         else:
-            ys = yf - 1
-        for y in range(ys,yf):
+            ys = yf
+        for y in range(ys,yf+1):
             for x in range(xs,xf):
                 if self.map.geom[y][x]:
                     return False
         return True
-    def move_map_char(self,obj,move_x,move_y):
-        """Similar to self.set_xy, only applies to objs.objs."""
-        self.add_to_render_objs(obj)
-        newx = obj.x + move_x
-        newy = obj.y + move_y
-        line = self.objs.find_obj_chunk(obj.x,obj.y)[obj.y%CHUNK_HEI]
-        if len(line) > 0: # Only necessary on map changing.
-            obj = line.pop(self.objs.find_obj_index(obj))
-        obj.y = newy
-        obj.x = newx
-        self.objs.append_obj_ordered(obj)
     
     # These functions are put into geom_set_dict, for quicker lookup than if statements.
     def geom_all(self,obj,boolean = 1):
@@ -736,15 +721,9 @@ class Game():
         [self.map.set_xy_geom(x + obj.x, obj.y, boolean)
         for x in range( min([obj.width(), len(self.map.geom[-1])-obj.x]) )
         if SKIP not in obj.sprite[-1][x]]
-    def geom_none(self,obj,boolean=1):
+    def geom_none(self,obj,boolean=0):
         pass
     
-    def add_to_render_objs(self,obj):
-        """Adds everything in the rows of a moved object into
-        the updated objects list."""
-        self.remove_rend(obj)
-        self.remove_geom(obj)
-        self.objs.render_objs.add(obj)
     def remove_rend(self,obj):
         start_y = obj.y-obj.height()+1
         for y in range(start_y,obj.y+1):
@@ -773,7 +752,7 @@ class Game():
                     while i < len(line):
                         obj = line[i]
                         if obj.img != "dead":
-                            self.render_obj_simple(obj)
+                            self.init_render_obj(obj)
                         self.geom_set_dict[obj.geom](obj)
                         if obj.geom == "background" or obj.img == "dead":
                             line.pop(i)
@@ -783,8 +762,11 @@ class Game():
                         else:
                             i+=1
         self.objs.render_objs = set()
-    def render_obj_simple(self,obj):
-        start_y = obj.y+1-obj.height()
+    def init_render_obj(self,obj):
+
+        obj.top_y = obj.y-obj.height()+1
+        obj.top_x = obj.x+obj.width()-1
+        start_y = obj.top_y
         end_y = min([obj.y+1,self.map.height-1])
         if obj.geom!="background":
             for y in range(start_y,end_y):
@@ -806,12 +788,73 @@ class Game():
         """ This creates the output AND geometry
         maps out of all object sprites."""
         self.set_load_chunks()
-        if len(self.objs.render_objs) > 0:
-            for obj in self.objs.render_objs:
-                self.render_obj(obj)
-                self.geom_set_dict[obj.geom](obj)
-            self.objs.render_objs = set()
-    def render_obj(self,obj):
+        for obj in self.objs.render_objs:
+            self.render_one(obj)
+        self.render_map_mirrors()
+        self.move_camera()
+        self.objs.render_objs = set()
+
+    def render_map_mirrors(self):
+        map_name = deconstruct_path(self.map_name)
+        if map_name in self.mirs.mirrors:
+            for mir in self.mirs.mirrors[map_name]:
+                mir_type = self.mirs.types[mir.mirror_name]
+                if mir_type.color > -1:
+                    mir_color = color_by_num(mir_type.color)
+                    colored = True
+                else:colored=False
+                for y in range(0,mir.y2-mir.y1+1):
+                    for x in range(0,mir.x2-mir.x1+1):
+                        rend_x = mir.x1+(x*mir_type.x_mult)+mir.copy_x
+                        rend_y = mir.y1+(y*mir_type.y_mult)+mir.copy_y
+                        char =       self.map.rend[rend_y][rend_x][-1][-1]
+                        if colored:
+                            color = mir_color
+                        else:
+                            color = self.map.rend[rend_y][rend_x][-1][:-1]
+                        color = brighten(color)
+                        if mir_type.flip_horizontal:
+                            if char in H_FLIP_CHARS:
+                                char = H_FLIP_CHARS[char]
+                        self.map.rend[mir.y1+y][x+mir.x1][0] = color + char
+
+    def render_one(self,obj):
+        self.remove_render_one(obj)
+        self.set_render_one(obj)
+        self.add_render_one(obj)
+
+    def remove_render_one(self,obj):
+        self.remove_rend(obj)
+        self.remove_geom(obj)
+        self.objs.remove_obj(obj)
+    def set_render_one(self,obj):
+        obj.set_obj_coords()
+        self.objs.set_sprite(obj)
+    def add_render_one(self,obj):
+        self.objs.append_obj_ordered(obj)
+        self.add_rend(obj)
+        self.add_geom(obj)
+
+    def move_camera(self):
+        # CAMERA MOVEMENT:
+        move_x, move_y = 0,0
+        player = self.map.camera_star 
+        if "x" in self.camera_follow:
+            if self.map.width > self.map.end_camera_x < player.x + WINDOW_CUSHION_X:
+                move_x = 1
+            elif self.map.camera_x + WINDOW_CUSHION_X > player.x and self.map.camera_x > 0:
+                move_x = -1
+        if "y" in self.camera_follow:
+            if self.map.height > self.map.end_camera_y < player.y - player.height() + WINDOW_CUSHION_Y:
+                move_y = 1
+            elif self.map.camera_y + WINDOW_CUSHION_Y > player.y - player.height() and self.map.camera_y > 0:
+                move_y = -1
+        self.map.move_camera(move_x,move_y)
+        #self.map.center_camera(player.x,player.y)
+
+    def add_geom(self,obj):
+        self.geom_set_dict[obj.geom](obj)
+    def add_rend(self,obj):
         start_y = obj.y+1-obj.height()
         end_y = min([obj.y+1,self.map.height-1])
         # Find all the objects that are in front of the character
@@ -874,7 +917,7 @@ class Map():
     map, the output map, and a geom map.
     Set the map path upon initialization"""
     def __init__(self,universal_objs=set()):
-        self.path = ""
+        self.path = "" #WILL INCLUDE DIRPATH
         self.background_color = DEFAULT_COLOR
         self.text_color = DEFAULT_TEXT
 
@@ -882,6 +925,7 @@ class Map():
         self.rend = [] # Map of what will be rendered. 3-Dimensional.
         self.geom = [] # For checking collision.
         self.print_map = ""
+        self.mirrors = []
         self.color_on = True
         self.last_used_color = DEFAULT_COLOR
 
@@ -891,6 +935,7 @@ class Map():
         self.width = WINDOW_WID
         self.camera_x = 0
         self.camera_y = 0 # start_window_y
+        self.camera_star = None #The player, usually.
         self.end_camera_y = WINDOW_HEI
         self.end_camera_x = WINDOW_WID
             # These are the map coordinates of the 
@@ -903,9 +948,7 @@ class Map():
         """ Stores characters and their coords in the input map,
         using a preset path. Also sets self.width and self.height. """
         if not directed_path:
-            path = DIRPATH + path
-            if ".txt" not in path:
-                path += ".txt"
+            path = solidify_path(path)
         # Adds parent directory of running program
         self.path = path
         y = 0
@@ -1087,7 +1130,7 @@ class Acts():
     def new(self,func,name="default",type="interact", item_char="",
         arg=None,map="default",act_on_self=False,locked = False, loc_arg = []):
         if map != "default":
-            map = DIRPATH + map
+            map = solidify_path(map)
         new_act = self.Act(func,name,type,item_char,arg,map,act_on_self,locked,loc_arg)
         self.acts.append(new_act)
 
@@ -1106,15 +1149,63 @@ class Acts():
             self.map = map
             self.locked = locked
             self.loc_arg = loc_arg
-        
+class Mirrors():
+    def __init__(self):
+        self.mirrors = dict() #world_name:list of mirrors
+        self.types = dict()
+    def new_type(self,name:str,flip_sprites:bool=False,color:int=-1,
+        flip_horizontal:bool=False,flip_vertical:bool=False,
+        ripple:bool=False,brighten:int=0):
+        self.types[name] = self.Mirror_Type(flip_sprites,color,
+            flip_horizontal,flip_vertical,ripple,brighten)
+    def new(self,world_name,mirror_name,x1,y1,x2,y2,copy_x,copy_y):
+        world_name = deconstruct_path(world_name)
+        if world_name not in self.mirrors:
+            self.mirrors[world_name]=[]
+        self.mirrors[world_name].append(self.Mirror(mirror_name,x1,y1,x2,y2,copy_x,copy_y))
+    class Mirror():
+        """This is for instances of rectangular areas of land that are
+        reflective. It is assumed that the location being mirrored has
+        the same dimensions as the mirror."""
+        def __init__(self,mirror_name,x1,y1,x2,y2,copy_x,copy_y):
+            self.mirror_name = mirror_name
+            self.x1 = x1
+            self.y1 = y1
+            self.x2 = x2
+            self.y2 = y2
+            self.copy_x = copy_x
+            self.copy_y = copy_y
+    class Mirror_Type():
+        """Create reflection templates to use here, either on the
+        map or on objects. Using a color sets the whole reflection
+        to that color. The brighten variable makes the reflected text
+        backgrounds brighter if a positive integer, or darker if
+        negative. When flip_sprites is on, the game will look for
+        objects in the reflection area and find their sprites and find
+        out if those sprites have other sides."""
+        def __init__(self,flip_sprites:bool=False,color:int=-1,
+        flip_horizontal:bool=False,flip_vertical:bool=False,
+        ripple:bool=False,brighten:int=0):
+            self.flip_sprites = flip_sprites
+            self.color = color
+            self.flip_horizontal = flip_horizontal
+            self.flip_vertical = flip_vertical
+            self.ripple = ripple
+            self.brighten = brighten
+
+            if flip_horizontal: self.y_mult = -1
+            else:               self.y_mult = 1
+            if flip_vertical:   self.x_mult = -1
+            else:               self.x_mult = 1
 class Objs():
     def __init__(self,universal_objs=set()):
+        """Stores objects in their chunks and sprites AND pallete_objs
+        that may or may not be used on the given map."""
         self.chunks = dict()
-        # Key-value pairs of y's and x's.
+        # Key-value pairs of y's to x's.
         # Each x is a list of objects (a chunk).
         self.load_chunks = []
         # The list of chunks that will be edited and/or shown.
-        self.objs = [] # must be drawn from pallete_objs
         self.render_objs = set()
         self.pallete_objs = universal_objs # These are all the o.g. objs.
         self.sprites = dict()
@@ -1122,12 +1213,16 @@ class Objs():
         self.max_sprite_width = 1
         self.default_color = DEFAULT_COLOR
     
-    def set_sprite(self,obj,new_img):
-        obj.img = new_img
+    def set_img(self,obj,img):
+        self.render_objs.add(obj)
+        obj.img = img
+    def set_sprite(self,obj):
+        """Change the sprite of an object."""
         obj.sprite = []
         [obj.sprite.append(list(row)) for row in self.sprites[obj.img]]
         self.set_sprite_color(obj)
         obj.rotate = 0
+        obj.img = obj.img
     def set_sprite_color(self,obj):
         chars = [SKIP]
         if obj.geom == "skeleton":
@@ -1179,7 +1274,7 @@ class Objs():
             i+= 1
         return -1
     def find_obj_chunk(self,x,y,divided=False):
-        """ confirms that a chunk exists or creates it.
+        """ Confirms that a chunk exists or creates it.
         Returns the chunk x and y. """
         if not divided:
             x = x//CHUNK_WID
@@ -1194,20 +1289,30 @@ class Objs():
     def append_obj_ordered(self,obj):
         """This is for a ready-made object who must be placed in the right spot
         within the objs list."""
-        chunk = self.find_obj_chunk(obj.x,obj.y)
-        line = chunk[obj.y%CHUNK_HEI]
+        #for xy in ([obj.x,obj.y],[obj.top_x,obj.top_y]):
+        xy = [obj.x,obj.y]
+        chunk = self.find_obj_chunk(xy[0],xy[1])
+        line = chunk[xy[1]%CHUNK_HEI]
         i = 0
         while i < len(line):
             next_obj = line[i]
-            if next_obj.x >= obj.x:
+            if next_obj.x >= xy[0]:
                 break
             i+=1
-        chunk[obj.y%CHUNK_HEI].insert(i,obj)
-
+        chunk[xy[1]%CHUNK_HEI].insert(i,obj)
+    def remove_obj(self,obj):
+        """Remove the obj twice, once from the top coords, and once
+        from the bottom ones."""
+        #for xy in ([obj.x,obj.y],[obj.top_x,obj.top_y]):
+        xy = [obj.x,obj.y]
+        chunk = self.find_obj_chunk(xy[0],xy[1])
+        line = chunk[xy[1]%CHUNK_HEI]
+        i = self.find_obj_index(obj,chunk)
+        if len(line) > 0:
+            line.pop(i)
     def init_obj(self,obj,rotate=0):
-        while rotate != obj.rotate:
-            obj.rotate_right()
-        self.set_sprite(obj,obj.img)
+        obj.rotate_right(rotate)
+        self.set_sprite(obj)
         if obj.animate == "flip":
             original = obj.img
             flip_img = reversed(obj.img)
@@ -1226,7 +1331,6 @@ class Objs():
             facing_left = obj.img + "-a"
             self.sprites[facing_left] = self.get_flipped_sprite(self.sprites[obj.img],obj)
             obj.animate = {"w":facing_up,"a":facing_left,"s":facing_down,"d":obj.img}
-        obj.i = len(self.objs)
         self.append_obj_ordered(obj)
     def add_to_pallete(self,obj):
         obj_clone = self.copy(obj) #reset coords
@@ -1249,19 +1353,6 @@ class Objs():
             o.hp, o.face_right, o.face_down, o.grav, o.dmg, o.enemy_chars, o.dmg_dirs,
             o.animate,o.txt,o.max_jump,o.color,o.data)
         return obj
-
-    class MirrorObj():
-        """Mirrors are on z-level 0. The base coordinates are where it copies
-        from."""
-        def __init__(self,base_x=-1,base_y=-1,color=DEFAULT_COLOR,x=-1,
-        y=-1,flip_horizontal=False,flip_vertical=False):
-            self.base_x=base_x
-            self.base_y=base_y
-            self.color = color
-            self.x = x
-            self.y = y
-            self.flip_horizontal = flip_horizontal
-            self.flip_vertical = flip_vertical
     class Obj():
         def __init__(self,img, char, x=-1,y=-1, geom = "all",
         move = None, xspeed = 1,yspeed = 1,hp =1,face_right=True,
@@ -1275,6 +1366,8 @@ class Objs():
             #else:
             self.xspeed = xspeed
             self.yspeed = yspeed
+            self.move_x = 0
+            self.move_y = 0
             self.direction = 0 # NOT IMPLEMENTED
             self.velocity = 0 # NOT IMPLEMENTED
             self.acceleration = 0 # NOT IMPLEMENTED
@@ -1287,12 +1380,13 @@ class Objs():
                 self.init_touching()
                 # Store pointers to objects that are touching this one.
             self.img = img
+            self.img = img
             self.sprite = [] # Must be set through Objs function new().
             self.geom = geom # Options of: None, line, complex, skeleton, background, or all.
             self.x = x
             self.y = y
-            self.top_x = x # NOT IMPLEMENTED
-            self.top_y = y # NOT IMPLEMENTED
+            self.top_x = x
+            self.top_y = y
             self.char = char
             self.hp = hp
             self.enemy_chars = enemy_chars
@@ -1310,6 +1404,8 @@ class Objs():
             # "flip" is default, mirrors the image for every change between right and left.
             # Otherwise, if it's not None it becomes a dictionary: {w,a,s,d:sprite images.}            
             self.txt = txt # line number from textsheet
+            self.reflect_x = 0
+            self.reflect_y = 0
             self.face_right = face_right # Left: False, Right: True
             self.face_down = face_down # Up: False, Down: True
             self.rotate = 0 # 0 through 3
@@ -1328,36 +1424,48 @@ class Objs():
             return len(self.sprite[y])
         def height(self):
             return len(self.sprite)
+        def set_obj_coords(self):
+            self.top_x += self.move_x
+            self.top_y += self.move_y
+            self.x += self.move_x
+            self.y += self.move_y
+            self.move_x = 0
+            self.move_y = 0
 
-        def rotate_right(self):
-            """Rotates the object sprite 90 degrees."""
-            self.rotate = (self.rotate + 1)%4
-            # Only works properly on even-width objects.
-            sprite = [] # Must make a new sprite sequentially,
-            for x in range(len(self.sprite[0])//2):
-                row = [] # otherwise it creates pointers.
-                for y in range(len(self.sprite)*2):
-                    row.append(BLANK)
-                sprite.append(row)
-            # To rotate, it is inverted, and then mirrored along y.
-            for y in range(len(sprite)):
-                for x in range(len(sprite[0])//2):
-                    sprite[y][-((x*2)+2)] = self.sprite[x][(y*2)]
-                    sprite[y][-((x*2)+1)] = self.sprite[x][(y*2)+1]
-            self.sprite = sprite
+        def rotate_right(self,rotate):
+            """Rotates the object sprite 90 degrees 
+            times the rotate var."""
+            while rotate != self.rotate:
+                self.rotate = (self.rotate + 1)%4
+                # Only works properly on even-width objects.
+                sprite = [] # Must make a new sprite sequentially,
+                for x in range(len(self.sprite[0])//2):
+                    row = [] # otherwise it creates pointers.
+                    for y in range(len(self.sprite)*2):
+                        row.append(BLANK)
+                    sprite.append(row)
+                # To rotate, it is inverted, and then mirrored along y.
+                for y in range(len(sprite)):
+                    for x in range(len(sprite[0])//2):
+                        sprite[y][-((x*2)+2)] = self.sprite[x][(y*2)]
+                        sprite[y][-((x*2)+1)] = self.sprite[x][(y*2)+1]
+                self.sprite = sprite
 
 def color_by_num(x):
     if x < 16:
         x = PRE_16_COLORS[x]
     return (COLOR_ESC + str(x) + "m")
 def num_by_color(x):
-    return (x[len(COLOR_ESC):-1])
+    if len(x) > 3:
+        return (x[len(COLOR_ESC):-1])
+    else:
+        return x
 def print_color_numbers():
     """For Debugging: Returns a sheet of all color numbers highlighted
     by their respective color."""
     spaces = " "
-    black_words = "\033[38;5;" + str(16) + "m"
-    white_words = "\033[38;5;" + str(15) + "m"
+    black_words = "\033[38;5;" + str(BLACK_INT) + "m"
+    white_words = "\033[38;5;" + str(WHITE_INT) + "m"
     for x in range(1,256):
         color = COLOR_ESC + str(x) + "m"
         try:spaces = " " * (9 - int(log(x,10)))
@@ -1365,35 +1473,43 @@ def print_color_numbers():
         print(f"{black_words}{color}{x}{white_words}{x}{spaces}{spaces}",end="")
         if (x-15)%6 == 0:
             print()
+WHITE_INT = 231
+BLACK_INT = 16 # SAME AS 232
 PRE_16_COLORS = {1:160,2:34,3:172,4:20,5:90,6:68,7:252,8:243,
-                9:167,10:40,11:192,12:32,13:127,14:44,15:255}
-BLACK_INT = 16
-WHITE_INT = 15
+                9:167,10:40,11:192,12:32,13:127,14:44,15:WHITE_INT}
 SHADE = 6
-JSHADE = 36
-def brighten_color(color_code,positive=True):
+JUMP_SHADE = 36
+def brighten(color_code:str,positive=True):
+    """Takes a color escape code, returns a color escape code that
+    is either darker(-) or brighter(+)."""
     if positive:change = 1
     else:change = -1
-    color = int(color_code[len(COLOR_ESC):-1])
+    if len(color_code)>len(COLOR_ESC):
+        color = int(color_code[len(COLOR_ESC):color_code.find("m")])
+    else:
+        color = 232
     if color < BLACK_INT:
-        return brighten_color(color_by_num(PRE_16_COLORS[color]))
-    elif color > 231: #MONOCHROME
+        return brighten(color_by_num(PRE_16_COLORS[color]))
+    elif color > WHITE_INT: #MONOCHROME
         color += change
-        if color < 232:
+        if color <= WHITE_INT:
             color = BLACK_INT
         elif color > 255:
             color = WHITE_INT
     else:
-        root = (color-BLACK_INT)%JSHADE
-        if (root < SHADE and not positive) or root >= JSHADE - SHADE:
-            color += (change*JSHADE)
+        root = (color-BLACK_INT)%JUMP_SHADE
+        if positive:
+            if root >= JUMP_SHADE - SHADE:
+                color = WHITE_INT
+            else:
+                color += (change*SHADE)
         else:
-            color += (change*SHADE)
-
-        if color > 231:
-            color = WHITE_INT
-        elif color < BLACK_INT:
-            color = BLACK_INT
+            if root < SHADE:
+                color += (change*JUMP_SHADE)
+            else:
+                color += (change*SHADE)
+        color = min([WHITE_INT,color])
+        color = max([BLACK_INT,color])
     return color_by_num(color)
 
 def find_non(string,bad_c):
@@ -1463,3 +1579,14 @@ def replace_spaces(line:str):
         return start + end
     else:
         return start[:-1] + end
+def solidify_path(path,suffix=".txt"):
+    if DIRPATH not in path:
+        path = DIRPATH + path
+    if suffix not in path:
+        path += suffix
+    return path
+def deconstruct_path(path):
+    path = path[path.rfind("/")+1:]
+    if "." in path:
+        path = path[:path.rfind(".")]
+    return path
