@@ -605,9 +605,9 @@ class Game():
             path = arg[-1]
             self.remove_render_one(actor)
         new_map_path = solidify_path(path)
-        if path in self.map_dict.keys(): # Is map created?
+        if new_map_path in self.map_dict.keys(): # Is map created?
             self.map_name = deconstruct_path(path)
-            self.map = self.map_dict[path]
+            self.map = self.map_dict[new_map_path]
             self.objs = self.map.objs
         else: # Create new map and add it to the map list.
             self.create_new_map(new_map_path)
@@ -618,6 +618,7 @@ class Game():
             self.set_render_one(actor)
             self.add_render_one(actor)
         self.set_sprites_in_objs()
+        self.map.print_from_black()
 
     def create_new_map(self,path):
         """Creates the map from a given path, populating it with object sprites
@@ -625,7 +626,7 @@ class Game():
         for obj in self.objs.pallete_objs:
             self.universal_objs.add(obj) # Collect objects from the pallete
         self.map_dict[path] = Map(self.universal_objs)
-        self.map_name = path
+        self.map_name = deconstruct_path(path)
         self.map = self.map_dict[path]
         self.objs = self.map.objs
         self.set_sprites_in_objs()
@@ -1065,14 +1066,25 @@ class Map():
                 self.disp_msg = ""
     def print_to_black(self):
         """Clears the screen line by line. Moves
-        theme volume from 0 to 100%."""
+        theme volume from 100 to 0%."""
         print(DEFAULT_COLOR + RETURN,end="")
-        volume = 0
+        volume = 1
         for line in range(WINDOW_HEI):
+            volume -= 1/WINDOW_HEI
             print(S_LINE)
             mixer.music.set_volume(volume)
             sleep(.03)
+    def print_from_black(self):
+        print(RETURN,end="")
+        volume = 0
+        for row in range(self.camera_y,self.end_camera_y):
+            line = []
+            for x in range(self.camera_x,self.end_camera_x):
+                line.append(self.rend[row][x][-1])
+            print("".join(line))
             volume += 1/WINDOW_HEI
+            mixer.music.set_volume(volume)
+            sleep(.03)
         mixer.music.set_volume(1)
         
     def set_xy_geom(self,x,y,boolean=1):
@@ -1130,7 +1142,7 @@ class Acts():
     def new(self,func,name="default",type="interact", item_char="",
         arg=None,map="default",act_on_self=False,locked = False, loc_arg = []):
         if map != "default":
-            map = solidify_path(map)
+            map = deconstruct_path(map)
         new_act = self.Act(func,name,type,item_char,arg,map,act_on_self,locked,loc_arg)
         self.acts.append(new_act)
 
