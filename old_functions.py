@@ -185,3 +185,50 @@ def print_colors_with_gradients():
         if (x-15)%6 == 0:
             print()
 
+def move_right_old(self,obj):
+    self.objs.set_img(obj,obj.animate["d"])
+    obj.face_right = True
+    if time() - obj.move_time["d"] > 1/obj.xspeed:
+        obj.move_time["d"] = time()
+        self.set_movement(obj,1)
+def move_down(self,obj):
+    self.objs.set_img(obj,obj.animate["s"])
+    obj.face_down = True
+    if time() - obj.move_time["s"] > 1/obj.yspeed:
+        obj.move_time["s"] = time()
+        if obj.grav:
+            obj.jump = 0
+        self.set_movement(obj,0,1)
+def move_up(self,obj):
+    self.objs.set_img(obj,obj.animate["w"])
+    obj.face_down = False
+    if time() - obj.move_time["w"] > 1/obj.yspeed:
+        obj.move_time["w"] = time()
+        if not obj.grav:
+            self.set_movement(obj,0,-1)
+        elif not self.can_move(obj,0,1): # If on top of something.
+            obj.jump = obj.max_jump
+            self.set_movement(obj,0,-1)
+            self.play_sound("jump")
+        elif obj.jump > 0:
+            self.set_movement(obj,0,-1)
+def move_camera(self):
+    player = self.map.camera_star
+    move_x, move_y = 0,0
+    if "x" in self.camera_follow:
+        if self.map.width > self.map.end_camera_x < player.x + WINDOW_CUSHION_X:
+            move_x = 1
+        elif self.map.camera_x + WINDOW_CUSHION_X > player.x and self.map.camera_x > 0:
+            move_x = -1
+    if "y" in self.camera_follow:
+        if self.map.height > self.map.end_camera_y < player.y - player.height() + WINDOW_CUSHION_Y:
+            move_y = 1
+        elif self.map.camera_y + WINDOW_CUSHION_Y > player.y - player.height() and self.map.camera_y > 0:
+            move_y = -1
+    self.map.move_camera(move_x,move_y)
+    
+def move_camera(self,x=0,y=0):
+    self.camera_x += x
+    self.camera_y += y
+    self.end_camera_y += y
+    self.end_camera_x += x

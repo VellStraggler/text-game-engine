@@ -1,6 +1,6 @@
 ###################################
 #                                 #
-#      Textoon Game Engine        #
+#       Texil Game Engine         #
 #    Created by: David Wells      #
 #          Version 1.0            #
 #                                 #
@@ -55,6 +55,7 @@ H_FLIP_CHARS = {'\\':'/','/':'\\','↙':'↖','↘':'↗','כ':'c',
 COLOR_ESC = "\033[48;5;"
 DEFAULT_COLOR = COLOR_ESC + "16m"
 DEFAULT_TEXT  = "\033[38;5;15m"
+NEW_SETTING = {"color":"mono","mono":"geom","geom":"color"}
 def ex_func(obj,arg):
     pass
 class Game():
@@ -85,7 +86,6 @@ class Game():
         self.themes = []
         self.sounds = dict()
 
-        self.tick = 0
         self.fps = 0
         self.display_fps = 0
         self.fps_list = []
@@ -94,9 +94,11 @@ class Game():
         self.fps_max = 60
         self.fps_timer = 0
         self.fps_timer_wait = 0.25
-        self.general_action_time = 0
-        self.game_speed = 1 # General action calling per second.
+        self.game_act_time = 0
+        self.game_speed = 1 # General act calling per second.
         self.total = 0
+        self.frame_start = time()
+        self.prev_frame_start = self.frame_start
 
         self.geom_set_dict= {"all":self.geom_all,
                             "complex":self.geom_complex,
@@ -230,7 +232,7 @@ class Game():
         self.init_objs()
         self.init_render_all()
         self.map.display_timer()
-        self.map.print_all()
+        #self.map.print_all()
     def init_objs(self):
         """Create objects from the pallete and place them on coordinates
         as directed by the input map."""
@@ -243,14 +245,12 @@ class Game():
     def game_loop(self):
         """This is what loops for every game tick.
         It is run by the run_game method."""
-        self.frame_start = time()
         self.set_all_movement()
         self.render_all()
         self.map.display_timer()
         self.map.print_all()
         self.run_frame_counter()
     def game_loop_debug(self):
-        self.frame_start = time()
         self.set_all_movement()
         self.render_all()
         self.map.display_timer()
@@ -258,7 +258,7 @@ class Game():
         self.run_frame_counter(True)
 
     def run_frame_counter(self,with_avg=False):
-        self.tick = (self.tick + 1)%MAX_TICK
+        self.last_frame_start = self.frame_start
         if time() != self.frame_start:
             self.fps = round(1/(time()-self.frame_start),2)
             if with_avg:
@@ -270,6 +270,7 @@ class Game():
             self.fps = 999.00 # Cosmetic only.
         self.disp_data = "FPS:" + str(self.display_fps)
         self.disp_data +=" Map: " + deconstruct_path(self.map_name)
+        self.frame_start = time()
 
     def end_game(self):
         """All the comes after the main game_loop"""
@@ -277,8 +278,8 @@ class Game():
         self.play_sound("quit")
         end_game = CLEAR+SPACES+"Game Over!\n"
         if len(self.fps_list) > 0:
-            fps_avg = str(sum(self.fps_list)/len(self.fps_list))
-            end_game += "Average FPS: "+fps_avg+"\n"
+            fps_avg = str(round(sum(self.fps_list)/len(self.fps_list),2))
+            end_game += "Average FPS: "+fps_avg+"\n"+"Runtime: "+str(int(time()-self.start_time))+" seconds.\n"
         input(f"{end_game}Press ENTER to exit.\n{DEFAULT_COLOR}") # Hide input from the whole game
         print(CLEAR)
 
@@ -327,7 +328,7 @@ class Game():
     def set_all_movement(self):
         """ Set the movement of every mobile object found in the chunks
         shown in the camera window."""
-        self.general_actions()
+        self.game_acts()
         self.set_load_chunks()
         self.remove_the_dead()
         for chunk in self.objs.load_chunks:
@@ -335,10 +336,9 @@ class Game():
                 for obj in line:
                     if not obj.static:
                         # ANIMATION
-                        if len(obj.animation)>1:
-                            if time() > obj.frame_time:
-                                obj.frame_time = time() + obj.framerate
-                                self.next_frame(obj)
+                        if time() > obj.frame_time:
+                            obj.frame_time = time() + obj.framerate
+                            self.next_frame(obj)
                         self.get_objs_touching(obj)
                         if obj.move in ["wasd","dirs"]:
                             self.player_actions(obj)
@@ -351,6 +351,7 @@ class Game():
                                 if self.can_move(obj,-1):
                                     self.move_left(obj)
                                 else: self.flip_sprite(obj)
+                        self.set_movement(obj)
                         # ALL THAT SHOULD FALL WILL FALL
                         if obj.grav:
                             if time() - obj.move_time["w"] > 3/obj.yspeed:
@@ -361,10 +362,11 @@ class Game():
                                     obj.jump -= 1
                                 obj.move_time["g"] = time()
                                 if obj.jump == 0:
-                                    self.set_movement(obj,0,1)
+                                    #self.set_movement(obj,0,1)
+                                    pass
                         # DAMAGE-TAKING
                         self.take_dmg(obj)
-                    if obj.hp <= 0 or obj.y == self.map.height -1: # All non-player mobs, DEATH.
+                    if obj.hp <= 0 or obj.y == self.map.height: # All non-player mobs, DEATH.
                         if obj.move in ["wasd","dirs"]:
                             self.quit = True
                         self.kill_obj(obj,True)
@@ -381,10 +383,10 @@ class Game():
                 chunk = self.objs.find_obj_chunk(x,y,True)
                 self.objs.load_chunks.append(chunk)
 
-    def general_actions(self):
-        if self.general_action_time < time():
+    def game_acts(self):
+        if self.game_act_time < time():
             if is_pressed("p"):# PAUSE
-                self.general_action_time = time() + self.game_speed
+                self.game_act_time = time() + self.game_speed
                 mixer.music.set_volume(.25)
                 wait("p")
                 sleep(.5)
@@ -394,13 +396,10 @@ class Game():
             elif is_pressed("ctrl+r"):
                 self.init_render_all()# RELOAD SCREEN
             elif is_pressed("ctrl+g"):
-                self.general_action_time = time() + self.game_speed
-                self.map.color_on = not self.map.color_on
+                self.game_act_time = time() + self.game_speed
+                self.map.setting = NEW_SETTING[self.map.setting]
     def next_frame(self,obj):
-        self.objs.set_img(obj,obj.animation[obj.frame])
-        obj.frame += 1
-        if obj.frame == len(obj.animation):
-            obj.animation = [obj.img]
+        self.objs.set_img(obj,obj.animation.next())
     def player_actions(self,player):
         # PLAYER MOVEMENT:
         for key in self.key_dict[player.move].keys():
@@ -443,36 +442,19 @@ class Game():
     def move_left(self,obj):
         self.objs.set_img(obj,obj.animate["a"])
         obj.face_right = False
-        if time() - obj.move_time["a"] > 1/obj.xspeed:
-            obj.move_time["a"] = time()
-            self.set_movement(obj,-1)
+        obj.true_x -= obj.xspeed*(self.frame_start-self.last_frame_start)
     def move_right(self,obj):
         self.objs.set_img(obj,obj.animate["d"])
         obj.face_right = True
-        if time() - obj.move_time["d"] > 1/obj.xspeed:
-            obj.move_time["d"] = time()
-            self.set_movement(obj,1)
+        obj.true_x += obj.xspeed*(self.frame_start-self.last_frame_start)
     def move_down(self,obj):
         self.objs.set_img(obj,obj.animate["s"])
         obj.face_down = True
-        if time() - obj.move_time["s"] > 1/obj.yspeed:
-            obj.move_time["s"] = time()
-            if obj.grav:
-                obj.jump = 0
-            self.set_movement(obj,0,1)
+        obj.true_y += obj.yspeed*(self.frame_start-self.last_frame_start)
     def move_up(self,obj):
         self.objs.set_img(obj,obj.animate["w"])
         obj.face_down = False
-        if time() - obj.move_time["w"] > 1/obj.yspeed:
-            obj.move_time["w"] = time()
-            if not obj.grav:
-                self.set_movement(obj,0,-1)
-            elif not self.can_move(obj,0,1): # If on top of something.
-                obj.jump = obj.max_jump
-                self.set_movement(obj,0,-1)
-                self.play_sound("jump")
-            elif obj.jump > 0:
-                self.set_movement(obj,0,-1)
+        obj.true_y -= obj.yspeed*(self.frame_start-self.last_frame_start)
     
     def kill_obj(self,obj,sound:bool=False): # DEATH
         self.objs.set_img(obj,"dead")
@@ -543,21 +525,22 @@ class Game():
             ys = obj.y - 1
         return xs,xf,ys,yf
 
-    # These functions are put into act_set_dict, for quicker lookup than if statements.
+    """Here are pre-made functions that can be put into Acts. Every function made for an
+    Act must take 2 arguments which, if used, must be a game object and a more specific arg."""
     def act_change_sprite(self,obj,arg):
-        """ARG: dictionary of old img key and new img value"""
-        self.objs.set_img(obj,arg[obj.img])
+        """arg is a Linked List."""
+        self.objs.set_img(obj,arg.next())
     def act_animate(self,obj,arg):
-        """ARG: list of frames. Default frame time of 1 fps."""
-        obj.frame = 0
-        self.objs.set_img(obj,arg[obj.frame])
+        """This sets the object animation to a linked list, but next_frame iterates
+        through it."""
         obj.animation = arg
-    def act_change_color(self,obj,arg:dict):
-        obj.set_color(arg[obj.color])
-        self.objs.set_img(obj,obj.img)
-    def act_change_geom(self,obj,arg:dict):
-        obj.geom = arg[obj.geom]
-        self.objs.set_img(obj,obj.img)
+        self.objs.set_img(obj,arg.curr.data)
+    def act_change_color(self,obj,arg):
+        obj.set_color(arg.next())
+        self.objs.set_img(obj)
+    def act_change_geom(self,obj,arg):
+        obj.geom = arg.next()
+        self.objs.set_img(obj)
     def act_change_theme(self,obj,arg:str):
         mixer.music.stop()
         self.set_theme(arg)
@@ -614,6 +597,8 @@ class Game():
         if len(arg)<4: # Add actor to new map and center camera on them.
             actor.x = arg[0]
             actor.y = arg[1]
+            actor.true_x = arg[0]
+            actor.true_y = arg[1]
             self.map.center_camera(actor.x,actor.y)
             self.set_render_one(actor)
             self.add_render_one(actor)
@@ -653,33 +638,42 @@ class Game():
         if y < obj.y:   obj.move_y *= -1
         if obj.move in ["wasd","dirs"]:
             self.map.center_camera(obj.x+obj.width()//2,obj.y-obj.height()//2)
-    def set_movement(self,obj,move_x = 0,move_y = 0):
-        """Start at 0, see how close we can get to move_y and move_x."""
-        max_found = False
+    def set_movement(self,obj):
+        """Take the true_x and true_y from obj to get the change in x and y.
+        Get as close as to true_x and true_y as possible.
+        Start at 0, see how close we can get to move_y and move_x."""
+        move_x_targ = int(obj.true_x) - obj.x
+        move_y_targ = int(obj.true_y) - obj.y
         obj.move_x = 0
         obj.move_y = 0
         x_change = 0
         y_change = 0
-        if move_x != 0:
-            x_change = (move_x)//(abs(move_x))
-        if move_y != 0:
-            y_change = (move_y)//(abs(move_y))
+        if move_x_targ != 0:
+            x_change = (move_x_targ)//(abs(move_x_targ))
+        if move_y_targ != 0:
+            y_change = (move_y_targ)//(abs(move_y_targ))
+        max_found = False
         while not max_found:
-            if not self.can_move(obj,x_change,y_change) or (obj.move_y == move_y and obj.move_x == move_x):
-                max_found = True
-            else:
-                if obj.move_x != move_x:
+            if self.can_move(obj,x_change,y_change):
+                if obj.move_x != move_x_targ:
                     obj.move_x += x_change
-                if obj.move_y != move_y:
+                if obj.move_y != move_y_targ:
                     obj.move_y += y_change
-                elif obj.move_y == move_y and obj.move_x == move_x:
-                    max_found = True
-        if obj.move_x!=0 and obj.move_y!=0:
+            else:
+                max_found = True
+            if (obj.move_y == move_y_targ and obj.move_x == move_x_targ):
+                max_found = True
+        if move_x_targ!=0 and move_y_targ!=0:
             self.objs.render_objs.add(obj)
+        if move_x_targ!= 0 and obj.move_x==0:#hit a wall
+            obj.true_x = obj.x
+        if move_y_targ!= 0 and obj.move_y==0:
+            obj.true_y = obj.y
     def can_move(self, obj,x_change,y_change=0):
         """Check if there are any characters in the area that 
         the obj would take up. Takes literal change in x and y.
         Returns True if character can move in that diRECTion."""
+        assert abs(x_change)<2 and abs(y_change)<2,"x and y can only be -1, 0, or 1."
         yf = y_change + obj.y
         ys = yf - obj.height()
         xs = x_change + obj.x
@@ -703,7 +697,7 @@ class Game():
     def geom_all(self,obj,boolean = 1):
         """Creates a hollow box of geometry (hollow is obviously faster than not)"""
         for y in range(obj.y - obj.height() +1,obj.y +1):
-            x_end = min([obj.x + obj.width()-2,len(self.map.geom[y])])
+            x_end = min([obj.x + obj.width()-1,len(self.map.geom[y])])
             for x in [obj.x,x_end]:
                 self.map.set_xy_geom(x, y,boolean)
         for x in range(obj.x, min([obj.x + obj.width(),len(self.map.geom[y])])):
@@ -804,16 +798,22 @@ class Game():
                     mir_color = color_by_num(mir_type.color)
                     colored = True
                 else:colored=False
+                switch = bool(int(time()*3)%2) # Speed of ripple is 3 changes/sec.
+                ripple_amt = int(mir_type.ripple) * -1 #-1 or 0
                 for y in range(0,mir.y2-mir.y1+1):
+                    switch = not switch
                     for x in range(0,mir.x2-mir.x1+1):
                         rend_x = mir.x1+(x*mir_type.x_mult)+mir.copy_x
+                        if switch:
+                            rend_x += ripple_amt
                         rend_y = mir.y1+(y*mir_type.y_mult)+mir.copy_y
-                        char =       self.map.rend[rend_y][rend_x][-1][-1]
+                        char = self.map.rend[rend_y][rend_x][-1][-1]
                         if colored:
                             color = mir_color
                         else:
                             color = self.map.rend[rend_y][rend_x][-1][:-1]
-                        color = brighten(color)
+                        #if char != BLANK:
+                        #    color = brighten(color)
                         if mir_type.flip_horizontal:
                             if char in H_FLIP_CHARS:
                                 char = H_FLIP_CHARS[char]
@@ -838,20 +838,9 @@ class Game():
 
     def move_camera(self):
         # CAMERA MOVEMENT:
-        move_x, move_y = 0,0
-        player = self.map.camera_star 
-        if "x" in self.camera_follow:
-            if self.map.width > self.map.end_camera_x < player.x + WINDOW_CUSHION_X:
-                move_x = 1
-            elif self.map.camera_x + WINDOW_CUSHION_X > player.x and self.map.camera_x > 0:
-                move_x = -1
-        if "y" in self.camera_follow:
-            if self.map.height > self.map.end_camera_y < player.y - player.height() + WINDOW_CUSHION_Y:
-                move_y = 1
-            elif self.map.camera_y + WINDOW_CUSHION_Y > player.y - player.height() and self.map.camera_y > 0:
-                move_y = -1
-        self.map.move_camera(move_x,move_y)
-        #self.map.center_camera(player.x,player.y)
+        player = self.map.camera_star
+        y = player.y-(player.height()//2)
+        self.map.center_camera(player.x+(player.width()//2),y)
 
     def add_geom(self,obj):
         self.geom_set_dict[obj.geom](obj)
@@ -926,8 +915,9 @@ class Map():
         self.rend = [] # Map of what will be rendered. 3-Dimensional.
         self.geom = [] # For checking collision.
         self.print_map = ""
+        self.screen = []
         self.mirrors = []
-        self.color_on = True
+        self.setting = "color"
         self.last_used_color = DEFAULT_COLOR
 
         self.objs = Objs(universal_objs)
@@ -1017,8 +1007,10 @@ class Map():
         newline escapes. Appending to a new screen list is oddly faster
         than editing a screen list."""
         self.screen = []
-        if self.color_on:
+        if self.setting == "color":
             [[self.get_print_pixel(self.rend[row][x][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
+        elif self.setting == "geom":
+            [[self.get_print_pixel(str(int(self.geom[row][x])),x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
         else:
             [[self.get_print_pixel(self.rend[row][x][-1][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
         self.add_message()
@@ -1040,6 +1032,7 @@ class Map():
             self.last_used_color = color
             char = color + char
         self.screen.append(char)
+        return char
     def add_message(self):
         if len(self.disp_msg) > 0:
             start = int(len(self.screen)*((WINDOW_HEI-len(self.disp_msg)-.5)/WINDOW_HEI))
@@ -1080,7 +1073,7 @@ class Map():
         for row in range(self.camera_y,self.end_camera_y):
             line = []
             for x in range(self.camera_x,self.end_camera_x):
-                line.append(self.rend[row][x][-1])
+                line.append(self.get_print_pixel(self.rend[row][x][-1],x))
             print("".join(line))
             volume += 1/WINDOW_HEI
             mixer.music.set_volume(volume)
@@ -1111,11 +1104,6 @@ class Map():
     def get_xy_rend(self,x,y,z=-1):
         return self.rend[y][x][z]
 
-    def move_camera(self,x=0,y=0):
-        self.camera_x += x
-        self.camera_y += y
-        self.end_camera_y += y
-        self.end_camera_x += x
     def center_camera(self,x,y):
         """Takes a coordinate and centers the camera on that point."""
         half_wid = WINDOW_WID//2
@@ -1143,6 +1131,13 @@ class Acts():
         arg=None,map="default",act_on_self=False,locked = False, loc_arg = []):
         if map != "default":
             map = deconstruct_path(map)
+        if isinstance(arg,list): # List of strings should be a Linked list.
+            all_strs = True
+            for i in arg:
+                if not isinstance(i,str):
+                    all_strs = False
+            if all_strs:
+                arg = Linked(arg)
         new_act = self.Act(func,name,type,item_char,arg,map,act_on_self,locked,loc_arg)
         self.acts.append(new_act)
 
@@ -1225,7 +1220,8 @@ class Objs():
         self.max_sprite_width = 1
         self.default_color = DEFAULT_COLOR
     
-    def set_img(self,obj,img):
+    def set_img(self,obj,img=None):
+        if img == None: img = obj.img
         self.render_objs.add(obj)
         obj.img = img
     def set_sprite(self,obj):
@@ -1378,25 +1374,26 @@ class Objs():
             #else:
             self.xspeed = xspeed
             self.yspeed = yspeed
+            self.max_jump = max_jump
             self.move_x = 0
             self.move_y = 0
-            self.direction = 0 # NOT IMPLEMENTED
-            self.velocity = 0 # NOT IMPLEMENTED
-            self.acceleration = 0 # NOT IMPLEMENTED
-            self.max_jump = max_jump
-            self.jump = 0 # based on yspeed
-
             if not self.static:
                 #wasd: controls, i:interact, g:gravity (falling)
                 self.move_time = {"w":0,"a":0,"s":0,"d":0,"i":0,"g":0}
                 self.init_touching()
+                self.direction = 0 # NOT IMPLEMENTED
+                self.velocity = 0 # NOT IMPLEMENTED
+                self.acceleration = 0 # NOT IMPLEMENTED
+                self.jump = 0 # based on yspeed
                 # Store pointers to objects that are touching this one.
             self.img = img
             self.img = img
             self.sprite = [] # Must be set through Objs function new().
             self.geom = geom # Options of: None, line, complex, skeleton, background, or all.
-            self.x = x
-            self.y = y
+            self.x = int(x)
+            self.y = int(y)
+            self.true_x = x
+            self.true_y = y
             self.top_x = x
             self.top_y = y
             self.char = char
@@ -1406,11 +1403,10 @@ class Objs():
             self.dmg_dirs = dmg_dirs
 
             self.animate = animate # Edited in the objs.append_obj function
-            self.idle_animation = [img] # When doing NOTHINg. NOT IMPLEMENTED
-            self.animation = [img]
+            self.idle_animation = Linked([img]) # When doing NOTHINg. NOT IMPLEMENTED
+            self.animation = Linked([img])
             self.framerate = ANIMATE_FPS
             self.frame_time = 0
-            self.frame = 0
 
             self.color = self.set_color(color)
             # "flip" is default, mirrors the image for every change between right and left.
@@ -1441,6 +1437,10 @@ class Objs():
             self.top_y += self.move_y
             self.x += self.move_x
             self.y += self.move_y
+            """if self.move_x != 0:
+                self.true_x = self.x
+            if self.move_y != 0:
+                self.true_y = self.y"""
             self.move_x = 0
             self.move_y = 0
 
@@ -1462,6 +1462,33 @@ class Objs():
                         sprite[y][-((x*2)+2)] = self.sprite[x][(y*2)]
                         sprite[y][-((x*2)+1)] = self.sprite[x][(y*2)+1]
                 self.sprite = sprite
+class Linked():
+    """Stores a one-way linked list, presumably of sprite names. "start"
+    signifies which name to start at."""
+    def __init__(self,anim_list:list,loop:bool=True,start:int=0):
+        self.first = Node(anim_list[0])
+        self.curr = self.first
+        self.len = len(anim_list)
+        assert self.len > 0, "Received empty list."
+        for i in range(1,len(anim_list)):
+            self.curr.next = Node(anim_list[i])
+            self.curr = self.curr.next
+        if loop:
+            self.curr.next = self.first
+        else:
+            self.curr.next = self.curr
+        self.curr = self.first
+        for i in range(start):
+            self.curr = self.curr.next
+    def next(self):
+        self.curr = self.curr.next
+        return self.curr.data
+class Node():
+    """A single pointer node."""
+    def __init__(self,data=None):
+        self.data = data
+        self.next = None
+
 
 def color_by_num(x):
     if x < 16:
@@ -1554,13 +1581,16 @@ def find_indices(string,character):
             indices.append(i)
         i+=1
     return indices
-def linked_list(list1):
-    """Create a linked list (dict) with a closed loop ending from a given list."""
+def linked_dict(list1:list,closed=False):
+    """Create a linked list dictionary with a closed loop ending from a given list."""
     llist = dict()
     if len(list1) > 1:
         for i in range (len(list1)-1):
             llist[list1[i]] = list1[i+1]
-        llist[list1[i+1]] = list1[i+1]
+        if closed:
+            llist[list1[i+1]] = list1[i+1]
+        else:
+            llist[list1[i+1]] = list1[0]
     else:
         llist[list1[0]] = list1[0]
     return llist

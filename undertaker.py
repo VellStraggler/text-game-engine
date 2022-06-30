@@ -14,7 +14,7 @@ wall = 235
 robe = 239
 
 g.objs.new("title","Z",color=232,geom="background")
-g.objs.new("cursor","X",move="wasd",yspeed=500,xspeed=1)
+g.objs.new("cursor","X",move="wasd",yspeed=500,xspeed=10)
 g.objs.new("start","Y",geom="all",color=236)
 g.objs.new("quit","Q",geom="all",color=244)
 
@@ -65,22 +65,23 @@ g.objs.new("outer-wall","r",geom="line")
 g.objs.new("diagon-wall","a",geom="background")
 g.objs.new("mirror",">",geom="background")
 g.mirs.new_type("mirror",True,-1,False,False,False,1)
-g.mirs.new_type("water",False,18,True,False,True)
+g.mirs.new_type("water",False,17,True,False,True)
 g.mirs.new("outside","water",30,30,60,40,0,-1)
 g.mirs.new("bedroom","mirror",41,6,47,14,0,5)
 
 
-doors =     {"door-closed":"door-open","door-open":"door-closed","door-locked":"door-open"}
-door_geom = {"skeleton":"line","line":"skeleton"}
-windows=    {"window-closed":"window-open","window-open":"window-closed"}
-lights =    {tx.color_by_num(58):tx.DEFAULT_COLOR,tx.DEFAULT_COLOR:tx.color_by_num(58)}
-grimm_open =["grimm-w-open1","grimm-w-open2","grimm-w-open3","grimm-w"]
+doors_locked = ["door-locked","door-open"]
+doors =     ["door-closed","door-open"]
+door_geom = ["line","skeleton"]
+windows=    ["window-closed","window-open"]
+lights =    [tx.color_by_num(58),tx.DEFAULT_COLOR]
+grimm_open =tx.Linked(["grimm-w-open1","grimm-w-open2","grimm-w-open3","grimm-w"],False)
 
 def open_door(obj,arg):
     g.act_sound(obj,arg[0])
     g.act_change_sprite(obj,arg[1])
     g.act_change_geom(obj,arg[2])
-door_arg = ["under/a/door_close.wav",doors,door_geom,grimm_open]
+door_arg = ["under/a/door_close.wav",tx.Linked(doors),tx.Linked(door_geom),grimm_open]
 g.acts.new(item_char="d",func=open_door,arg=door_arg)
 g.acts.new(g.act_animate,item_char="d",act_on_self=True,arg=grimm_open)
 g.acts.new(g.act_sound,item_char="D",arg="under/a/door_close.wav")
