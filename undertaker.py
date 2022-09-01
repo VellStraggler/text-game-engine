@@ -75,7 +75,7 @@ doors =     ["door-closed","door-open"]
 door_geom = ["line","skeleton"]
 windows=    ["window-closed","window-open"]
 lights =    tx.Linked([tx.color_by_num(58),tx.DEFAULT_COLOR])
-grimm_open =tx.Linked(["grimm-w-open1","grimm-w-open2","grimm-w-open3","grimm-w"],False)
+grimm_open =tx.Linked(["grimm-w-open1","grimm-w-open2","grimm-w-open3","grimm-w"],False,True)
 
 def open_door(obj,arg):
     g.act_sound(obj,arg[0])

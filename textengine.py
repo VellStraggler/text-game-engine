@@ -402,11 +402,14 @@ class Game():
     def next_frame(self,obj):
         if obj.animation.curr.next is not None and not obj.animation.loop:
             self.objs.set_img(obj,obj.animation.next())
+        elif obj.animation.stuns:
+            obj.stunned = False
     def player_actions(self,player):
         # PLAYER MOVEMENT:
-        for key in self.key_dict[player.move].keys():
-            if is_pressed(key):
-                self.key_dict[player.move][key](player)
+        if not player.stunned:
+            for key in self.key_dict[player.move].keys():
+                if is_pressed(key):
+                    self.key_dict[player.move][key](player)
         self.run_acts(player)
         self.map.camera_star = player # UPDATE: Only needs to be done once.
         coords = "("+str(player.x)+","+str(player.y)+")"
@@ -537,6 +540,7 @@ class Game():
         through it."""
         obj.animation = arg
         obj.animation.reset()
+        obj.stunned = obj.animation.stuns
         self.objs.set_img(obj,arg.curr.data)
     def act_change_color(self,obj,arg):
         obj.set_color(arg.next())
@@ -1410,6 +1414,7 @@ class Objs():
             self.animation = Linked([img])
             self.framerate = ANIMATE_FPS
             self.frame_time = 0
+            self.stunned = False
 
             self.color = self.set_color(color)
             # "flip" is default, mirrors the image for every change between right and left.
@@ -1468,11 +1473,12 @@ class Objs():
 class Linked():
     """A one-way linked list. Uses a boolean to check if it's circular. Check
     for self.curr.next to find out if an animation is complete."""
-    def __init__(self,anim_list:list,loop:bool=True,stunned:bool=False):
+    def __init__(self,anim_list:list,loop:bool=True,stuns:bool=False):
         self.first = Node(anim_list[0])
         self.curr = self.first
         self.len = len(anim_list)
         self.loop = loop
+        self.stuns = stuns
         assert self.len > 0, "Received empty list."
         for i in range(1,len(anim_list)):
             self.curr.next = Node(anim_list[i])
