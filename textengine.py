@@ -400,7 +400,7 @@ class Game():
                 self.game_act_time = time() + self.game_speed
                 self.map.setting = NEW_SETTING[self.map.setting]
     def next_frame(self,obj):
-        if obj.animation.curr.next is not None and not obj.animation.loop:
+        if obj.animation.curr.next is not None or obj.animation.loop:
             self.objs.set_img(obj,obj.animation.next())
         elif obj.animation.stuns:
             obj.stunned = False
@@ -846,8 +846,9 @@ class Game():
     def move_camera(self):
         # CAMERA MOVEMENT:
         player = self.map.camera_star
-        y = player.y-(player.height()//2)
-        self.map.center_camera(player.x+(player.width()//2),y)
+        #y = player.y-(player.height()//2)
+        #self.map.center_camera(player.x+(player.width()//2),y)
+        self.map.center_camera(player.x+4,player.y-4)
 
     def add_geom(self,obj):
         self.geom_set_dict[obj.geom](obj)
@@ -1346,6 +1347,10 @@ class Objs():
             facing_left = obj.img + "-a"
             self.sprites[facing_left] = self.get_flipped_sprite(self.sprites[obj.img],obj)
             obj.animate = {"w":facing_up,"a":facing_left,"s":facing_down,"d":obj.img}
+        else:
+            obj.animation = obj.animate
+            obj.animate = None
+            #This is where an idle animation is put in.
         self.append_obj_ordered(obj)
     def add_to_pallete(self,obj):
         obj_clone = self.copy(obj) #reset coords
@@ -1376,7 +1381,7 @@ class Objs():
             self.static = False
             self.move = move # None, leftright, wasd, dirs.
             self.grav = grav
-            if move == None and not grav:
+            if move == None and not grav and animate == None:
                 self.static = True
             #else:
             self.xspeed = xspeed

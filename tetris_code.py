@@ -3,9 +3,9 @@ from random import randint
 from time import time
 
 g = tx.Game()
-g.curr_map.set_path('tetris/tetris_map.txt')
-g.objs.get_sprites('tetris/tetris_sprites.txt')
-g.add_theme('tetris/song.wav')
+g.set_map_path('tetris/tetris_map.txt')
+g.set_sprite_path('tetris/tetris_sprites.txt')
+g.set_theme('tetris/song.wav')
 
 p1 = g.objs.Obj(str(randint(1,9)),'l',move = "wasd",grav=True,
     xspeed =50,yspeed = 5,geom="complex",animate=None,
