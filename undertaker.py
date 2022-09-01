@@ -74,7 +74,7 @@ doors_locked = ["door-locked","door-open"]
 doors =     ["door-closed","door-open"]
 door_geom = ["line","skeleton"]
 windows=    ["window-closed","window-open"]
-lights =    [tx.color_by_num(58),tx.DEFAULT_COLOR]
+lights =    tx.Linked([tx.color_by_num(58),tx.DEFAULT_COLOR])
 grimm_open =tx.Linked(["grimm-w-open1","grimm-w-open2","grimm-w-open3","grimm-w"],False)
 
 def open_door(obj,arg):
@@ -92,6 +92,7 @@ g.acts.new(g.act_change_geom,"unlock_door","interact","D",door_geom,locked=True)
 g.acts.new(g.act_animate,"unlock_door","interact","D",act_on_self=True,arg=grimm_open,locked=True)
 g.acts.new(item_char="P",func=g.act_sound,arg="under/a/bink_sound.wav")
 g.acts.new(g.act_change_color,"light-switch",item_char="P",arg=lights)
+g.acts.new(g.act_animate,item_char="P",act_on_self=True,arg=grimm_open)
 g.acts.new(g.act_change_sprite,"open-curtain",item_char="h",arg=windows)
 g.acts.new(item_char="h",func=g.act_sound,arg="under/a/bink_sound.wav")
 
@@ -109,8 +110,8 @@ g.acts.new(g.act_change_map,"","location","A",[62,17,"under/m/map2.txt"],loc_arg
 def go_outside(obj,arg):
     g.act_change_map(obj,arg)
     g.set_default_color(tx.color_by_num(64))
-g.acts.new(go_outside,"","location","A",[48,33,"under/m/outside.txt"],loc_arg=[-1,78],map="under/m/map1.txt")
-g.acts.new(g.act_change_map,"","location","A",[79,77,"under/m/map1.txt"],loc_arg=[48,31],map="under/m/outside.txt")
+g.acts.new(go_outside,"","location","A",[48,33,"under/m/house.txt"],loc_arg=[-1,78],map="under/m/map1.txt")
+g.acts.new(g.act_change_map,"","location","A",[79,77,"under/m/map1.txt"],loc_arg=[48,31],map="under/m/house.txt")
 
 g.acts.new(g.act_message,"play_piano","interact","p",1)
 g.acts.new(g.act_sound,"play_piano",item_char="p",arg="under/a/piano.wav")

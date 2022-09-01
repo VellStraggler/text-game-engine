@@ -279,7 +279,8 @@ class Game():
         end_game = CLEAR+SPACES+"Game Over!\n"
         if len(self.fps_list) > 0:
             fps_avg = str(round(sum(self.fps_list)/len(self.fps_list),2))
-            end_game += "Average FPS: "+fps_avg+"\n"+"Runtime: "+str(int(time()-self.start_time))+" seconds.\n"
+            runtime = str(int(time()-self.start_time))
+            end_game += "Average FPS: "+fps_avg+"\n"+"Runtime: "+runtime+" seconds.\n"
         input(f"{end_game}Press ENTER to exit.\n{DEFAULT_COLOR}") # Hide input from the whole game
         print(CLEAR)
 
@@ -399,7 +400,8 @@ class Game():
                 self.game_act_time = time() + self.game_speed
                 self.map.setting = NEW_SETTING[self.map.setting]
     def next_frame(self,obj):
-        self.objs.set_img(obj,obj.animation.next())
+        if obj.animation.curr.next is not None and not obj.animation.loop:
+            self.objs.set_img(obj,obj.animation.next())
     def player_actions(self,player):
         # PLAYER MOVEMENT:
         for key in self.key_dict[player.move].keys():
@@ -534,6 +536,7 @@ class Game():
         """This sets the object animation to a linked list, but next_frame iterates
         through it."""
         obj.animation = arg
+        obj.animation.reset()
         self.objs.set_img(obj,arg.curr.data)
     def act_change_color(self,obj,arg):
         obj.set_color(arg.next())
@@ -672,7 +675,7 @@ class Game():
     def can_move(self, obj,x_change,y_change=0):
         """Check if there are any characters in the area that 
         the obj would take up. Takes literal change in x and y.
-        Returns True if character can move in that diRECTion."""
+        Returns True if character can move in that diRECTion.""" # Collision
         assert abs(x_change)<2 and abs(y_change)<2,"x and y can only be -1, 0, or 1."
         yf = y_change + obj.y
         ys = yf - obj.height()
@@ -681,12 +684,12 @@ class Game():
         if x_change > 0:      xs = obj.x + obj.width()
         elif x_change < 0:    xf = obj.x
         if obj.geom not in ["line","skeleton"]:
-            if y_change < 0:
+            if y_change < 0: # Moving up.
                 yf = obj.y - obj.height()
-            elif y_change > 0:
+            elif y_change > 0: # Down.
                 ys = obj.y + 1
         else:
-            ys = yf
+            ys = yf # Geometry is a line.
         for y in range(ys,yf+1):
             for x in range(xs,xf):
                 if self.map.geom[y][x]:
@@ -752,33 +755,33 @@ class Game():
                         if obj.geom == "background" or obj.img == "dead":
                             line.pop(i)
                         elif obj.geom == "all" and obj.static and obj.char not in self.acts.acted_obj_chars:
-                            #This is an object that will never be used and cannot be walked through.
+                            # This is an object that will never be used and cannot be walked through.
                             line.pop(i)
                         else:
                             i+=1
         self.objs.render_objs = set()
     def init_render_obj(self,obj):
-
         obj.top_y = obj.y-obj.height()+1
         obj.top_x = obj.x+obj.width()-1
-        start_y = obj.top_y
+        #start_y = obj.top_y
         end_y = min([obj.y+1,self.map.height-1])
         if obj.geom!="background":
-            for y in range(start_y,end_y):
-                start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.x
-                end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.x+1,self.map.width])
-                for x in range(start_x,end_x):
-                    char = obj.sprite[y-start_y][x-obj.x]
-                    if SKIP not in char:
-                        self.map.rend[y][x].append(char) # The only difference.
+            self.init_render_obj_geom(obj.top_y,end_y,obj,self.init_render_obj_append)
         else:
-            for y in range(start_y,end_y):
-                start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.x
-                end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.x+1,self.map.width])
-                for x in range(start_x,end_x):
-                    char = obj.sprite[y-start_y][x-obj.x]
-                    if SKIP not in char:
-                        self.map.rend[y][x][0] = char
+            self.init_render_obj_geom(obj.top_y,end_y,obj,self.init_render_obj_set)
+    def init_render_obj_geom(self,start_y,end_y,obj,func):
+        for y in range(start_y,end_y):
+            start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.x
+            end_x = min([rfind_non(obj.sprite[y-start_y],SKIP)+obj.x+1,self.map.width])
+            for x in range(start_x,end_x):
+                char = obj.sprite[y-start_y][x-obj.x]
+                if SKIP not in char:
+                    func(y,x,char)
+    def init_render_obj_append(self,y,x,char):
+        self.map.rend[y][x].append(char)
+    def init_render_obj_set(self,y,x,char):
+        self.map.rend[y][x][0] = char
+
     def render_all(self):
         """ This creates the output AND geometry
         maps out of all object sprites."""
@@ -1392,7 +1395,7 @@ class Objs():
             self.geom = geom # Options of: None, line, complex, skeleton, background, or all.
             self.x = int(x)
             self.y = int(y)
-            self.true_x = x
+            self.true_x = x # Float point x coordinate
             self.true_y = y
             self.top_x = x
             self.top_y = y
@@ -1463,26 +1466,30 @@ class Objs():
                         sprite[y][-((x*2)+1)] = self.sprite[x][(y*2)+1]
                 self.sprite = sprite
 class Linked():
-    """Stores a one-way linked list, presumably of sprite names. "start"
-    signifies which name to start at."""
-    def __init__(self,anim_list:list,loop:bool=True,start:int=0):
+    """A one-way linked list. Uses a boolean to check if it's circular. Check
+    for self.curr.next to find out if an animation is complete."""
+    def __init__(self,anim_list:list,loop:bool=True,stunned:bool=False):
         self.first = Node(anim_list[0])
         self.curr = self.first
         self.len = len(anim_list)
+        self.loop = loop
         assert self.len > 0, "Received empty list."
         for i in range(1,len(anim_list)):
             self.curr.next = Node(anim_list[i])
             self.curr = self.curr.next
-        if loop:
-            self.curr.next = self.first
-        else:
-            self.curr.next = self.curr
-        self.curr = self.first
-        for i in range(start):
-            self.curr = self.curr.next
+        self.curr = self.first # Start on frame 1
     def next(self):
-        self.curr = self.curr.next
+        """Loops back to the first if self.loop. Otherwise,
+        it does nothing once finished, only returning data
+        from the last node each time."""
+        if self.curr.next is not None:
+            self.curr = self.curr.next
+        elif self.loop:
+            self.curr = self.first
         return self.curr.data
+    def reset(self):
+        self.curr = self.first
+
 class Node():
     """A single pointer node."""
     def __init__(self,data=None):

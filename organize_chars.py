@@ -1,4 +1,4 @@
-from keyboard import is_pressed,record
+from keyboard import record
 BADS = ["shift","space","down","enter"]
 QUIT = "esc"
 PREFIX = "[KeyboardEvent("
@@ -19,8 +19,10 @@ def decode_record(rec_list:list):
         return rec_list[len(PREFIX):len(PREFIX)+3] # for esc, alt, etc.
     return rec_list[len(PREFIX)]
 
+goal = 0
 with open("texil_chars.txt",encoding="utf=8") as file:
     file_str = file.readline()
+    goal += len(file_str)
 organized = dict()
 with open("texil_chars_org.txt",encoding="utf-8") as file:
     oldline = file.readline()
@@ -65,4 +67,5 @@ with open("texil_chars_org.txt",mode="w",encoding="utf-8") as save_file:
         for match_char in organized[char]:
             line += " " + match_char
         line += "\n"
+    print("Total Progress:",str(((len(line))/goal)*100)[:4]+"%")
     save_file.write(line)
