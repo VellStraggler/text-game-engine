@@ -27,7 +27,7 @@ CHUNK_WID = 32
 CHUNK_HEI = 16
 
 WINDOW_WID = 120#60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
-WINDOW_HEI = 29 #49 for fullscreen
+WINDOW_HEI = 34 #49 for fullscreen
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (WINDOW_HEI+INFO_HEI)

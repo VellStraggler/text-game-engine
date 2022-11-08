@@ -74,6 +74,12 @@ g.mirs.new_type("water",False,17,True,False,True)
 g.mirs.new("outside","water",30,30,60,40,0,-1)
 g.mirs.new("bedroom","mirror",41,6,47,14,0,5)
 
+g.objs.new("cloud","{",geom="line",move="leftright",xspeed=1,color=248)
+g.objs.new("moon","m",geom="background")
+g.mirs.new("sleepy","water",0,28,180,37,0,-1)
+g.objs.new("grassyfloor","}",geom=None,color=34)
+g.objs.new("star","*",geom="background")
+
 
 
 def open_door(obj,arg):
