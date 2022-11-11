@@ -1,6 +1,6 @@
 ###################################
 #                                 #
-#       Texil Game Engine         #
+#       Texillica Game Engine         #
 #    Created by: David Wells      #
 #          Version 1.0            #
 #                                 #
@@ -12,11 +12,12 @@ from random import randint
 from time import time,sleep
 from math import log
 from pygame import mixer
+system("") # Allow the terminal to understand escape codes
 CLEAR = "\033[2J"
 print(CLEAR) # erase pygame's message.
-system("") # Allow the terminal to understand escape codes
 
 DIRPATH = dirname(__file__) + "/"
+DIRPATH = "C:/Users/david/OneDrive/Desktop/Programs_on_Standby/Programming/textengine/"
 
 BLANK = ' '
 SKIP = '$'
@@ -26,8 +27,8 @@ ANIMATE_FPS = 1/8
 CHUNK_WID = 32
 CHUNK_HEI = 16
 
-WINDOW_WID = 120#60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
-WINDOW_HEI = 34 #49 for fullscreen
+WINDOW_WID = 110#60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
+WINDOW_HEI = 29 #49 for fullscreen
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (WINDOW_HEI+INFO_HEI)
@@ -1478,7 +1479,7 @@ class Objs():
 class Linked():
     """A one-way linked list. Uses a boolean to check if it's circular. Check
     for self.curr.next to find out if an animation is complete."""
-    def __init__(self,anim_list:list,loop:bool=True,stuns:bool=False):
+    def __init__(self,anim_list:list,loop:bool=False,stuns:bool=False):
         self.first = Node(anim_list[0])
         self.curr = self.first
         self.len = len(anim_list)
