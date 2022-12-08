@@ -22,6 +22,14 @@ IMG_CHRS_DICT = add_to_dict_from_dict(SPECIAL_CASE_CHRS,string_to_dict(IMG_CHRS)
 
 CHAR_SHEET_PATH = DIRPATH + "pixel_char_sheet_18.png"
 
+class Rect():
+    def __init__(self,left_x, top_y, right_x, bot_y):
+        self.left = left_x
+        self.top = top_y
+        self.right = right_x
+        self.bot = bot_y
+        self.fulfilled = False
+
 class Graphics(Frame):
     def __init__(self):
         super().__init__()
@@ -53,11 +61,11 @@ class Graphics(Frame):
                 #Turns it into a boolean
             img_array.append(img_line)
         return img_array
-    def print_char_img(self,char_img,base_x,base_y):
+    def get_char_img_order_old(self,char_img,base_x,base_y,char_img_orders):
         for x in range(len(char_img[0])):
             make_block = False
-            top_x = base_x + (x*SCALE)
-            bot_x = base_x + ((x+1)*SCALE)
+            left_x = base_x + (x*SCALE)
+            right_x = base_x + ((x+1)*SCALE)
             for y in range(len(char_img)):
                 if not char_img[y][x]: #black
                     if not make_block:
@@ -65,13 +73,25 @@ class Graphics(Frame):
                         top_y = base_y + (y*SCALE)
                     bot_y = base_y + ((y+1)*SCALE)
                 elif make_block:
-                    self.canvas.create_rectangle(top_x, top_y, bot_x, bot_y,fill="black",width=0)
-                    self.rect_count += 1
+                    char_img_orders.append(Rect(left_x, top_y, right_x, bot_y))
+                    #self.canvas.create_rectangle(left_x, top_y, right_x, bot_y,fill="black",width=0)
                     make_block = False
             if make_block:
-                self.canvas.create_rectangle(top_x, top_y, bot_x, bot_y,fill="black",width=0)
-                self.rect_count += 1
+                char_img_orders.append(Rect(left_x, top_y, right_x, bot_y))
+                #self.canvas.create_rectangle(left_x, top_y, right_x, bot_y,fill="black",width=0)
                 make_block = False
+        return char_img_orders
+    def get_char_img_order(self,char_img,base_x,base_y,char_img_orders):
+        for x in range(len(char_img[0])):
+            left_x = base_x + (x*SCALE)
+            right_x = base_x + ((x+1)*SCALE)
+            for y in range(len(char_img)):
+                if not char_img[y][x]: #black
+                    top_y = base_y + (y*SCALE)
+                    bot_y = base_y + ((y+1)*SCALE)
+                    char_img_orders.append(Rect(left_x, top_y, right_x, bot_y))
+                    self.pixel_count += 1
+        return char_img_orders
 
     def print_frame(self,char_list):
         """Take a string that's usually printed in-terminal, and
@@ -81,6 +101,8 @@ class Graphics(Frame):
         y = 0
         c_count = 0
         self.rect_count = 0
+        self.pixel_count = 0
+        char_img_orders = []
         for c in char_list:
             if c_count == 110:
                 y += SCALE*CHAR_HEI
@@ -89,9 +111,72 @@ class Graphics(Frame):
             else:
                 if c != " ":
                     char_img = self.interpret_char(c)
-                    self.print_char_img(char_img,x,y)
+                    char_img_orders = self.get_char_img_order(char_img,x,y,char_img_orders)
                 x += SCALE*CHAR_WID
             c_count += 1
-        print(self.rect_count)
+        vertical_lines = dict()
+        horizontal_lines = dict()
+        for rect in char_img_orders:
+            # Connect vertical lines into singular rectangles
+            if rect.left not in vertical_lines.keys():
+                vertical_lines[rect.left] = []
+            vertical_lines[rect.left].append(rect) # 1. Sort them into columns
+            if rect.top not in horizontal_lines.keys():
+                horizontal_lines[rect.top] = []
+            horizontal_lines[rect.top].append(rect) # 2. Sort them into rows
+        for c in horizontal_lines.values():
+            if len(c) > 1:
+                i = 0
+                rect_len = 1
+                while i < len(c)-1:
+                    rect1 = c[i]
+                    rect2 = c[i+1]
+                    if rect1.right == rect2.left:
+                        rect1.right = rect2.right
+                        rect_len += 1
+                        rect2.fulfilled = True
+                        c.pop(i+1)
+                    else:
+                        if rect_len > 1:
+                            rect1.fulfilled = True
+                            self.canvas.create_rectangle(rect1.left, rect1.top, rect1.right, rect1.bot,fill="black",width=0)
+                            self.rect_count += 1
+                        i += 1
+
+        for c in vertical_lines.values():
+            if len(c) > 1:
+                i = 0
+                rect_len = 1
+                while i < len(c)-1:
+                    rect1 = c[i]
+                    rect2 = c[i+1]
+                    if not rect1.fulfilled:
+                        if rect1.bot == rect2.top and not rect2.fulfilled:
+                            rect1.bot = rect2.bot
+                            rect_len += 1
+                            rect2.fulfilled = True
+                            c.pop(i+1)
+                        else:
+                            rect1.fulfilled = True
+                            self.canvas.create_rectangle(rect1.left, rect1.top, rect1.right, rect1.bot,fill="black",width=0)
+                            self.rect_count += 1
+                            i += 1
+                    else:
+                        i += 1
+                if not rect1.fulfilled:
+                    rect1.fulfilled = True
+                    self.canvas.create_rectangle(rect1.left, rect1.top, rect1.right, rect1.bot,fill="black",width=0)
+                    self.rect_count += 1
+            if not c[0].fulfilled:
+                self.canvas.create_rectangle(c[0].left, c[0].top, c[0].right, c[0].bot,fill="black",width=0)
+                c[0].fulfilled = True
+                self.rect_count += 1
+
+        for rect in char_img_orders:
+            if not rect.fulfilled:
+                self.canvas.create_rectangle(rect1.left, rect1.top, rect1.right, rect1.bot,fill="black",width=0)
+                self.rect_count += 1
+        
+        print("\033[2J" + "Saved " + str(self.pixel_count - self.rect_count) + " rectangles.")
         self.canvas.pack(fill = BOTH, expand = 1)
         self.canvas.update()
