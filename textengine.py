@@ -12,8 +12,9 @@ from random import randint
 from time import time,sleep
 from math import log
 from pygame import mixer
+import graphics as gx
 system("") # Allow the terminal to understand escape codes
-CLEAR = "\033[2J"
+CLEAR = ""#\033[2J"
 print(CLEAR) # erase pygame's message.
 
 DIRPATH = dirname(__file__) + "/"
@@ -21,7 +22,7 @@ DIRPATH = "C:/Users/david/OneDrive/Desktop/Programs_on_Standby/Programming/texte
 
 BLANK = ' '
 SKIP = '$'
-CUR = '\033[A\033[F'
+CUR = ''#\033[A\033[F'
 MAX_TICK = 16
 ANIMATE_FPS = 1/8
 CHUNK_WID = 32
@@ -53,12 +54,11 @@ H_FLIP_CHARS = {'\\':'/','/':'\\','↙':'↖','↘':'↗','כ':'c',
     'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↙','↗':'↘',"_":"⎺",
     "⎺":"_","'":".",".":"'","A":"V","V":"A","M":"W","W":"M"}
 
-COLOR_ESC = "\033[48;5;"
-DEFAULT_COLOR = COLOR_ESC + "16m"
-DEFAULT_TEXT  = "\033[38;5;15m"
+COLOR_ESC = ""#\033[48;5;"
+DEFAULT_COLOR = ""#COLOR_ESC + "16m"
+DEFAULT_TEXT  = ""#\033[38;5;15m"
 NEW_SETTING = {"color":"mono","mono":"geom","geom":"color"}
-def ex_func(obj,arg):
-    pass
+
 class Game():
     """
     Creates an empty map and empty sprite list.
@@ -82,6 +82,11 @@ class Game():
         self.texts = []
         self.quit = False
         self.camera_follow = []
+
+        self.root = gx.Tk()
+        self.root.geometry(str(gx.WINDOW_WID) + "x" + str(gx.WINDOW_HEI) + "+250+0")
+        self.graphics = gx.Graphics()
+        self.root.after(1, self.task)
 
         mixer.init()
         self.themes = []
@@ -115,6 +120,9 @@ class Game():
                             {"up arrow":self.move_up,"left arrow":self.move_left,
                             "down arrow":self.move_down,"right arrow":self.move_right,
                             ".":self.run_interacts}}
+
+    def task(self):
+        self.root.after(1, self.task)
 
     def set_map_path(self,path,directed_path=False):
         self.map.set_path(path,directed_path)
@@ -233,7 +241,6 @@ class Game():
         self.init_objs()
         self.init_render_all()
         self.map.display_timer()
-        #self.map.print_all()
     def init_objs(self):
         """Create objects from the pallete and place them on coordinates
         as directed by the input map."""
@@ -250,12 +257,14 @@ class Game():
         self.render_all()
         self.map.display_timer()
         self.map.print_all()
+        self.graphics.print_frame(self.map.print_map)
         self.run_frame_counter()
     def game_loop_debug(self):
         self.set_all_movement()
         self.render_all()
         self.map.display_timer()
         self.map.print_all(self.disp_data)
+        self.graphics.print_frame(self.map.print_map)
         self.run_frame_counter(True)
 
     def run_frame_counter(self,with_avg=False):
@@ -1016,16 +1025,16 @@ class Map():
         newline escapes. Appending to a new screen list is oddly faster
         than editing a screen list."""
         self.screen = []
-        if self.setting == "color":
-            [[self.get_print_pixel(self.rend[row][x][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
-        elif self.setting == "geom":
-            [[self.get_print_pixel(str(int(self.geom[row][x])),x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
-        else:
-            [[self.get_print_pixel(self.rend[row][x][-1][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
+        #if self.setting == "color":
+        #    [[self.get_print_pixel(self.rend[row][x][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
+        #elif self.setting == "geom":
+        #    [[self.get_print_pixel(str(int(self.geom[row][x])),x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
+        #else: #Black and White
+        [[self.get_print_pixel(self.rend[row][x][-1][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
         self.add_message()
         self.add_data(data)
         self.print_map = RETURN + self.text_color + "".join(self.screen)
-        print(self.print_map)
+        #print(self.print_map) #FIXME
     def get_print_pixel(self,color_char_pair,x):
         """Filters a colored character to not call
         the same color escape code as has been most
