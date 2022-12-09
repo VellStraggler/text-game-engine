@@ -1,6 +1,6 @@
 ###################################
 #                                 #
-#       Texillica Game Engine         #
+#     Texillica Game Engine       #
 #    Created by: David Wells      #
 #          Version 1.0            #
 #                                 #
@@ -84,9 +84,9 @@ class Game():
         self.camera_follow = []
 
         self.root = gx.Tk()
-        self.root.geometry(str(gx.WINDOW_WID) + "x" + str(gx.WINDOW_HEI) + "+250+0")
+        self.root.geometry(str(gx.WINDOW_WID) + "x" + str(gx.WINDOW_HEI) + "+0+0")
         self.graphics = gx.Graphics()
-        self.root.after(1, self.task)
+        self.root.after(50, self.task)
 
         mixer.init()
         self.themes = []
@@ -122,7 +122,7 @@ class Game():
                             ".":self.run_interacts}}
 
     def task(self):
-        self.root.after(1, self.task)
+        self.root.after(50, self.task)
 
     def set_map_path(self,path,directed_path=False):
         self.map.set_path(path,directed_path)
@@ -257,18 +257,18 @@ class Game():
         self.render_all()
         self.map.display_timer()
         self.map.print_all()
-        self.graphics.print_frame(self.map.print_map)
+        self.graphics.print_frame(self.map.screen)
         self.run_frame_counter()
     def game_loop_debug(self):
         self.set_all_movement()
         self.render_all()
         self.map.display_timer()
         self.map.print_all(self.disp_data)
-        self.graphics.print_frame(self.map.print_map)
+        self.graphics.print_frame(self.map.screen)
         self.run_frame_counter(True)
 
     def run_frame_counter(self,with_avg=False):
-        self.last_frame_start = self.frame_start
+        self.prev_frame_start = self.frame_start
         if time() != self.frame_start:
             self.fps = round(1/(time()-self.frame_start),2)
             if with_avg:
@@ -457,19 +457,19 @@ class Game():
     def move_left(self,obj):
         self.objs.set_img(obj,obj.animate["a"])
         obj.face_right = False
-        obj.true_x -= obj.xspeed*(self.frame_start-self.last_frame_start)
+        obj.true_x -= obj.xspeed*(self.frame_start-self.prev_frame_start)
     def move_right(self,obj):
         self.objs.set_img(obj,obj.animate["d"])
         obj.face_right = True
-        obj.true_x += obj.xspeed*(self.frame_start-self.last_frame_start)
+        obj.true_x += obj.xspeed*(self.frame_start-self.prev_frame_start)
     def move_down(self,obj):
         self.objs.set_img(obj,obj.animate["s"])
         obj.face_down = True
-        obj.true_y += obj.yspeed*(self.frame_start-self.last_frame_start)
+        obj.true_y += obj.yspeed*(self.frame_start-self.prev_frame_start)
     def move_up(self,obj):
         self.objs.set_img(obj,obj.animate["w"])
         obj.face_down = False
-        obj.true_y -= obj.yspeed*(self.frame_start-self.last_frame_start)
+        obj.true_y -= obj.yspeed*(self.frame_start-self.prev_frame_start)
     
     def kill_obj(self,obj,sound:bool=False): # DEATH
         self.objs.set_img(obj,"dead")
@@ -855,10 +855,11 @@ class Game():
 
     def move_camera(self):
         # CAMERA MOVEMENT:
-        player = self.map.camera_star
-        #y = player.y-(player.height()//2)
-        #self.map.center_camera(player.x+(player.width()//2),y)
-        self.map.center_camera(player.x+4,player.y-4)
+        if self.map.camera_star is not None:
+            player = self.map.camera_star
+            #y = player.y-(player.height()//2)
+            #self.map.center_camera(player.x+(player.width()//2),y)
+            self.map.center_camera(player.x+4,player.y-4)
 
     def add_geom(self,obj):
         self.geom_set_dict[obj.geom](obj)
