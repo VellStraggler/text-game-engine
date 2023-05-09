@@ -1,11 +1,11 @@
 # The TXT Game Engine
 Developer: David Wells
 ## Setup:
-There are four main file-types to any videogame made with this engine. The **Sprite file**, the **Map file**, the **Speech file** and the **Python Code file**. It is essential that all of these stay in the same folder.
+There are four main file-types to any videogame made with this engine. The **Sprite file**, the **Map file**, the **Speech file** and the **Python Code file**. All of these are to remain in the same folder.
 
 ## 1. The Sprite file
 
-It is awfully simple to create a character or a tree, or a house or celery. The image of any one of these is known as a **sprite**. To store a sprite, create a text file under any name you think would be useful. Here's what goes inside:
+This is simply a text file filled with sprite designs. The image of any one of these is known as a **sprite**. To store a sprite, create a text file under any name you think would be useful. Here's what goes inside:
 
         $The name of the sprite goes here$ 
         The sprite is drawn here
@@ -79,7 +79,7 @@ Here is the full list of supported sounds that the game will play automatically:
 * jump
 * death
 * quit
-Here are the sounds we intend to add.
+Here are the sounds we may add in the future.
 * move
 * pain
 * attack
@@ -91,6 +91,11 @@ Here are the sounds we intend to add.
 * objective-failed
 * talk
 
+
+### Conclusion
+There are some pre-made programs that you can look at, the primary one being undertaker. Most recently, a reflection feature was added so that things like water and mirrors could be placed in-game. If you have any questions you need answered, please contact me from any of the social media sites featured in my bio:
+
+https://github.com/VellStraggler
 
 # DEVELOPER NOTES
 * Textengine uses the module playsound version 1.2.2, NOT the latest
