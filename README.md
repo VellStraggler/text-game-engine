@@ -2,6 +2,10 @@
 Developer: David Wells
 ## Setup:
 There are four main file-types to any videogame made with this engine. The **Sprite file**, the **Map file**, the **Speech file** and the **Python Code file**. All of these are to remain in the same folder.
+### Things to Download:
+you must install the following modules for python: keyboard, py-game
+Then in the main python file, you need to update the DIRPATH to your repository's exact path
+After that, it should work (I hope)
 
 ## 1. The Sprite file
 
