@@ -91,7 +91,7 @@ class Game():
         self.fps = 0
         self.display_fps = 0
         self.fps_list = []
-        self.disp_data = ""
+        self.display_data = ""
         self.start_time = 0
         self.fps_max = 60
         self.fps_timer = 0
@@ -256,7 +256,7 @@ class Game():
         self.set_all_movement()
         self.render_all()
         self.map.display_timer()
-        self.map.print_all(self.disp_data)
+        self.map.print_all(self.display_data)
         self.run_frame_counter(True)
 
     def run_frame_counter(self,with_avg=False):
@@ -270,8 +270,8 @@ class Game():
                 self.display_fps = self.fps
         else:
             self.fps = 999.00 # Cosmetic only.
-        self.disp_data = "FPS:" + str(self.display_fps)
-        self.disp_data +=" Map: " + deconstruct_path(self.map_name)
+        self.display_data = "FPS:" + str(self.display_fps)
+        self.display_data +=" Map: " + deconstruct_path(self.map_name)
         self.frame_start = time()
 
     def end_game(self):
@@ -416,7 +416,7 @@ class Game():
         self.run_acts(player)
         self.map.camera_star = player # UPDATE: Only needs to be done once.
         coords = "("+str(player.x)+","+str(player.y)+")"
-        self.disp_data += coords
+        self.display_data += coords
     
     def get_objs_touching(self,obj):
         xs,xf,ys,yf = self.get_xy_range(obj)

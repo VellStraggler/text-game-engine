@@ -1,6 +1,6 @@
 from textengine import brighten,color_by_num,RETURN
 from time import sleep
-sphere=[brighten
+sphere=[
     " HHHHH+ ",
     "H##HHH++",
     "H#HH+++.",

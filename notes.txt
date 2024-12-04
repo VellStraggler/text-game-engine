@@ -1,7 +1,0 @@
-You have a 2D list of all the text that makes up a sprite, but you need them to be able to be pointers to a mirroring function.
-
-Within the 256 colors provided, there are 5 obvious hues of red(52,88,124,160,196), green(22,28,34,40,46), and blue(17,18,19,20,21). 
-
-It needs to find where all objects will move, delete them, and then place them in the new location. This all happens only once per object in a frame.
-
-Act that sends an object on its way to a given location.

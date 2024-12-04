@@ -1,5 +1,11 @@
+import sys
+import os
+
+# Add the parent folder of "textengine.py" to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from textengine import Game,Linked,color_by_num,DEFAULT_COLOR
 try:
-    from textengine import Game,Linked,color_by_num,DEFAULT_COLOR
 
     g = Game()
     g.set_map_path("under/m/menu")

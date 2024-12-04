@@ -1,9 +1,15 @@
+import sys
+import os
+
+# Add the parent folder of "textengine.py" to the system path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import textengine as tx
 from time import sleep,time
 g = tx.Game()
 g.set_map_path("mariokart/test_map.txt")
 g.set_sprite_path("mariokart/karts.txt")
-g.objs.new("mario-w","m",xspeed = 20,yspeed=10,geom="line",color=124)
+g.objs.new("mario-w","m",xspeed = 20,yspeed=10,move="wasd",geom="line",color=124)
 g.objs.new("block","b",geom="complex")
 g.objs.new("qblock-f1","q")
 
@@ -18,7 +24,7 @@ skins = ["mario-d2","mario-d1","mario","mario-w","mario-a","mario-a1","mario-a2"
 block_frames = ["qblock-f1","qblock-f2","qblock-f3","qblock-f4","qblock-f5","qblock-f6"]
 def game_loop(g):
     g.frame_start = time()
-    g.move_all()
+    g.set_all_movement()
     g.render_all()
     g.map.display_timer()
     g.map.print_all(g.display_data)
@@ -31,7 +37,7 @@ while not g.quit:
     sleep(.1)
     g = game_loop(g)
     g.init_render_all()
-    for obj in g.objs.objs:
+    for obj in g.map.objs.render_objs:
         if obj.char == "m":
             mario = obj
             g.set_sprite(mario,skins[i])
