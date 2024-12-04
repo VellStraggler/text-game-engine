@@ -16,8 +16,9 @@ system("") # Allow the terminal to understand escape codes
 CLEAR = "\033[2J"
 print(CLEAR) # erase pygame's message.
 
-DIRPATH = dirname(__file__) + "/"
-DIRPATH = "C:/Users/david/OneDrive/Desktop/Programs_on_Standby/Programming/textengine/"
+# DIRPATH = dirname(__file__) + "/"
+# DIRPATH = "C:/Users/david/OneDrive/Desktop/Programs_on_Standby/Programming/textengine/"
+DIRPATH = "C:/Users/david/code_projects/my-projects/textgameengine/"
 
 BLANK = ' '
 SKIP = '$'
@@ -259,7 +260,7 @@ class Game():
         self.run_frame_counter(True)
 
     def run_frame_counter(self,with_avg=False):
-        self.last_frame_start = self.frame_start
+        self.prev_frame_start = self.frame_start
         if time() != self.frame_start:
             self.fps = round(1/(time()-self.frame_start),2)
             if with_avg:
@@ -411,6 +412,7 @@ class Game():
             for key in self.key_dict[player.move].keys():
                 if is_pressed(key):
                     self.key_dict[player.move][key](player)
+                    break # ONLY ALLOW ONE BUTTON AT A TIME
         self.run_acts(player)
         self.map.camera_star = player # UPDATE: Only needs to be done once.
         coords = "("+str(player.x)+","+str(player.y)+")"
@@ -448,19 +450,19 @@ class Game():
     def move_left(self,obj):
         self.objs.set_img(obj,obj.animate["a"])
         obj.face_right = False
-        obj.true_x -= obj.xspeed*(self.frame_start-self.last_frame_start)
+        obj.true_x -= obj.xspeed*(self.frame_start-self.prev_frame_start)
     def move_right(self,obj):
         self.objs.set_img(obj,obj.animate["d"])
         obj.face_right = True
-        obj.true_x += obj.xspeed*(self.frame_start-self.last_frame_start)
+        obj.true_x += obj.xspeed*(self.frame_start-self.prev_frame_start)
     def move_down(self,obj):
         self.objs.set_img(obj,obj.animate["s"])
         obj.face_down = True
-        obj.true_y += obj.yspeed*(self.frame_start-self.last_frame_start)
+        obj.true_y += obj.yspeed*(self.frame_start-self.prev_frame_start)
     def move_up(self,obj):
         self.objs.set_img(obj,obj.animate["w"])
         obj.face_down = False
-        obj.true_y -= obj.yspeed*(self.frame_start-self.last_frame_start)
+        obj.true_y -= obj.yspeed*(self.frame_start-self.prev_frame_start)
     
     def kill_obj(self,obj,sound:bool=False): # DEATH
         self.objs.set_img(obj,"dead")
