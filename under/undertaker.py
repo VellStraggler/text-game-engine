@@ -4,7 +4,8 @@ import os
 # Add the parent folder of "textengine.py" to the system path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from textengine import Game,Linked,color_by_num,DEFAULT_COLOR
+from textengine import Game,Linked,DEFAULT_COLOR
+from statics import color_by_num
 try:
 
     g = Game()
