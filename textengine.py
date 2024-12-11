@@ -540,12 +540,15 @@ class Game():
         self.set_theme(arg)
         self.play_theme()
     def act_message(self,obj,arg):
+        """arg can be an integer index of the line of text you want
+        from the stored texts file, or it can be a unique string"""
         if arg == int(arg):
             try:msg = self.texts[arg]
             except IndexError:msg = ""
         else:msg = arg
         self.map.set_disp_msg(msg)
     def act_rotate(self,obj,arg:int):
+        """Rotate the given object by 90 degrees times the rotation (arg)"""
         for i in range(arg):
             obj.rotate_right()
             self.objs.set_sprite(obj,obj.img)
@@ -553,16 +556,16 @@ class Game():
     def act_quit(self,obj,arg):
         self.quit = True
     def act_sound(self,obj,arg:str):
-        # ARG: sound path
+        """arg: sound path"""
         self.add_sound(arg,arg)
         self.play_sound(arg)
     def act_unlock(self,obj,arg):
-        # ARG: name of action to unlock
+        """arg: name of action to unlock"""
         for targ_act in self.acts.acts:
             if targ_act.name == arg:
                 targ_act.locked = False
     def act_lock(self,obj,arg):
-        # ARG: name of action to lock
+        """arg: name of action to lock"""
         for targ_act in self.acts.acts:
             if targ_act.name == arg:
                 targ_act.locked = True
@@ -793,8 +796,8 @@ class Game():
 
     def render_map_mirrors(self):
         map_name = deconstruct_path(self.map_name)
-        if map_name in self.mirrors.mirrors:
-            for mir in self.mirrors.mirrors[map_name]:
+        if map_name in self.mirrors.world_mirrors:
+            for mir in self.mirrors.world_mirrors[map_name]:
                 mir_type = self.mirrors.types[mir.mirror_name]
                 if mir_type.color > -1:
                     mir_color = color_by_number(mir_type.color)

@@ -2,7 +2,7 @@ from statics import deconstruct_path
 
 class Mirrors():
     def __init__(self):
-        self.mirrors = dict() #world_name:list of mirrors
+        self.world_mirrors = dict() #world_name:list of mirrors
         self.types = dict()
     def new_type(self,name:str,flip_sprites:bool=False,color:int=-1,
         flip_horizontal:bool=False,flip_vertical:bool=False,
@@ -11,9 +11,9 @@ class Mirrors():
             flip_horizontal,flip_vertical,ripple,brighten)
     def new(self,world_name,mirror_name,x1,y1,x2,y2,copy_x,copy_y):
         world_name = deconstruct_path(world_name)
-        if world_name not in self.mirrors:
-            self.mirrors[world_name]=[]
-        self.mirrors[world_name].append(self.Mirror(mirror_name,x1,y1,x2,y2,copy_x,copy_y))
+        if world_name not in self.world_mirrors:
+            self.world_mirrors[world_name]=[]
+        self.world_mirrors[world_name].append(self.Mirror(mirror_name,x1,y1,x2,y2,copy_x,copy_y))
     class Mirror():
         """This is for instances of rectangular areas of land that are
         reflective. It is assumed that the location being mirrored has
