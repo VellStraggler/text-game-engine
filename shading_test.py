@@ -1,4 +1,4 @@
-from textengine import brighten,color_by_num,RETURN
+from textengine import brighten,color_by_number,RETURN
 from time import sleep
 sphere=[
     " HHHHH+ ",
@@ -7,7 +7,7 @@ sphere=[
     " +++... "]
 def rainbow_sphere():
     for i in range (1,256):
-        color = color_by_num(i)
+        color = color_by_number(i)
         brighter = brighten(color,True)
         darker = brighten(color,False)
         darkest = brighten(darker,False)
@@ -25,8 +25,8 @@ def rainbow_sphere():
                 elif i == ".":
                     line.append(darkest + " ")
                 else:
-                    line.append(color_by_num(16)+ " ")
-            ssphere = ssphere +("".join(line)) + color_by_num(16) + "\n"
+                    line.append(color_by_number(16)+ " ")
+            ssphere = ssphere +("".join(line)) + color_by_number(16) + "\n"
         ssphere = RETURN + ssphere
         print(ssphere)
         sleep(.1)

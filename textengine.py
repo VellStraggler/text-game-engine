@@ -16,7 +16,7 @@ from acts import Acts
 from linked import Linked
 from map import Map
 from mirrors import Mirrors
-from statics import ANIMATE_FPS, BLANK, BUBBLE, CHUNK_HEI, CHUNK_WID, CLEAR, COLOR_ESC, DEFAULT_COLOR, DEFAULT_TEXT, FLIP_CHARS, H_FLIP_CHARS, NEW_SETTING, RETURN, S_LINE, SKIP, SPACES, WINDOW_HEI, WINDOW_WID, deconstruct_path, find_count, find_indices, find_non, ms_gothic, replace_spaces, rfind_non, solidify_path, color_by_num
+from statics import ANIMATE_FPS, BLANK, BUBBLE, CHUNK_HEI, CHUNK_WID, CLEAR, COLOR_ESC, DEFAULT_COLOR, DEFAULT_TEXT, FLIP_CHARS, H_FLIP_CHARS, NEW_SETTING, RETURN, S_LINE, SKIP, SPACES, WINDOW_HEI, WINDOW_WID, deconstruct_path, find_count, find_indices, find_non, ms_gothic, replace_spaces, rfind_non, solidify_path, color_by_number
 
 system("") # Allow the terminal to understand escape codes
 print(CLEAR) # erase pygame's message.
@@ -36,7 +36,7 @@ class Game():
         self.sprites = {"dead":[[" "]]}
         geometry = self.objs.Obj("dead","g",geom="all") # invisible geometry: g
         self.the_dead = set()
-        self.mirs = Mirrors()
+        self.mirrors = Mirrors()
         self.objs.pallete_objs.add(geometry)
         self.universal_objs = set()
         self.max_sprite_width = 1
@@ -145,12 +145,15 @@ class Game():
                         name = line[1:inds[1]]
                         where_coded = False
                         if skips == 4:
+                            # $below$ at end of sprite name, this tells you that
+                            # the color code is below the text drawing rather than
+                            # in it.
                             if line[inds[2]+1:inds[3]] == "below":  where_coded = True
                         colors_raw = line[inds[1]+1:inds[2]]
                         colors_raw = colors_raw.split(",")
                         color_code = [""]
                         for num in colors_raw:
-                            color_code.append(color_by_num(int(num)))
+                            color_code.append(color_by_number(int(num)))
                 else: # Append to the current sprite image.
                     line = replace_spaces(line)
                     line = ms_gothic(line)
@@ -159,6 +162,26 @@ class Game():
                 line = file.readline()[:-1] # Removes the \n
         self.set_sprites_in_objs()
     
+    # Made for user readability
+    def new_object(self, img:str, char:str, x:int = -1, y:int = -1, geom:str = "all",
+        move = None, xspeed:int = 1, yspeed:int = 1, hp:int = 1, face_right:bool = True,
+        face_down:bool = False, grav:bool = False, dmg = 1,enemy_chars:list = [],
+        dmg_dirs:list=[], animate = None,txt:int = -1, max_jump = 1, color = "",
+        data:dict = dict(), rotation:int = 0):
+        """Forward arguments to objs.new(). The only required variables are img and char.
+        Img is a string of the sprite name you will use.
+        Char is the text character on the map which represents where your object will be
+        drawn."""
+
+        self.objs.new(img, char, x, y, geom, move, xspeed, yspeed, hp, face_right, face_down,
+        grav, dmg, enemy_chars, dmg_dirs, animate, txt, max_jump, color, data, rotation)
+
+    # Made for user readability
+    def new_action(self,func,name:str="default",type:str="interact", item_char:str="",
+        arg=None,map:str ="default",act_on_self:bool=False,locked:bool = False, loc_arg = []):
+        """Forward arguments to Acts.new()"""
+        self.acts.new(func, name, type, item_char, arg, map, act_on_self, locked, loc_arg)
+
     def set_sprites_in_objs(self):
         self.objs.sprites = self.sprites
         self.objs.max_sprite_height = self.max_sprite_height
@@ -640,7 +663,7 @@ class Game():
             obj.true_x = obj.x
         if move_y_targ!= 0 and obj.move_y==0:
             obj.true_y = obj.y
-    def can_move(self, obj,x_change,y_change=0):
+    def can_move(self, obj, x_change, y_change=0):
         """Check if there are any characters in the area that 
         the obj would take up. Takes literal change in x and y.
         Returns True if character can move in that diRECTion.""" # Collision
@@ -657,9 +680,17 @@ class Game():
             elif y_change > 0: # Down.
                 ys = obj.y + 1
         else:
-            ys = yf # Geometry is a line.
+            ys = yf # Geometry is the bottom line
+        if len(self.map.geom) < yf -2 or ys < 0:
+            return False
+        if len(self.map.geom[0]) < xf -2 or xs < 0:
+            return False
         for y in range(ys,yf+1):
             for x in range(xs,xf):
+                if (y > len(self.map.geom) -2):
+                    return False
+                elif (x > len(self.map.geom[y]) -2):
+                    return False
                 if self.map.geom[y][x]:
                     return False
         return True
@@ -762,11 +793,11 @@ class Game():
 
     def render_map_mirrors(self):
         map_name = deconstruct_path(self.map_name)
-        if map_name in self.mirs.mirrors:
-            for mir in self.mirs.mirrors[map_name]:
-                mir_type = self.mirs.types[mir.mirror_name]
+        if map_name in self.mirrors.mirrors:
+            for mir in self.mirrors.mirrors[map_name]:
+                mir_type = self.mirrors.types[mir.mirror_name]
                 if mir_type.color > -1:
-                    mir_color = color_by_num(mir_type.color)
+                    mir_color = color_by_number(mir_type.color)
                     colored = True
                 else:colored=False
                 switch = bool(int(time()*3)%2) # Speed of ripple is 3 changes/sec.

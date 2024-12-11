@@ -1,5 +1,5 @@
 from linked import Linked
-from statics import color_by_num, ANIMATE_FPS, BLANK, CHUNK_HEI, CHUNK_WID, DEFAULT_COLOR, FLIP_CHARS, SKIP
+from statics import color_by_number, ANIMATE_FPS, BLANK, CHUNK_HEI, CHUNK_WID, DEFAULT_COLOR, FLIP_CHARS, SKIP
 
 class Objs():
     def __init__(self,universal_objs=set()):
@@ -21,25 +21,16 @@ class Objs():
         if img == None: img = obj.img
         self.render_objs.add(obj)
         obj.img = img
+
     def set_sprite(self,obj):
-        """Change the sprite of an object."""
-        obj.sprite = []
-        [obj.sprite.append(list(row)) for row in self.sprites[obj.img]]
-        self.set_sprite_color(obj)
-        obj.rotate = 0
-        obj.img = obj.img
+        """Change the sprite of an object.
+        Deprecated method. use obj.set_sprite()"""
+        obj.set_sprite(self.sprites)
+    
     def set_sprite_color(self,obj):
-        chars = [SKIP]
-        if obj.geom == "skeleton":
-            chars.append(BLANK)
-        for y in range(obj.height()):
-            for x in range(obj.width()):
-                char = obj.sprite[y][x]
-                if chars[-1] == char:
-                    char = SKIP # Turn any BLANKS into SKIPS
-                if char != SKIP:
-                    char = obj.color + char
-                obj.sprite[y][x] = char
+        """Deprecated method. Use obj.set_sprite_color()"""
+        obj.set_sprite_color()
+
     def get_flipped_sprite(self,sprite,obj=None):
         """ Returns a vertically mirrored
         2D sprite of the given sprite"""
@@ -108,25 +99,23 @@ class Objs():
     def remove_obj(self,obj):
         """Remove the obj twice, once from the top coords, and once
         from the bottom ones."""
-        #for xy in ([obj.x,obj.y],[obj.top_x,obj.top_y]):
         xy = [obj.x,obj.y]
         chunk = self.find_obj_chunk(xy[0],xy[1])
         line = chunk[xy[1]%CHUNK_HEI]
         i = self.find_obj_index(obj,chunk)
         if len(line) > 0:
             line.pop(i)
-    def init_obj(self,obj,rotate=0):
-        obj.rotate_right(rotate)
+    def init_obj(self,obj):
         self.set_sprite(obj)
         if obj.animate == "flip":
             original = obj.img
-            flip_img = reversed(obj.img)
-            self.sprites[flip_img] = self.get_flipped_sprite(self.sprites[obj.img],obj)
-            obj.animate = {"w":obj.img,"a":flip_img,"s":obj.img,"d":original}
+            flipped_img = reversed(obj.img)
+            self.sprites[flipped_img] = self.get_flipped_sprite(self.sprites[obj.img],obj)
+            obj.animate = {"w":obj.img,"a":flipped_img,"s":obj.img,"d":original}
         elif obj.animate == None:
             obj.animate = {"w":obj.img,"a":obj.img,"s":obj.img,"d":obj.img}
         elif obj.animate == "sneaky":
-            # This takes the object img name and assumes it to be facing right
+            # First frame MUST be right-facing
             # and to be the reverse of facing left.
             # It looks for the object image with "-w" and "-s" added at the end
             assert (obj.img + "-w") in self.sprites.keys(), "img_name-w required."
@@ -137,36 +126,44 @@ class Objs():
             self.sprites[facing_left] = self.get_flipped_sprite(self.sprites[obj.img],obj)
             obj.animate = {"w":facing_up,"a":facing_left,"s":facing_down,"d":obj.img}
         else:
+            # Animation given is a Linked List of sprite names
             obj.animation = obj.animate
             obj.animate = None
-            #This is where an idle animation is put in.
+            # This is where an idle animation is put in.
         self.append_obj_ordered(obj)
     def add_to_pallete(self,obj):
         obj_clone = self.copy(obj) #reset coords
         self.pallete_objs.add(obj_clone)
+
     def new(self,img, char, x=-1,y=-1, geom = "all",
-    move = None, xspeed = 1, yspeed = 1, hp =1,face_right=True,
-    face_down=False, grav=False,dmg = 1, enemy_chars=[],
-    dmg_dirs=[], set_rotate=0, animate=None,txt=-1,max_jump=1,
-    color="",data=dict()):
-        """Creates an Obj and appends it to the objs list. This should
-        only be called by the module-user (you)."""
+        move = None, xspeed = 1, yspeed = 1, hp =1,face_right=True,
+        face_down=False, grav=False,dmg = 1, enemy_chars=[],
+        dmg_dirs=[], animate=None,txt=-1,max_jump=1,
+        color="",data=dict(), rotation=0):
+        """Creates an Obj and appends it to the objs list."""
         obj = self.Obj(img, char, x,y, geom, move,xspeed,yspeed,
             hp,face_right,face_down,grav,dmg,enemy_chars,dmg_dirs,
-            animate,txt,max_jump,color,data)
+            animate,txt,max_jump,color,data, rotation)
         self.add_to_pallete(obj)
 
-    def copy(self,o,newx=-1,newy=-1):
+    def copy(self,o,new_x=-1,new_y=-1):
         """Returns a duplicate of an object."""
-        obj = self.Obj(o.img, o.char, newx,newy, o.geom, o.move, o.xspeed, o.yspeed,
+        obj = self.Obj(o.img, o.char, new_x,new_y, o.geom, o.move, o.xspeed, o.yspeed,
             o.hp, o.face_right, o.face_down, o.grav, o.dmg, o.enemy_chars, o.dmg_dirs,
-            o.animate,o.txt,o.max_jump,o.color,o.data)
+            o.animate,o.txt,o.max_jump,o.color,o.data, o.rotation)
         return obj
+    
     class Obj():
-        def __init__(self,img, char, x=-1,y=-1, geom = "all",
-        move = None, xspeed = 1,yspeed = 1,hp =1,face_right=True,
-        face_down=False,grav:bool=False,dmg = 1,enemy_chars=[],dmg_dirs=[],
-        animate=None,txt:int=-1,max_jump=1,color="",data=dict()):
+        def __init__(self,img:str, char:str, x:int = -1, y:int = -1, geom:str = "all",
+        move = None, xspeed:int = 1, yspeed:int = 1, hp:int = 1, face_right:bool = True,
+        face_down:bool = False, grav:bool = False, dmg = 1,enemy_chars:list = [],
+        dmg_dirs:list=[], animate = None,txt:int = -1, max_jump = 1, color = "",
+        data:dict = dict(), rotation:int = 0):
+            
+            # For TextEngine Devs: 
+            # Any changes made to the variables here must also be reflected in
+            # Game.new_object, Objs.new, objs.copy
+
             self.static = False
             self.move = move # None, leftright, wasd, dirs.
             self.grav = grav
@@ -187,7 +184,6 @@ class Objs():
                 self.acceleration = 0 # NOT IMPLEMENTED
                 self.jump = 0 # based on yspeed
                 # Store pointers to objects that are touching this one.
-            self.img = img
             self.img = img
             self.sprite = [] # Must be set through Objs function new().
             self.geom = geom # Options of: None, line, complex, skeleton, background, or all.
@@ -210,7 +206,7 @@ class Objs():
             self.frame_time = 0
             self.stunned = False
 
-            self.color = self.set_color(color)
+            self.color = self.interpret_color(color)
             # "flip" is default, mirrors the image for every change between right and left.
             # Otherwise, if it's not None it becomes a dictionary: {w,a,s,d:sprite images.}            
             self.txt = txt # line number from textsheet
@@ -218,17 +214,40 @@ class Objs():
             self.reflect_y = 0
             self.face_right = face_right # Left: False, Right: True
             self.face_down = face_down # Up: False, Down: True
-            self.rotate = 0 # 0 through 3
+            self.rotation = rotation # 0 through 3
             self.data = data
 
         def init_touching(self):
             self.touching = {"up":set(),"down":set(),"left":set(),"right":set(),"inside":set()}
-        def set_color(self,color):
+
+        def set_sprite(self, objs_sprites):
+            """objs_sprites should come from instantiated Objs"""
+            self.sprite = []
+            [self.sprite.append(list(row)) for row in objs_sprites[self.img]]
+            # [self.sprite.append(list(row)) for row in self.sprites[self.img]]
+            self.set_sprite_color()
+            self.rotation = 0
+            self.img = self.img
+
+        def interpret_color(self,color):
             if type(color) == type(42):
-                self.color = color_by_num(color)
+                self.color = color_by_number(color)
             else:
                 self.color = color # The literal escape code (or blank), not the number.
             return self.color
+        
+        def set_sprite_color(self):
+            chars = [SKIP]
+            if self.geom == "skeleton":
+                chars.append(BLANK)
+            for y in range(self.height()):
+                for x in range(self.width()):
+                    char = self.sprite[y][x]
+                    if chars[-1] == char:
+                        char = SKIP # Turn any BLANKS into SKIPS
+                    if char != SKIP:
+                        char = self.color + char
+                    self.sprite[y][x] = char
             
         def width(self,y=0):
             return len(self.sprite[y])
@@ -246,11 +265,11 @@ class Objs():
             self.move_x = 0
             self.move_y = 0
 
-        def rotate_right(self,rotate):
+        def set_rotation(self,rotate:int = 0):
             """Rotates the object sprite 90 degrees 
             times the rotate var."""
-            while rotate != self.rotate:
-                self.rotate = (self.rotate + 1)%4
+            while rotate != self.rotation:
+                self.rotation = (self.rotation + 1)%4
                 # Only works properly on even-width objects.
                 sprite = [] # Must make a new sprite sequentially,
                 for x in range(len(self.sprite[0])//2):

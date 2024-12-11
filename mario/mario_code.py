@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import textengine as tx
 
 def rand():
-    return tx.color_by_num(tx.randint(0,255))
+    return tx.color_by_number(tx.randint(0,255))
 
 def main():
     g = tx.Game()

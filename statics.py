@@ -13,8 +13,8 @@ ANIMATE_FPS = 1/8
 CHUNK_WID = 32
 CHUNK_HEI = 16
 
-WINDOW_WID = 110 #110, 60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
-WINDOW_HEI = 29  #29, 49 for fullscreen
+WINDOW_WID = 130 #110, 60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
+WINDOW_HEI = 20  #29, 49 for fullscreen
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (WINDOW_HEI+INFO_HEI)
@@ -128,7 +128,7 @@ def deconstruct_path(path):
         path = path[:path.rfind(".")]
     return path
 
-def color_by_num(x):
+def color_by_number(x):
     if x < 16:
         x = PRE_16_COLORS[x]
     return (COLOR_ESC + str(x) + "m")
@@ -166,7 +166,7 @@ def brighten(color_code:str,positive=True):
     else:
         color = 232
     if color < BLACK_INT:
-        return brighten(color_by_num(PRE_16_COLORS[color]))
+        return brighten(color_by_number(PRE_16_COLORS[color]))
     elif color > WHITE_INT: #MONOCHROME
         color += change
         if color <= WHITE_INT:
@@ -187,4 +187,4 @@ def brighten(color_code:str,positive=True):
                 color += (change*SHADE)
         color = min([WHITE_INT,color])
         color = max([BLACK_INT,color])
-    return color_by_num(color)
+    return color_by_number(color)

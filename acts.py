@@ -7,8 +7,8 @@ class Acts():
         self.acted_obj_chars = set()
         # This is used to find which objects are
         # never used and can be removed as objects.
-    def new(self,func,name="default",type="interact", item_char="",
-        arg=None,map="default",act_on_self=False,locked = False, loc_arg = []):
+    def new(self,func,name:str="default",type:str="interact", item_char:str="",
+        arg=None,map:str ="default",act_on_self:bool=False,locked:bool = False, loc_arg = []):
         if map != "default":
             map = deconstruct_path(map)
         if isinstance(arg,list): # List of strings should be a Linked list.
