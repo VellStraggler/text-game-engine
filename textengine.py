@@ -43,7 +43,7 @@ class Game():
         self.max_sprite_height= 1
         self.texts = []
         self.quit = False
-        self.camera_follow = []
+        self.camera_follow = ["x","y"] # follow player by default
 
         mixer.init()
         self.themes = []
@@ -236,15 +236,22 @@ class Game():
         It is run by the run_game method."""
         self.set_all_movement()
         self.render_all()
-        self.map.display_timer()
-        self.map.print_all()
+        self.display_timer()
+        self.print_all()
         self.run_frame_counter()
+
     def game_loop_debug(self):
         self.set_all_movement()
         self.render_all()
-        self.map.display_timer()
-        self.map.print_all(self.display_data)
+        self.display_timer()
+        self.print_all(self.display_data)
         self.run_frame_counter(True)
+
+    def display_timer(self):
+        self.map.display_timer
+
+    def print_all(self,display_data:str = ""):
+        self.map.print_all(self.display_data)
 
     def run_frame_counter(self,with_avg=False):
         self.prev_frame_start = self.frame_start
@@ -374,6 +381,7 @@ class Game():
                 self.objs.load_chunks.append(chunk)
 
     def game_acts(self):
+        """Things like pausing, quitting, and debug commands"""
         if self.game_act_time < time():
             if is_pressed("p"):# PAUSE
                 self.game_act_time = time() + self.game_speed
@@ -562,7 +570,7 @@ class Game():
         obj.stunned = obj.animation.stuns
         self.objs.set_img(obj,arg.curr.data)
     def act_change_color(self,obj,arg):
-        obj.set_color(arg.next())
+        obj.interpret_color(arg.next())
         self.objs.set_img(obj)
     def act_change_geom(self,obj,arg):
         obj.geom = arg.next()
@@ -628,11 +636,20 @@ class Game():
             actor.y = arg[1]
             actor.true_x = arg[0]
             actor.true_y = arg[1]
-            self.map.center_camera(actor.x,actor.y)
+            self.center_camera(actor)
             self.set_render_one(actor)
             self.add_render_one(actor)
         self.set_sprites_in_objs()
         self.map.print_from_black(mixer)
+
+    def center_camera(self, actor_obj):
+        x = 0
+        y = 0
+        if "x" in self.camera_follow:
+            x = actor_obj.x + actor_obj.width()//2
+        if "y" in self.camera_follow:
+            y = actor_obj.y - actor_obj.height()//2
+        self.map.center_camera(x,y)
 
     def create_new_map(self,path):
         """Creates the map from a given path, populating it with object sprites
@@ -666,7 +683,7 @@ class Game():
         if x > obj.x:   obj.move_x *= -1
         if y < obj.y:   obj.move_y *= -1
         if obj.move in ["wasd","dirs","drive"]:
-            self.map.center_camera(obj.x+obj.width()//2,obj.y-obj.height()//2)
+            self.center_camera(obj)
     def set_movement(self,obj):
         """Take the true_x and true_y from obj to get the change in x and y.
         Get as close as to true_x and true_y as possible.
@@ -881,9 +898,7 @@ class Game():
     def move_camera(self):
         # CAMERA MOVEMENT:
         player = self.map.camera_star
-        #y = player.y-(player.height()//2)
-        #self.map.center_camera(player.x+(player.width()//2),y)
-        self.map.center_camera(player.x+4,player.y-4)
+        self.center_camera(player)
 
     def add_geom(self,obj):
         self.geom_set_dict[obj.geom](obj)

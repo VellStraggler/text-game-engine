@@ -146,7 +146,9 @@ class Map():
                     i += 1
                 start += row_down
                 i = start
-    def add_data(self,data):
+    def add_data(self,data:str):
+        if len(data) > WINDOW_WID - len(self.background_color):
+            data = data[:WINDOW_WID -len(self.background_color)]
         if len(data)>0:
             i = int(len(self.screen)*((WINDOW_HEI-1)/WINDOW_HEI))
             self.screen[i-1] += self.background_color

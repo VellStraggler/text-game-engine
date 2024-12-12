@@ -13,8 +13,9 @@ ANIMATE_FPS = 1/8
 CHUNK_WID = 32
 CHUNK_HEI = 16
 
-WINDOW_WID = 130 #110, 60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
-WINDOW_HEI = 30  #29, 49 for fullscreen
+#FIXME: make sure all maps are at least window size
+WINDOW_WID = 110 #110, 60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
+WINDOW_HEI = 29  #29, 49 for fullscreen
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (WINDOW_HEI+INFO_HEI)

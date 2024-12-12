@@ -15,7 +15,7 @@ def main():
     g.set_sprite_path('mario/sprites.txt')
     g.set_theme('mario/text_mario.wav')
     g.add_sounds_simple(["jump","death","quit"],"mario")
-    g.camera_follow = ["x","y"]
+    g.camera_follow = ["x"]
 
     g.acts.new("","touch","g","change_map",["f","mario/map.txt","mario/map2.txt"])
     g.acts.new("","location","m","quit",[-1,31])
