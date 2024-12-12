@@ -221,7 +221,7 @@ class Game():
         self.init_objs()
         self.init_render_all()
         self.map.display_timer()
-        #self.map.print_all()
+
     def init_objs(self):
         """Create objects from the pallete and place them on coordinates
         as directed by the input map."""
@@ -445,12 +445,13 @@ class Game():
                 if xs < tobj.x + tobj.width() and xf > tobj.x:
                     obj.touching["down"].add(tobj)
             for tobj in line:
-                if xs < tobj.x + tobj.width() and xf > tobj.x:
-                    obj.touching["inside"].add(tobj)
-                elif tobj.x == xf:
-                        obj.touching["right"].add(tobj)
-                elif tobj.x + tobj.width() -1 == xs:
-                    obj.touching["left"].add(tobj)
+                if tobj.img != obj.img or tobj.move != obj.move: # Don't compare to yourself
+                    if xs < tobj.x + tobj.width() and xf > tobj.x:
+                        obj.touching["inside"].add(tobj)
+                    elif tobj.x == xf:
+                            obj.touching["right"].add(tobj)
+                    elif tobj.x + tobj.width() -1 == xs:
+                        obj.touching["left"].add(tobj)
         return xs,xf,ys,yf
 
     def get_frame_time(self):
@@ -521,7 +522,7 @@ class Game():
             if not act.locked: 
                 if act.type == "location":
                     # ARG: LOCATION TO REACH, [X,Y] FORM
-                    # To focus only on a certain x or y, set the other to -1.
+                    # To focus only on x or on y, set the other value to -1.
                     if act.map == self.map_name:
                         if ys <= act.loc_arg[1] < yf or act.loc_arg[1] == -1:
                             if xs <= act.loc_arg[0] < xf or act.loc_arg[0] == -1:
@@ -531,6 +532,12 @@ class Game():
                         for tobj in direction:
                             if act.item_char == tobj.char:
                                 act.func(obj,act.arg)
+                elif act.type == "timer":
+                    # arg: [time when this timer should go off, arg for function]
+                    self.act_message(obj=None, arg=str(time()) + " " + str(act.arg[0]))
+                    if time() > act.arg[0]:
+                        act.func(obj,act.arg[1])
+                        act.locked = True
 
     def get_xy_range(self,obj):
         """Finds the range around an object"""
