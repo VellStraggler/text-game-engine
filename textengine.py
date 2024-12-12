@@ -76,7 +76,10 @@ class Game():
                         "dirs":
                             {"up arrow":self.move_up,"left arrow":self.move_left,
                             "down arrow":self.move_down,"right arrow":self.move_right,
-                            ".":self.run_interacts}}
+                            ".":self.run_interacts},
+                        "drive":
+                            {"w":self.accelerate,"s":self.decelerate,
+                             "a":self.rotate_left,"d":self.rotate_right}}
 
     def set_map_path(self,path,directed_path=False):
         self.map.set_path(path,directed_path)
@@ -327,7 +330,7 @@ class Game():
                             obj.frame_time = time() + obj.framerate
                             self.next_frame(obj)
                         self.get_objs_touching(obj)
-                        if obj.move in ["wasd","dirs"]:
+                        if obj.move in ["wasd","dirs","drive"]:
                             self.player_actions(obj)
                         elif obj.move == "leftright":
                             if obj.face_right:
@@ -354,7 +357,7 @@ class Game():
                         # DAMAGE-TAKING
                         self.take_dmg(obj)
                     if obj.hp <= 0 or obj.y == self.map.height: # All non-player mobs, DEATH.
-                        if obj.move in ["wasd","dirs"]:
+                        if obj.move in ["wasd","dirs","drive"]:
                             self.quit = True
                         self.kill_obj(obj,True)
 
@@ -396,12 +399,30 @@ class Game():
             for key in self.key_dict[player.move].keys():
                 if is_pressed(key):
                     self.key_dict[player.move][key](player)
-                    break # ONLY ALLOW ONE BUTTON AT A TIME
+                    # break # ONLY ALLOW ONE BUTTON AT A TIME
+        if(player.move == "drive"):
+            # char height is twice the length of char width
+            player.true_x += player.velocity_x * 4 * self.get_frame_time() * 2
+            player.true_y += player.velocity_y * 4 * self.get_frame_time()
+            player.apply_friction()
+            self.objs.set_img(player,player.get_image())
         self.run_acts(player)
         self.map.camera_star = player # UPDATE: Only needs to be done once.
         coords = "("+str(player.x)+","+str(player.y)+")"
         self.display_data += coords
     
+    def accelerate(self, obj):
+        obj.accelerate()
+
+    def decelerate(self, obj):
+        obj.accelerate(-.6)
+    
+    def rotate_right(self, obj):
+        obj.direction = (obj.direction + (200 * self.get_frame_time())) % 360
+
+    def rotate_left(self, obj):
+        obj.direction = (obj.direction - (200 * self.get_frame_time())) % 360
+
     def get_objs_touching(self,obj):
         xs,xf,ys,yf = self.get_xy_range(obj)
         obj.init_touching()
@@ -429,24 +450,28 @@ class Game():
                     obj.touching["left"].add(tobj)
         return xs,xf,ys,yf
 
+    def get_frame_time(self):
+        return self.frame_start - self.prev_frame_start
+
+
 
     # Synonymous functions
     def move_left(self,obj):
         self.objs.set_img(obj,obj.animate["a"])
         obj.face_right = False
-        obj.true_x -= obj.xspeed*(self.frame_start-self.prev_frame_start)
+        obj.true_x -= obj.xspeed*(self.get_frame_time())
     def move_right(self,obj):
         self.objs.set_img(obj,obj.animate["d"])
         obj.face_right = True
-        obj.true_x += obj.xspeed*(self.frame_start-self.prev_frame_start)
+        obj.true_x += obj.xspeed*(self.get_frame_time())
     def move_down(self,obj):
         self.objs.set_img(obj,obj.animate["s"])
         obj.face_down = True
-        obj.true_y += obj.yspeed*(self.frame_start-self.prev_frame_start)
+        obj.true_y += obj.yspeed*(self.get_frame_time())
     def move_up(self,obj):
         self.objs.set_img(obj,obj.animate["w"])
         obj.face_down = False
-        obj.true_y -= obj.yspeed*(self.frame_start-self.prev_frame_start)
+        obj.true_y -= obj.yspeed*(self.get_frame_time())
     
     def kill_obj(self,obj,sound:bool=False): # DEATH
         self.objs.set_img(obj,"dead")
@@ -542,7 +567,7 @@ class Game():
     def act_message(self,obj,arg):
         """arg can be an integer index of the line of text you want
         from the stored texts file, or it can be a unique string"""
-        if arg == int(arg):
+        if isinstance(arg,int):
             try:msg = self.texts[arg]
             except IndexError:msg = ""
         else:msg = arg
@@ -633,7 +658,7 @@ class Game():
         obj.move_y = y - obj.y
         if x > obj.x:   obj.move_x *= -1
         if y < obj.y:   obj.move_y *= -1
-        if obj.move in ["wasd","dirs"]:
+        if obj.move in ["wasd","dirs","drive"]:
             self.map.center_camera(obj.x+obj.width()//2,obj.y-obj.height()//2)
     def set_movement(self,obj):
         """Take the true_x and true_y from obj to get the change in x and y.
@@ -803,7 +828,7 @@ class Game():
                     mir_color = color_by_number(mir_type.color)
                     colored = True
                 else:colored=False
-                switch = bool(int(time()*3)%2) # Speed of ripple is 3 changes/sec.
+                switch = bool(int(time()*3)%2) # Ripple Speed is 3 FPS.
                 ripple_amt = int(mir_type.ripple) * -1 #-1 or 0
                 for y in range(0,mir.y2-mir.y1+1):
                     switch = not switch

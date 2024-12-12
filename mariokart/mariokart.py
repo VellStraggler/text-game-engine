@@ -20,9 +20,10 @@ g.objs.sprites["mario-a1"] = g.objs.get_flipped_sprite(g.objs.sprites["mario-d1"
 g.objs.sprites["mario-a2"] = g.objs.get_flipped_sprite(g.objs.sprites["mario-d2"])
 g.objs.sprites["mario-a3"] = g.objs.get_flipped_sprite(g.objs.sprites["mario-d3"])
 g.objs.sprites["mario-a4"] = g.objs.get_flipped_sprite(g.objs.sprites["mario-d4"])
-skins = Linked(["mario-w","mario-d2","mario-d1","mario","mario-d3","mario-d4","mario-s","mario-a4","mario-a3","mario-a","mario-a1","mario-a2"],True)
-g.new_object("mario","m",xspeed = 20,yspeed=10,move="wasd",geom="line",color=124, animate = "sneaky")
+skins = Linked(["mario","mario-d3","mario-d4","mario-s","mario-a4","mario-a3",
+                "mario-a","mario-a1","mario-a2","mario-w", "mario-d2", "mario-d1"],True)
+g.new_object("mario","m",xspeed = 20,yspeed=10,move="drive",geom="line",color=124, animate = skins)
 
 block_frames = Linked(["qblock-f1","qblock-f2","qblock-f3","qblock-f4","qblock-f5","qblock-f6"],True)
 g.new_object("qblock-f1","q",animate=block_frames, geom="line")
-g.run_game(False)
+g.run_game()

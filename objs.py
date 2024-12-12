@@ -1,3 +1,4 @@
+import math
 from linked import Linked
 from statics import color_by_number, ANIMATE_FPS, BLANK, CHUNK_HEI, CHUNK_WID, DEFAULT_COLOR, FLIP_CHARS, SKIP
 
@@ -179,11 +180,14 @@ class Objs():
                 #wasd: controls, i:interact, g:gravity (falling)
                 self.move_time = {"w":0,"a":0,"s":0,"d":0,"i":0,"g":0}
                 self.init_touching()
-                self.direction = 0 # NOT IMPLEMENTED
-                self.velocity = 0 # NOT IMPLEMENTED
-                self.acceleration = 0 # NOT IMPLEMENTED
                 self.jump = 0 # based on yspeed
-                # Store pointers to objects that are touching this one.
+
+                self.direction = 0 # in degrees, 0 to 360
+                self.velocity_x = 0
+                self.velocity_y = 0
+                self.acceleration = .05
+                self.friction = .99
+
             self.img = img
             self.sprite = [] # Must be set through Objs function new().
             self.geom = geom # Options of: None, line, complex, skeleton, background, or all.
@@ -216,6 +220,23 @@ class Objs():
             self.face_down = face_down # Up: False, Down: True
             self.rotation = rotation # 0 through 3
             self.data = data
+
+        def accelerate(self, mult:int = 1):
+            """Accelerate in current direction"""
+            rad = math.radians(self.direction)
+            self.velocity_x += math.cos(rad) * self.acceleration * mult
+            self.velocity_y += math.sin(rad) * self.acceleration * mult
+        
+        def apply_friction(self):
+            """Slow down over time"""
+            self.velocity_x *= self.friction
+            self.velocity_y *= self.friction
+
+        def get_image(self):
+            # Take length of sprite sheet
+            interval = self.animation.len / 360
+            # Get rounded sprite image (unless you really do have 360 angles)
+            return self.animation.get(int(interval * self.direction))
 
         def init_touching(self):
             self.touching = {"up":set(),"down":set(),"left":set(),"right":set(),"inside":set()}
