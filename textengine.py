@@ -534,7 +534,6 @@ class Game():
                                 act.func(obj,act.arg)
                 elif act.type == "timer":
                     # arg: [time when this timer should go off, arg for function]
-                    self.act_message(obj=None, arg=str(time()) + " " + str(act.arg[0]))
                     if time() > act.arg[0]:
                         act.func(obj,act.arg[1])
                         act.locked = True

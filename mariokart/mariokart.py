@@ -41,7 +41,7 @@ def cross_mid(obj, arg):
 def return_to_theme(obj, arg):
     g.act_change_theme(obj, "mariokart/mariokart.wav")
 def end_game(obj,arg):
-    quit()
+    g.end_game()
 g.new_action(cross_line,"cross line","location",loc_arg=[82,-1])
 g.new_action(cross_mid,"cross mid", "location", loc_arg=[32,-1])
 
