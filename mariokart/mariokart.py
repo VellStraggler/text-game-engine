@@ -10,7 +10,9 @@ from time import sleep,time
 g = tx.Game()
 g.set_map_path("mariokart/test_map.txt")
 g.set_sprite_path("mariokart/karts.txt")
-g.new_object("block","b",geom="complex")
+
+g.objs.sprites["right_block"] = g.objs.get_flipped_sprite(g.objs.sprites["block"])
+g.new_object("right_block","b",geom="complex")
 
 g.objs.sprites["qblock-f5"] = g.objs.get_flipped_sprite(g.objs.sprites["qblock-f3"])
 g.objs.sprites["qblock-f6"] = g.objs.get_flipped_sprite(g.objs.sprites["qblock-f2"])

@@ -399,11 +399,14 @@ class Game():
             for key in self.key_dict[player.move].keys():
                 if is_pressed(key):
                     self.key_dict[player.move][key](player)
+                    self.set_movement(player)
                     # break # ONLY ALLOW ONE BUTTON AT A TIME
         if(player.move == "drive"):
             # char height is twice the length of char width
             player.true_x += player.velocity_x * 4 * self.get_frame_time() * 2
+            self.set_movement(player)
             player.true_y += player.velocity_y * 4 * self.get_frame_time()
+            self.set_movement(player)
             player.apply_friction()
             self.objs.set_img(player,player.get_image())
         self.run_acts(player)
@@ -452,8 +455,6 @@ class Game():
 
     def get_frame_time(self):
         return self.frame_start - self.prev_frame_start
-
-
 
     # Synonymous functions
     def move_left(self,obj):
@@ -664,42 +665,43 @@ class Game():
         """Take the true_x and true_y from obj to get the change in x and y.
         Get as close as to true_x and true_y as possible.
         Start at 0, see how close we can get to move_y and move_x."""
-        move_x_targ = int(obj.true_x) - obj.x
-        move_y_targ = int(obj.true_y) - obj.y
+        x_target = int(obj.true_x - obj.x)
+        y_target = int(obj.true_y - obj.y)
         obj.move_x = 0
         obj.move_y = 0
         x_change = 0
         y_change = 0
-        if move_x_targ != 0:
-            x_change = (move_x_targ)//(abs(move_x_targ))
-        if move_y_targ != 0:
-            y_change = (move_y_targ)//(abs(move_y_targ))
+        if x_target != 0:
+            x_change = (x_target)//(abs(x_target))
+        if y_target != 0:
+            y_change = (y_target)//(abs(y_target))
         max_found = False
         while not max_found:
             if self.can_move(obj,x_change,y_change):
-                if obj.move_x != move_x_targ:
+                if obj.move_x != x_target:
                     obj.move_x += x_change
-                if obj.move_y != move_y_targ:
+                if obj.move_y != y_target:
                     obj.move_y += y_change
             else:
                 max_found = True
-            if (obj.move_y == move_y_targ and obj.move_x == move_x_targ):
+            if (obj.move_y == y_target and obj.move_x == x_target):
                 max_found = True
-        if move_x_targ!=0 and move_y_targ!=0:
+        if x_target!=0 and y_target!=0:
             self.objs.render_objs.add(obj)
-        if move_x_targ!= 0 and obj.move_x==0:#hit a wall
+        if x_target!= 0 and obj.move_x==0:#hit a wall
             obj.true_x = obj.x
-        if move_y_targ!= 0 and obj.move_y==0:
+        if y_target!= 0 and obj.move_y==0:
             obj.true_y = obj.y
+
     def can_move(self, obj, x_change, y_change=0):
         """Check if there are any characters in the area that 
         the obj would take up. Takes literal change in x and y.
         Returns True if character can move in that diRECTion.""" # Collision
         assert abs(x_change)<2 and abs(y_change)<2,"x and y can only be -1, 0, or 1."
-        yf = y_change + obj.y
+        yf = y_change + obj.y 
         ys = yf - obj.height()
-        xs = x_change + obj.x
-        xf = xs + obj.width()
+        xs = x_change + obj.x 
+        xf = xs + obj.width() 
         if x_change > 0:      xs = obj.x + obj.width()
         elif x_change < 0:    xf = obj.x
         if obj.geom not in ["line","skeleton"]:
@@ -740,8 +742,12 @@ class Game():
         if SKIP not in obj.sprite[y][x]]
         for y in range(obj.height())]
     def geom_line(self,obj,boolean = 1):
-        [self.map.set_xy_geom(x + obj.x, obj.y, boolean)
-        for x in range( min([obj.width(), len(self.map.geom[-1])-obj.x]) )]
+        if (obj.min_width == None):
+            [self.map.set_xy_geom(x + obj.x, obj.y, boolean)
+            for x in range( min([obj.width(), len(self.map.geom[-1])-obj.x]) )]
+        else:
+            [self.map.set_xy_geom(x + obj.x, obj.y, boolean)
+            for x in range( min([obj.get_min_width(), len(self.map.geom[-1])-obj.x]) )]
     def geom_skeleton(self,obj,boolean = 1):
         [self.map.set_xy_geom(x + obj.x, obj.y, boolean)
         for x in range( min([obj.width(), len(self.map.geom[-1])-obj.x]) )

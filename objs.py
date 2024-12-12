@@ -170,12 +170,17 @@ class Objs():
             self.grav = grav
             if move == None and not grav and animate == None:
                 self.static = True
+            if move not in ["wasd","dirs","drive","leftright",None]:
+                raise Exception("move variable must be one of the 5 options")
             #else:
             self.xspeed = xspeed
             self.yspeed = yspeed
             self.max_jump = max_jump
             self.move_x = 0
             self.move_y = 0
+
+            self.min_width = None
+
             if not self.static:
                 #wasd: controls, i:interact, g:gravity (falling)
                 self.move_time = {"w":0,"a":0,"s":0,"d":0,"i":0,"g":0}
@@ -185,8 +190,11 @@ class Objs():
                 self.direction = 0 # in degrees, 0 to 360
                 self.velocity_x = 0
                 self.velocity_y = 0
-                self.acceleration = .05
+                self.acceleration = .1
                 self.friction = .99
+
+                self.min_width = -1 
+                # will be updated when geom_width is called
 
             self.img = img
             self.sprite = [] # Must be set through Objs function new().
@@ -220,6 +228,16 @@ class Objs():
             self.face_down = face_down # Up: False, Down: True
             self.rotation = rotation # 0 through 3
             self.data = data
+
+        def get_min_width(self):
+            """take the smallest width we've ever had"""
+            width = self.width()
+            if (self.min_width == -1):
+                self.min_width = width
+            elif (width < self.min_width):
+                self.min_width = width
+            return self.min_width
+
 
         def accelerate(self, mult:int = 1):
             """Accelerate in current direction"""
