@@ -1,9 +1,13 @@
 from math import log
+import os
+
+# DIRPATH points to the directory containing statics.py
+DIRPATH = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 CLEAR = "\033[2J"
 # DIRPATH = dirname(__file__) + "/"
 # DIRPATH = "C:/Users/david/OneDrive/Desktop/Programs_on_Standby/Programming/textengine/"
-DIRPATH = "C:/Users/david/code_projects/my-projects/textgameengine/"
+# DIRPATH = "C:/Users/david/code_projects/my-projects/textgameengine/"
 
 BLANK = ' '
 SKIP = '$'
