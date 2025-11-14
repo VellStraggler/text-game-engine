@@ -1,9 +1,13 @@
 from math import log
+import os
+
+# DIRPATH points to the directory containing statics.py
+DIRPATH = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 CLEAR = "\033[2J"
 # DIRPATH = dirname(__file__) + "/"
 # DIRPATH = "C:/Users/david/OneDrive/Desktop/Programs_on_Standby/Programming/textengine/"
-DIRPATH = "C:/Users/david/code_projects/my-projects/textgameengine/"
+# DIRPATH = "C:/Users/david/code_projects/my-projects/textgameengine/"
 
 BLANK = ' '
 SKIP = '$'
@@ -14,8 +18,12 @@ CHUNK_WID = 32
 CHUNK_HEI = 16
 
 #FIXME: make sure all maps are at least window size
-WINDOW_WID = 110 #110, 60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
-WINDOW_HEI = 29  #29, 49 for fullscreen
+text_dims = os.get_terminal_size()
+# Recommended resolution sizes for cmd prompt settings:
+# small   | standard| large    |fullscreen|
+# 64 x 18 | 96 x 27 | 128 * 36 | 156 * 41 |
+WINDOW_WID = text_dims.columns #110, 60 for baby screen with 250 fps, 189 for fullscreen (and 30 fps)
+WINDOW_HEI = text_dims.lines -1#29, 49 for fullscreen
 # Based on the Windows Terminal window at default size.
 INFO_HEI=2
 RETURN = CUR * (WINDOW_HEI+INFO_HEI)
@@ -32,12 +40,13 @@ BUBBLE = [["╱","⎺","╲"],["|"],["╲","_","╱"]]
 # \_______/
 
 # Dictionary of chars (keys) and their opposites (values)
+# Anything not mentioned is assumed to be symmetrical
 FLIP_CHARS = {'\\':'/','/':'\\','[':']',']':'[','{':'}','}':'{','<':'>',
     '>':'<','(':')',')':'(','◐':'◑','◑':'◐','↙':'↘','↘':'↙','כ':'c',
     'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↗','↗':'↖','⌋':'⌊',
     '⌊':'⌋'}
-H_FLIP_CHARS = {'\\':'/','/':'\\','↙':'↖','↘':'↗','כ':'c',
-    'c':'כ','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↙','↗':'↘',"_":"⎺",
+# flipped horizontally
+H_FLIP_CHARS = {'\\':'/','/':'\\','↙':'↖','↘':'↗','◭':'◮','◮':'◭','╱':'╲','╲':'╱','↖':'↙','↗':'↘',"_":"⎺",
     "⎺":"_","'":".",".":"'","A":"V","V":"A","M":"W","W":"M"}
 
 COLOR_ESC = "\033[48;5;"

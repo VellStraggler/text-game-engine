@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from linked import Linked
 import textengine as tx
-from time import sleep,time
+from time import time
 g = tx.Game()
 g.set_map_path("mariokart/test_map.txt")
 g.set_sprite_path("mariokart/karts.txt")
