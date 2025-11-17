@@ -6,8 +6,10 @@ class SpriteMaker:
     def __init__(self, root:Tk):
         self.root = root
         self.root.title("TXTEngine Sprite Editor (Ver: 0.1)")
-        self.main = Frame(root, width=720, height=480)
-        self.main.grid(row=0, column=0)
+        for r in range(8):
+            root.grid_rowconfigure(r, weight=1, minsize=10)
+        for c in range(16):
+            root.grid_columnconfigure(c, weight=1, minsize=10)
 
         # Storing the Sprite
         self.sprite_width = 16
@@ -24,17 +26,18 @@ class SpriteMaker:
             self.color_array.append(color_row)
 
         # Create a Canvas
-        self.pixel_width = 10
+        self.pixel_width = 30
         self.pixel_height = self.pixel_width * 2
         self.canvas_width = self.sprite_width * self.pixel_width
         self.canvas_height = self.sprite_height * self.pixel_height
         self.canvas = Canvas(root, width=self.canvas_width, height=self.canvas_height,bg="white")
-        self.canvas.grid(row=0,column=0, columnspan=2,rowspan=4)
+        self.canvas.grid(row=0, column=8, rowspan=8, columnspan=8)
 
         self.canvas_width_scale = Scale(self.root, from_=1, to=30, 
                                         variable=IntVar(value=self.pixel_width), 
-                                        command=self.resize_canvas)  
-        self.canvas_width_scale.grid(row=0,column=4)
+                                        command=self.resize_canvas,
+                                        orient=HORIZONTAL)  
+        self.canvas_width_scale.grid(row=0,column=0)
 
         # Variables to store last mouse position
         self.last_x = 0
@@ -50,11 +53,43 @@ class SpriteMaker:
         self.current_color = "black"
         self.text_color = "white"
 
-        self.is_black = IntVar(value=False)
+        self.is_black = BooleanVar(value=False)
         self.color_lever = Checkbutton(root, text="Black Text", variable= self.is_black, command=self.set_lever)
-        self.color_lever.grid(row=1, column=4)
+        self.color_lever.grid(row=1, column=0)
+
+        self.is_type_mode = BooleanVar(value=False)
+        self.type_mode = Checkbutton(root, text="Type Mode", variable= self.is_type_mode)
+        self.type_mode.grid(row=3, column=0)
+
+        self.copy_button = Button(root, text="Copy Sprite to Clipboard", command=self.copy)
+        self.copy_button.grid(row=2,column=0)
+
+        self.palette_buttons = []
+        self.colors = ["black","white","yellow","red"]
+        for c in range(len(self.colors)):
+            button = Button(root, background=self.colors[c], 
+                            command= lambda color = self.colors[c]: self.set_color(color))
+            button.grid(row=4,column=c+1)
+            self.palette_buttons.append(button)
+        for c in range(len(self.colors)):
+            button = Button(root, background=self.colors[c], 
+                            command= lambda color = self.colors[c]: self.set_text_color(color))
+            button.grid(row=5,column=c+1)
+            self.palette_buttons.append(button)
         
         self.resize_canvas(self.pixel_width)
+
+    def set_color(self, value):
+        self.current_color = value
+
+    def set_text_color(self,value):
+        self.text_color = value
+
+    def copy(self):
+        text = "\n".join("".join(row) for row in self.sprite_array)
+        self.root.clipboard_clear()
+        root.clipboard_append(text)
+        root.update()
 
     def set_lever(self):
         if not self.is_black.get():
@@ -67,14 +102,24 @@ class SpriteMaker:
     def key_pressed(self, event):
         """Stores a key pressed and draws it on the last
         available coordinate on the sprite canvas"""
+        if event.char == "":
+            return
         self.last_key = event.char
 
         self.key_draw(self.last_x, self.last_y)
+        # move cursor along if in type mode
+        if self.is_type_mode.get():
+            self.last_x += self.pixel_width
+            if self.last_x > self.pixel_width * self.sprite_width:
+                self.last_x = 1
+                self.last_y += self.pixel_height
+                if self.last_y > self.pixel_height * self.sprite_height:
+                    self.last_y = 1
 
     def resize_canvas(self, value):
         self.pixel_width = int(value)
         self.pixel_height = self.pixel_width * 2
-        self.canvas_width = self.sprite_width * self.pixel_width/2
+        self.canvas_width = self.sprite_width * self.pixel_width
         self.canvas_height = self.sprite_height * self.pixel_height
         self.canvas.config(width=self.canvas_width, height=self.canvas_height)
 
