@@ -5,10 +5,6 @@ import os
 DIRPATH = os.path.dirname(os.path.abspath(__file__)) + os.sep
 
 CLEAR = "\033[2J"
-# DIRPATH = dirname(__file__) + "/"
-# DIRPATH = "C:/Users/david/OneDrive/Desktop/Programs_on_Standby/Programming/textengine/"
-# DIRPATH = "C:/Users/david/code_projects/my-projects/textgameengine/"
-
 BLANK = ' '
 SKIP = '$'
 CUR = '\033[A\033[F'
@@ -53,6 +49,9 @@ COLOR_ESC = "\033[48;5;"
 DEFAULT_COLOR = COLOR_ESC + "16m"
 DEFAULT_TEXT  = "\033[38;5;15m"
 NEW_SETTING = {"color":"mono","mono":"geom","geom":"color"}
+
+# Simple Color Names
+BROWN,YELLOW,DIRTY_GRAY,BLACK,DARK_RED = 52,226,8,232,88
 
 
 

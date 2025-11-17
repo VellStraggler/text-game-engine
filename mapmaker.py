@@ -1,8 +1,6 @@
-from time import time, sleep
+from time import time
 import keyboard as keys
 from tkinter import *
-import tkinter.font as font
-import threading
 from os.path import exists
 WID = 120
 HEI = 29

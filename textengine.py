@@ -16,7 +16,7 @@ from acts import Acts
 from linked import Linked
 from map import Map
 from mirrors import Mirrors
-from statics import ANIMATE_FPS, BLANK, BUBBLE, CHUNK_HEI, CHUNK_WID, CLEAR, COLOR_ESC, DEFAULT_COLOR, DEFAULT_TEXT, FLIP_CHARS, H_FLIP_CHARS, NEW_SETTING, RETURN, S_LINE, SKIP, SPACES, WINDOW_HEI, WINDOW_WID, deconstruct_path, find_count, find_indices, find_non, ms_gothic, replace_spaces, rfind_non, solidify_path, color_by_number
+from statics import *
 
 system("") # Allow the terminal to understand escape codes
 print(CLEAR) # erase pygame's message.
@@ -111,7 +111,10 @@ class Game():
                                 for row in range(half_len):
                                     colored_line = []
                                     for i in range(len(curr_sprite[0])):
-                                        color = color_code[int(curr_sprite[half_len][i])]
+                                        color_char = curr_sprite[half_len][i]
+                                        if color_char < "0" or color_char > "9":
+                                            color_char = 0
+                                        color = color_code[int(color_char)]
                                         char = curr_sprite[row][i]
                                         colored_line.append(color + char)
                                     curr_sprite[row] = colored_line
@@ -156,6 +159,8 @@ class Game():
                         colors_raw = colors_raw.split(",")
                         color_code = [""]
                         for num in colors_raw:
+                            if num == " ":
+                                num = 0
                             color_code.append(color_by_number(int(num)))
                 else: # Append to the current sprite image.
                     line = replace_spaces(line)
@@ -674,6 +679,8 @@ class Game():
                         obj.hp -= enemy.dmg
 
     def set_default_color(self,color):
+        if isinstance(color,int):
+            color = color_by_number(color)
         self.map.background_color = color
         self.objs.default_color = color
     def teleport_obj(self,obj,x:int=0,y:int=0):

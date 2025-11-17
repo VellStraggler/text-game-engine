@@ -11,9 +11,10 @@ g = tx.Game()
 g.set_map_path("mariokart/test_map.txt")
 g.set_sprite_path("mariokart/karts.txt")
 g.set_theme("mariokart/mariokart.wav")
+g.set_default_color(tx.DIRTY_GRAY)
 
 g.objs.sprites["right-block"] = g.objs.get_flipped_sprite(g.objs.sprites["block"])
-g.new_object("right-block","b",geom="complex")
+g.new_object("right-block","b",geom="complex",color=tx.BROWN)
 g.new_object("finish-line","f",geom="background")
 g.new_lap = True
 g.counter = 0
@@ -58,5 +59,5 @@ skins = Linked(["mario","mario-d3","mario-d4","mario-s","mario-a4","mario-a3",
 g.new_object("mario","m",xspeed = 20,yspeed=10,move="drive",geom="line",color=124, animate = skins)
 
 block_frames = Linked(["qblock-f1","qblock-f2","qblock-f3","qblock-f4","qblock-f5","qblock-f6"],True)
-g.new_object("qblock-f1","q",animate=block_frames, geom="line")
+g.new_object("qblock-f1","q",animate=block_frames, geom="line",color=tx.YELLOW)
 g.run_game()
