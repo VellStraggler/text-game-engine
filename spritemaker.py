@@ -34,7 +34,7 @@ class SpriteMaker:
 
         # Canvas
         self.pixel_width = 30
-        self.pixel_height = self.pixel_width * self.height_multiplier.get()
+        self.pixel_height = int(self.pixel_width * self.height_multiplier.get())
         self.canvas_width = self.sprite_width * self.pixel_width
         self.canvas_height = self.sprite_height * self.pixel_height
         self.canvas = Canvas(root, width=self.canvas_width, height=self.canvas_height,bg="white")
@@ -49,11 +49,28 @@ class SpriteMaker:
         # Mouse Position
         self.last_x = 0
         self.last_y = 0
+        self.press_x = 0
+        self.press_y = 0
+        self.release_x = 0
+        self.release_y = 0
+        self.last_outline = [0,0]
+        self.move_x, self.move_y = 0,0
+        self.mouse_inside = False
+
+        self.hover_outline = self.canvas.create_rectangle(0,0,self.pixel_width,self.pixel_height,
+                                                          outline="gray")
+        self.canvas.itemconfigure(self.hover_outline, state= "hidden")
+        self.canvas.tag_raise(self.hover_outline)
 
         # Bind mouse events
         self.canvas.bind("<Button-1>", self.activate)       # Left click
         self.canvas.bind("<B1-Motion>", self.draw)         # Drag while left-click held
-        self.canvas.bind("<ButtonRelease-1>", self.reset)  # Release mouse button
+        self.canvas.bind("<ButtonRelease-1>", self.release)  # Release mouse button
+        self.canvas.bind("<Motion>", self.on_move)
+        self.canvas.bind("<Enter>", self.entered)
+        self.canvas.bind("<Leave>", self.left)
+        self.root.bind("<Button-1>", self.root_click)
+
 
         self.last_key = "#"
         self.root.bind("<Key>", self.key_pressed)
@@ -214,24 +231,50 @@ class SpriteMaker:
             self.key_draw(self.last_x, self.last_y)
         elif self.is_replace_mode.get():
             self.key_draw(self.last_x, self.last_y)
+        self.draw_outline()
 
+    def deselect(self, event):
+        self.press_x, self.press_y = -100, -100
+        print("deselect")
+        self.draw_outline()
+
+
+    def draw_outline(self):
+        """ should be called last as it overlays the canvas"""
+        # overwrite previous outline
+        old_text_x, old_text_y = self.get_text_coords(self.last_outline[0], self.last_outline[1])
+        self.draw_canvas_from_memory(old_text_x, old_text_y, old_text_x+1, old_text_y+1)
+
+        x,y = self.get_rounded_coords(self.press_x, self.press_y)
+        bg_x,bg_y = self.get_text_coords(self.press_x, self.press_y)
+        bg_color = self.color_array[bg_y][bg_x]
+        outline_color = "white"
+        if bg_color == "white":
+            outline_color = "black"
+        self.canvas.create_rectangle(x, y, x+self.pixel_width, y+self.pixel_height,
+                                     outline=outline_color)
 
     def resize_canvas(self, value):
         self.pixel_width = int(value)
-        self.pixel_height = self.pixel_width * self.height_multiplier.get()
+        self.pixel_height = int(self.pixel_width * self.height_multiplier.get())
         self.canvas_width = self.sprite_width * self.pixel_width
         self.canvas_height = self.sprite_height * self.pixel_height
         self.canvas.config(width=self.canvas_width, height=self.canvas_height)
 
         self.draw_canvas_from_memory()
     
-    def draw_canvas_from_memory(self):
+    def draw_canvas_from_memory(self, start_x = 0, start_y = 0, end_x = None, end_y = None):
+        """Redraws the whole canvas by default"""
+        if end_x == None:
+            end_x = self.sprite_width
+            end_y = self.sprite_height
+
         temp_key = self.last_key
         temp_color = self.current_color
         temp_text_color = self.text_color
         temp_last_pos = [self.last_x,self.last_y]
-        for y in range(self.sprite_height):
-            for x in range(self.sprite_width):
+        for y in range(start_y, end_y):
+            for x in range(start_x, end_x):
                 self.last_key = self.sprite_array[y][x]
                 self.current_color = self.color_array[y][x]
                 self.text_color = self.text_color_array[y][x]
@@ -242,11 +285,16 @@ class SpriteMaker:
         self.last_x = temp_last_pos[0]
         self.last_y = temp_last_pos[1]
 
+
     def activate(self, event):
         # Save the initial position
         self.last_x = event.x
         self.last_y = event.y
+
+        self.last_outline = self.press_x, self.press_y
+        self.press_x, self.press_y = event.x, event.y
         self.draw(event)
+        self.draw_outline()
 
     def get_rounded_coords(self,x,y):
         x = int(x/self.pixel_width) * self.pixel_width
@@ -267,6 +315,9 @@ class SpriteMaker:
         if event.x is None:
             return
         self.key_draw(event.x, event.y)
+        self.last_outline = self.press_x, self.press_y
+        self.press_x, self.press_y = event.x, event.y
+        self.draw_outline()
 
     def store_current_char(self,x,y):
         """Takes mouse coords, not array coords"""
@@ -295,9 +346,27 @@ class SpriteMaker:
         self.last_x = ex
         self.last_y = ey
 
-    def reset(self, event):
+    def on_move(self, event):
+        x,y = self.get_rounded_coords(event.x, event.y)
+        self.canvas.coords(self.hover_outline,
+                           x, y, x + self.pixel_width, y + self.pixel_height)
+        self.canvas.tag_raise(self.hover_outline)
+        
+        # self.draw_outline()
+
+    def release(self, event):
+        self.release_x, self.release_y = event.x, event.y
         self.draw_canvas_from_memory()
-        # pass
+        self.draw_outline()
+
+    def entered(self, event):
+        self.canvas.itemconfigure(self.hover_outline, state= "normal")
+    def left(self, event):
+        self.canvas.itemconfigure(self.hover_outline, state= "hidden")
+
+    def root_click(self, event):
+        if event.widget is not self.canvas:
+            self.deselect(event)
 
 root = Tk()
 app = SpriteMaker(root)
