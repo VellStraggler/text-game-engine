@@ -10,7 +10,7 @@ class SpriteMaker:
         self.root.title("TXTEngine Sprite Editor (Ver: 0.1)")
         for r in range(16):
             root.grid_rowconfigure(r, weight=1, minsize=10)
-        for c in range(32):
+        for c in range(22):
             root.grid_columnconfigure(c, weight=1, minsize=10)
 
         self.height_multiplier = DoubleVar(value=1.41)
@@ -33,18 +33,16 @@ class SpriteMaker:
             self.text_color_array.append(text_color_row)
 
         # Canvas
-        self.pixel_width = 30
+        self.pixel_width = 36
         self.pixel_height = int(self.pixel_width * self.height_multiplier.get())
         self.canvas_width = self.sprite_width * self.pixel_width
         self.canvas_height = self.sprite_height * self.pixel_height
         self.canvas = Canvas(root, width=self.canvas_width, height=self.canvas_height,bg="white")
-        self.canvas.grid(row=0, column=16, rowspan=80, columnspan=80)
 
-        self.canvas_width_scale = Scale(self.root, from_=1, to=30, 
+        self.canvas_width_scale = Scale(self.root, from_=1, to=60, 
                                         variable=IntVar(value=self.pixel_width), 
                                         command=self.resize_canvas,
                                         orient=HORIZONTAL)  
-        self.canvas_width_scale.grid(row=0,column=0)
 
         # Mouse Position
         self.last_x = 0
@@ -69,6 +67,7 @@ class SpriteMaker:
         self.canvas.bind("<Motion>", self.on_move)
         self.canvas.bind("<Enter>", self.entered)
         self.canvas.bind("<Leave>", self.left)
+        self.canvas.bind("<Button-3>",self.flip_colors)
         self.root.bind("<Button-1>", self.root_click)
 
 
@@ -82,99 +81,102 @@ class SpriteMaker:
         # Type Mode
         self.is_type_mode = BooleanVar(value=False)
         self.type_mode = Checkbutton(root, text="Type Mode", variable= self.is_type_mode)
-        self.type_mode.grid(row=3, column=0)
 
         # Replace Mode
         self.is_replace_mode = BooleanVar(value=False)
         self.replace_mode = Checkbutton(root, text="Replace Mode", variable=self.is_replace_mode)
-        self.replace_mode.grid(row=4,column=0)
 
         # Copy Button
-        self.copy_button = Button(root, text="Copy Plain Text to Clipboard", command=self.copy)
-        self.copy_button.grid(row=2,column=0)
+        self.copy_button = Button(root, text="Copy Text", command=self.copy)
 
         # Special Text
         text_chars = "◤◥╱╲⎺│¯◉◕◔◓◑◐◨◧▼▲▶◀▄"
         self.special_text_buttons = []
-        tc_columns = 8
+        tc_columns = 10
         for i in range(len(text_chars)):
             button = Button(text=text_chars[i], command=lambda c = text_chars[i]: self.set_char(c))
-            button.grid(row=i//tc_columns, column =(i%tc_columns)+1)
+            button.grid(row=(i%tc_columns), column =(i//tc_columns)+1)
             self.special_text_buttons.append(button)
 
         # Preview Character
         self.preview_width = 60
         self.char_preview = Canvas(root,width=self.preview_width, height=self.preview_width*self.height_multiplier.get())
-        self.char_preview.grid(row=6,column=1,columnspan=7)
 
-        # Hidable Color Choices
-        image_file = PImage.open("scripts/text-game-engine/chars_and_colors/colors_by_number.png")
+        # Color Choices
+        image_file = PImage.open("chars_and_colors/colors_by_number.png")
         image = image_file.load()
         # FIXME: skip legacy colors for now
-        start_num = 16
+        self.colors_start_num = 16
         color_width = 200
         color_height = 20
         start_coord = [70,70] # midnight blue
-        color_dict = dict()
-        num = start_num
+        self.color_dict = dict()
+        num = self.colors_start_num
         for x in range(6):
             for y in range(40):
                 color = image[start_coord[0] + (color_width*x), start_coord[1] +(color_height*y)]
-                color_dict[num] = (color[0], color[1], color[2])
+                self.color_dict[num] = (color[0], color[1], color[2])
                 num+=1
         
         # print(color_dict)
-        # self.all_colors = Canvas(root, width=200, height=200)
-        # self.all_colors.grid(row=0,column=0)
+        self.color_box_size = 10   # size of each square
+        self.color_columns = 40       # squares per row
+        self.all_colors = Canvas(root, height=self.color_box_size*self.color_columns, 
+                                 width=self.color_box_size*(200//self.color_columns))
 
-        # box_size = 10   # size of each square
-        # cols = 24       # squares per row
 
-        # for i, (num, rgb) in enumerate(color_dict.items()):
-        #     tk_color = "#%02x%02x%02x" % rgb   # convert RGB → "#RRGGBB"
+        for i, (num, rgb) in enumerate(self.color_dict.items()):
+            tk_color = "#%02x%02x%02x" % rgb   # convert RGB → "#RRGGBB"
 
-        #     x = (i % cols) * box_size
-        #     y = (i // cols) * box_size
+            y = (i % self.color_columns) * self.color_box_size
+            x = (i // self.color_columns) * self.color_box_size
 
-        #     self.all_colors.create_rectangle(
-        #         x, y, x + box_size, y + box_size,
-        #         fill=tk_color, outline=""
-        #     )
+            self.all_colors.create_rectangle(
+                x, y, x + self.color_box_size, y + self.color_box_size,
+                fill=tk_color, outline=""
+            )
 
-        # Color Palettes
-        self.palette_buttons = []
-        self.colors =    ["black","white","yellow","red"]
-        self.text_colors=["white","black","purple","green"]
-        for i,label in enumerate(["background","text color"]):
-            palette_label = Label(root, text=label)
-            palette_label.grid(row=4+i, column=1)
-        for c in range(len(self.colors)):
-            button = Button(root, background=self.colors[c], 
-                            command= lambda color = self.colors[c]: self.set_color(color))
-            button.grid(row=4,column=c+2)
-            self.palette_buttons.append(button)
-        p_button = Button(root, text="+", command=self.add_color)
-        p_button.grid(row=4, column=len(self.colors)+2)
-        for c in range(len(self.text_colors)):
-            button = Button(root, background=self.text_colors[c], 
-                            command= lambda color = self.text_colors[c]: self.set_text_color(color))
-            button.grid(row=5,column=c+2)
-            self.palette_buttons.append(button)
-        p_button = Button(root, text="+", command=self.add_text_color)
-        p_button.grid(row=5, column=len(self.text_colors)+2)
+        self.all_colors.bind("<ButtonRelease-1>", self.select_from_all_colors)
+        self.all_colors.bind("<ButtonRelease-3>", self.select_from_all_text_colors)
 
         # Erase Button
         clear_b = Button(root, text='Erase All',command=self.clear_sprite)
-        clear_b.grid(row=6, column=0)
 
-        # Char Ratio
-        # For Debugging only
-        # char_ratio = Scale(root, variable=self.height_multiplier, 
-        #                    from_=1, to=2, resolution=.01, command=self.re_ratio)
-        # char_ratio.grid(row=7,column=0)
+        # Grid Item Placement
+        self.canvas_width_scale.grid(row=0, column=0, rowspan=2)
+        self.all_colors.grid(        row=0, column=4, rowspan=16)
+        self.canvas.grid(            row=0, column=5, rowspan=16, columnspan=16)
+        self.copy_button.grid(       row=2, column=0)
+        self.type_mode.grid(         row=3, column=0)
+        self.replace_mode.grid(      row=4, column=0)
+        clear_b.grid(                row=5, column=0)
+        self.char_preview.grid(      row=13, column=1, rowspan=3, columnspan=3)
         
         self.draw_preview()
         self.resize_canvas(self.pixel_width)
+
+    def flip_colors(self,event):
+        old_bg = self.current_color
+        self.set_color(self.text_color)
+        self.set_text_color(old_bg)
+
+    def rgb_to_hex(self, rgb):
+        return f'#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}'
+
+    def select_from_all_text_colors(self, event):
+        self.select_color_bg_fg(event, False)
+    def select_from_all_colors(self, event):
+        self.select_color_bg_fg(event, True)
+
+    def select_color_bg_fg(self, event, is_background):
+        y,x = event.x//self.color_box_size, event.y//self.color_box_size
+        index = x + self.colors_start_num + (y * self.color_columns)
+        rgb_code = self.color_dict[index]
+        hex_code = self.rgb_to_hex(rgb_code)
+        if is_background:
+            self.set_color(hex_code)
+        else:
+            self.set_text_color(hex_code)
 
     def re_ratio(self, val):
         value = self.pixel_width
@@ -191,12 +193,6 @@ class SpriteMaker:
                 self.sprite_array[y][x] = " "
                 self.text_color_array[y][x] = self.default_text_color
         self.draw_canvas_from_memory()
-
-    def add_color(self):
-        pass
-
-    def add_text_color(self):
-        pass
 
     def set_color(self, value):
         self.current_color = value
@@ -235,7 +231,6 @@ class SpriteMaker:
 
     def deselect(self, event):
         self.press_x, self.press_y = -100, -100
-        print("deselect")
         self.draw_outline()
 
 
