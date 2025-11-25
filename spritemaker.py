@@ -7,7 +7,7 @@ class SpriteMaker:
     def __init__(self, root:Tk):
         # Root
         self.root = root
-        self.root.title("TXTEngine Sprite Editor (Ver: 0.1)")
+        self.root.title("TXTEngine Sprite Editor (Ver: 0.2)")
         for r in range(16):
             root.grid_rowconfigure(r, weight=1, minsize=10)
         for c in range(22):
@@ -194,6 +194,10 @@ class SpriteMaker:
                 self.text_color_array[y][x] = self.default_text_color
         self.draw_canvas_from_memory()
 
+    def init_hover_outline(self):
+        self.hover_outline = self.canvas.create_rectangle(0,0,self.pixel_width,self.pixel_height,
+                                                          outline="gray")
+
     def set_color(self, value):
         self.current_color = value
         self.draw_preview()
@@ -263,6 +267,10 @@ class SpriteMaker:
         if end_x == None:
             end_x = self.sprite_width
             end_y = self.sprite_height
+            # Erase everything below
+            self.canvas.delete("all")
+            self.init_hover_outline()
+            
 
         temp_key = self.last_key
         temp_color = self.current_color
