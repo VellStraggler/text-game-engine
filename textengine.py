@@ -271,6 +271,7 @@ class Game():
             self.fps = 999.00 # Cosmetic only.
         self.display_data = "FPS:" + str(self.display_fps)
         self.display_data +=" Map: " + deconstruct_path(self.map_name)
+        self.display_data += str(self.player.x//CHUNK_WID) + ", " + str(self.player.y//CHUNK_HEI)
         self.frame_start = time()
 
     def end_game(self):
@@ -424,6 +425,7 @@ class Game():
             self.objs.set_img(player,player.get_image())
         self.run_acts(player)
         self.map.camera_star = player # UPDATE: Only needs to be done once.
+        self.player = player
         coords = "("+str(player.x)+","+str(player.y)+")"
         self.display_data += coords
     
@@ -816,6 +818,7 @@ class Game():
                             self.init_render_obj(obj)
                         self.geom_set_dict[obj.geom](obj)
                         if obj.geom == "background" or obj.img == "dead":
+                            # remove background items once they are draw once
                             line.pop(i)
                         elif obj.geom == "all" and obj.static and obj.char not in self.acts.acted_obj_chars:
                             # This is an object that will never be used and cannot be walked through.
@@ -824,14 +827,13 @@ class Game():
                             i+=1
         self.objs.render_objs = set()
     def init_render_obj(self,obj):
-        obj.top_y = obj.y-obj.height()+1
-        obj.top_x = obj.x+obj.width()-1
-        #start_y = obj.top_y
+        obj.top_y = obj.y-(obj.height()-1)
+        obj.top_x = obj.x+(obj.width()-1)
         end_y = min([obj.y+1,self.map.height-1])
-        if obj.geom!="background":
-            self.init_render_obj_geom(obj.top_y,end_y,obj,self.init_render_obj_append)
-        else:
+        if obj.geom =="background":
             self.init_render_obj_geom(obj.top_y,end_y,obj,self.init_render_obj_set)
+        else:
+            self.init_render_obj_geom(obj.top_y,end_y,obj,self.init_render_obj_append)
     def init_render_obj_geom(self,start_y,end_y,obj,func):
         for y in range(start_y,end_y):
             start_x = find_non(obj.sprite[y-start_y],SKIP)+obj.x
@@ -840,6 +842,7 @@ class Game():
                 char = obj.sprite[y-start_y][x-obj.x]
                 if SKIP not in char:
                     func(y,x,char)
+                    #funcs found below \/
     def init_render_obj_append(self,y,x,char):
         self.map.rend[y][x].append(char)
     def init_render_obj_set(self,y,x,char):
@@ -920,11 +923,11 @@ class Game():
             # Don't attempt to print out of bounds
             for x in range(start_x,end_x):
                 covered = False
-                for bobj in objs_ahead:
-                    back_x = x - bobj.x
-                    back_y = y - bobj.y + bobj.height()
+                for obj_ahead in objs_ahead:
+                    back_x = x - obj_ahead.x
+                    back_y = y - (obj_ahead.y - obj_ahead.height() + 1)
                     # Check if part of the bobj is at this coordinate
-                    if -1 < back_x < bobj.width() and -1 < back_y < bobj.height():
+                    if -1 < back_x < obj_ahead.width() and -1 < back_y < obj_ahead.height():
                         covered = True
                         break
                 char = obj.sprite[y-start_y][x-obj.x]
@@ -936,33 +939,38 @@ class Game():
                         self.map.rend[y][x].append(char)
 
     def find_objs_ahead(self,obj):
-        """Looks at the object's chunk and the one under it for objects
+        """Looks at the object's chunk, the chunk to the right of it,
+        and the three under it for objects
         that appear to cover up the main object."""
         objs_ahead = set()
-        chunks = [self.objs.find_obj_chunk(obj.x,obj.y)]
+        # current chunk
+        chunks = []
         chunks_below = []
-        #if obj.y%CHUNK_HEI > CHUNK_HEI//2:
-        chunks_below.append(self.objs.find_obj_chunk(obj.x,obj.y+CHUNK_HEI))
-        #if obj.x%CHUNK_WID < CHUNK_WID//2:
-        chunks.append(self.objs.find_obj_chunk(obj.x-CHUNK_WID,obj.y))
-        chunks_below.append(self.objs.find_obj_chunk(obj.x-CHUNK_WID,obj.y+CHUNK_HEI))
-        #elif obj.x%CHUNK_WID > CHUNK_WID - CHUNK_WID//3:
-        #else:
-        chunks.append(self.objs.find_obj_chunk(obj.x+CHUNK_WID,obj.y))
-        chunks_below.append(self.objs.find_obj_chunk(obj.x+CHUNK_WID,obj.y+CHUNK_HEI))
+        for x in range(obj.x-CHUNK_WID, obj.x+CHUNK_WID+1, CHUNK_WID):
+            chunks.append(self.objs.find_obj_chunk(x,obj.y))
+            chunks_below.append(self.objs.find_obj_chunk(x,obj.y+CHUNK_HEI))
         for chunk in chunks:
+            # The same line: look to the left of the object
+            # appears to have no effect
+            # same_line = chunk[obj.y%CHUNK_HEI]
+            # for obj_beside in same_line:
+            #     if obj_beside.x + obj_beside.width()-1 < obj.x:
+            #         if obj_beside.x > obj.x + obj.width()-1:
+            #             objs_ahead.add(obj_beside)
+            
+            # lines below
             for linei in range((obj.y+1)%CHUNK_HEI,CHUNK_HEI):
                 line = chunk[linei]
-                for bobj in line:
-                    if bobj.x + bobj.width() > obj.x:
-                        if bobj.x < obj.x + obj.width():
-                            objs_ahead.add(bobj)
+                for obj_below in line:
+                    if obj_below.x + obj_below.width()-1 > obj.x:
+                        if obj_below.x < obj.x + obj.width()-1:
+                            objs_ahead.add(obj_below)
         for chunk in chunks_below:
             for linei in range(CHUNK_HEI):
                 line = chunk[linei]
-                for bobj in line:
-                    if bobj.height() > linei + 2:
-                        if bobj.x + bobj.width() > obj.x:
-                            if bobj.x < obj.x + obj.width():
-                                objs_ahead.add(bobj)
+                for obj_below in line:
+                    if obj_below.height()-1 > linei:
+                        if obj_below.x + obj_below.width()-1 > obj.x:
+                            if obj_below.x < obj.x + obj.width()-1:
+                                objs_ahead.add(obj_below)
         return objs_ahead

@@ -10,7 +10,7 @@
                                                                                                                                   b            b            b            b            b                           
                                                                      b                                                                                                                                            
                                                                                                                                                                                                                   
-                          q                                                                                                                                                                    b                  
+                          q                                                                 t                                                                                                  b                  
                                                                         b                                                 b                                                                                       
                                                                                                                                                                                                                   
                                                                                                                                                                                                                   
@@ -38,7 +38,7 @@
                                                                                                                                                                                                                   
                                                                                                                                                                                                                   
            b                                               b         b            b            b            b            b            b            b                                                              
-                                                                                                                                                                                                  b               
+                                                                                                     t                                     t                                                      b               
                                                                                                                                                                                                                   
                                                                                                                                                                                                                   
        b                                                                                                                                                                                                          
@@ -61,8 +61,8 @@
                                                                                                                                                          b                                                        
                                                                                                                                             b                                                                     
                                                                                                                              b                                                                                    
-            b            b            b            b            b            b            b            b            b                                                                                             
-                                                                                                                                                                                                                  
+            b            b            b            b            b            b            b            b            b                   t                                                                         
+                                                                  t                                                                                                                                               
                                                                                                                                                                                                                   
                                                                                                                                                                                                                   
                                                                                                                                                                                                                   

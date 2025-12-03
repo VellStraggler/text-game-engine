@@ -10,8 +10,8 @@ SKIP = '$'
 CUR = '\033[A\033[F'
 MAX_TICK = 16
 ANIMATE_FPS = 1/8
-CHUNK_WID = 32
-CHUNK_HEI = 16
+CHUNK_WID = 64
+CHUNK_HEI = 32
 
 #FIXME: make sure all maps are at least window size
 text_dims = os.get_terminal_size()

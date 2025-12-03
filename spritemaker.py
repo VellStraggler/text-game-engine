@@ -15,16 +15,16 @@ class SpriteMaker:
 
         self.height_multiplier = DoubleVar(value=1.41)
         # Sprite Arrays
-        self.sprite_width = 16
-        self.sprite_height = 8
+        self.sprite_width = IntVar(value=16)
+        self.sprite_height = IntVar(value=8)
         self.text_array = []
         self.color_array = []
         self.text_color_array = []
-        for y in range(self.sprite_height):
+        for y in range(self.sprite_height.get()):
             sprite_row = []
             color_row = []
             text_color_row = []
-            for x in range(self.sprite_width):
+            for x in range(self.sprite_width.get()):
                 sprite_row.append(" ")
                 color_row.append("black")
                 text_color_row.append("white")
@@ -35,13 +35,13 @@ class SpriteMaker:
         # Canvas
         self.pixel_width = 36
         self.pixel_height = int(self.pixel_width * self.height_multiplier.get())
-        self.canvas_width = self.sprite_width * self.pixel_width
-        self.canvas_height = self.sprite_height * self.pixel_height
+        self.canvas_width = self.sprite_width.get() * self.pixel_width
+        self.canvas_height = self.sprite_height.get() * self.pixel_height
         self.canvas = Canvas(root, width=self.canvas_width, height=self.canvas_height,bg="white")
 
         self.canvas_width_scale = Scale(self.root, from_=1, to=60, 
                                         variable=IntVar(value=self.pixel_width), 
-                                        command=self.resize_canvas,
+                                        command=self.resize_canvas_pixel_ratio,
                                         orient=HORIZONTAL)  
 
         # Mouse Position
@@ -118,7 +118,6 @@ class SpriteMaker:
                 self.color_dict[num] = (color[0], color[1], color[2])
                 num+=1
         
-        # print(color_dict)
         self.color_box_size = 10   # size of each square
         self.color_columns = 40       # squares per row
         self.all_colors = Canvas(root, height=self.color_box_size*self.color_columns, 
@@ -146,10 +145,21 @@ class SpriteMaker:
         self.is_bg_only = BooleanVar(value=False)
         color_only = Checkbutton(root, text="Background-Only Mode", variable=self.is_bg_only)
 
+        sprite_width_slide = Scale(self.root, from_=1, to=60, 
+                                        variable=IntVar(value=self.sprite_width.get()), 
+                                        command=self.resize_canvas_width,
+                                        orient=HORIZONTAL)
+        sprite_height_slide = Scale(self.root, from_=1, to=60, 
+                                        variable=IntVar(value=self.sprite_height.get()), 
+                                        command=self.resize_canvas_height,
+                                        orient=VERTICAL)
+
         # Grid Item Placement
         self.canvas_width_scale.grid(row=0, column=0, rowspan=2)
         self.all_colors.grid(        row=0, column=4, rowspan=16)
-        self.canvas.grid(            row=0, column=5, rowspan=16, columnspan=16)
+        self.canvas.grid(            row=1, column=6, rowspan=16, columnspan=16)
+        sprite_height_slide.grid(    row=1, column=5, rowspan=3)
+        sprite_width_slide.grid(     row=0, column=6)
         self.copy_button.grid(       row=2, column=0)
         self.type_mode.grid(         row=3, column=0)
         self.replace_mode.grid(      row=4, column=0)
@@ -158,7 +168,7 @@ class SpriteMaker:
         self.char_preview.grid(      row=13, column=1, rowspan=3, columnspan=3)
         
         self.draw_preview()
-        self.resize_canvas(self.pixel_width)
+        self.resize_canvas_pixel_ratio(self.pixel_width)
 
     def flip_colors(self,event):
         old_bg = self.current_color
@@ -185,15 +195,15 @@ class SpriteMaker:
 
     def re_ratio(self, val):
         value = self.pixel_width
-        self.resize_canvas(value)
+        self.resize_canvas_pixel_ratio(value)
 
     def set_char(self, c):
         self.last_key = c
         self.draw_preview()
 
     def clear_sprite(self):
-        for y in range(self.sprite_height):
-            for x in range(self.sprite_width):
+        for y in range(self.sprite_height.get()):
+            for x in range(self.sprite_width.get()):
                 self.color_array[y][x] = self.default_color
                 self.text_array[y][x] = " "
                 self.text_color_array[y][x] = self.default_text_color
@@ -242,10 +252,10 @@ class SpriteMaker:
 
     def get_next_typing_coord_over(self, x, y):
         x += self.pixel_width
-        if x >= self.pixel_width * self.sprite_width:
+        if x >= self.pixel_width * self.sprite_width.get():
             x = 1
             y += self.pixel_height
-            if y >= self.pixel_height * self.sprite_height:
+            if y >= self.pixel_height * self.sprite_height.get():
                 y = 1
         return x,y
 
@@ -267,12 +277,51 @@ class SpriteMaker:
             outline_color = "black"
         self.canvas.create_rectangle(x, y, x+self.pixel_width, y+self.pixel_height,
                                      outline=outline_color)
+        
+    def resize_canvas_width(self, new_width):
+        self.resize_canvas_dimensions(int(new_width), self.sprite_height.get())
 
-    def resize_canvas(self, value):
+    def resize_canvas_height(self, new_height):
+        self.resize_canvas_dimensions(self.sprite_width.get(), int(new_height))
+
+    def resize_canvas_dimensions(self, new_width:int, new_height:int):
+        copy_width = int(self.sprite_width.get())
+        if copy_width > int(new_width):
+            copy_width = new_width
+        copy_height = int(self.sprite_height.get())
+        if copy_height > int(new_height):
+            copy_height = new_height
+
+        # create new arrays for use
+        new_text_array = [[" "] * new_width for _ in range(new_height)]
+        new_bg_array   = [["black"] * new_width for _ in range(new_height)]
+        new_fg_array   = [["white"] * new_width for _ in range(new_height)]
+        
+        # copy from the previous array
+        for y in range(copy_height):
+            for x in range(copy_width):
+                new_text_array[y][x] = self.text_array[y][x]
+                new_bg_array[y][x] = self.color_array[y][x]
+                new_fg_array[y][x] = self.text_color_array[y][x]
+
+        # reassign arrays to new arrays
+        self.text_array = new_text_array
+        self.color_array = new_bg_array
+        self.text_color_array = new_fg_array
+
+        self.sprite_height.set(new_height)
+        self.sprite_width.set(new_width)
+
+        self.resize_canvas_pixel_ratio(self.pixel_width)
+        self.draw_canvas_from_memory()
+
+
+    def resize_canvas_pixel_ratio(self, value):
+        """Ratio is based on pixel width for a single character"""
         self.pixel_width = int(value)
         self.pixel_height = int(self.pixel_width * self.height_multiplier.get())
-        self.canvas_width = self.sprite_width * self.pixel_width
-        self.canvas_height = self.sprite_height * self.pixel_height
+        self.canvas_width = self.sprite_width.get() * self.pixel_width
+        self.canvas_height = self.sprite_height.get() * self.pixel_height
         self.canvas.config(width=self.canvas_width, height=self.canvas_height)
 
         self.draw_canvas_from_memory()
@@ -280,8 +329,8 @@ class SpriteMaker:
     def draw_canvas_from_memory(self, start_x = 0, start_y = 0, end_x = None, end_y = None):
         """Redraws the whole canvas by default"""
         if end_x == None:
-            end_x = self.sprite_width
-            end_y = self.sprite_height
+            end_x = self.sprite_width.get()
+            end_y = self.sprite_height.get()
             # Erase everything below
             self.canvas.delete("all")
             self.init_hover_outline()
@@ -394,9 +443,9 @@ class SpriteMaker:
 
         self.draw_outline()
 
-    def entered(self, event):
+    def entered(self, _):
         self.canvas.itemconfigure(self.hover_outline, state= "normal")
-    def left(self, event):
+    def left(self, _):
         self.canvas.itemconfigure(self.hover_outline, state= "hidden")
 
     def root_click(self, event):

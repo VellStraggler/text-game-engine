@@ -70,10 +70,10 @@ class Objs():
                 return i
             i+= 1
         return -1
-    def find_obj_chunk(self,x,y,divided=False):
+    def find_obj_chunk(self,x,y,by_chunkxy_not_xy=False):
         """ Confirms that a chunk exists or creates it.
         Returns the chunk x and y. """
-        if not divided:
+        if not by_chunkxy_not_xy:
             x = x//CHUNK_WID
             y = y//CHUNK_HEI
         if y not in self.chunks:
@@ -84,19 +84,17 @@ class Objs():
                 self.chunks[y][x][y2] = list()
         return self.chunks[y][x]
     def append_obj_ordered(self,obj):
-        """This is for a ready-made object who must be placed in the right spot
-        within the objs list."""
-        #for xy in ([obj.x,obj.y],[obj.top_x,obj.top_y]):
-        xy = [obj.x,obj.y]
-        chunk = self.find_obj_chunk(xy[0],xy[1])
-        line = chunk[xy[1]%CHUNK_HEI]
+        """The given object is placed in the right spot
+        in a chunk within the objs list."""
+        chunk = self.find_obj_chunk(obj.x,obj.y)
+        line = chunk[obj.y%CHUNK_HEI]
         i = 0
         while i < len(line):
             next_obj = line[i]
-            if next_obj.x >= xy[0]:
+            if next_obj.x >= obj.x:
                 break
             i+=1
-        chunk[xy[1]%CHUNK_HEI].insert(i,obj)
+        line.insert(max(i-1,0),obj)
     def remove_obj(self,obj):
         """Remove the obj twice, once from the top coords, and once
         from the bottom ones."""
@@ -212,7 +210,7 @@ class Objs():
             self.dmg_dirs = dmg_dirs
 
             self.animate = animate # Edited in the objs.append_obj function
-            self.idle_animation = Linked([img]) # When doing NOTHINg. NOT IMPLEMENTED
+            self.idle_animation = Linked([img]) # When doing nothing. NOT IMPLEMENTED
             self.animation = Linked([img])
             self.framerate = ANIMATE_FPS
             self.frame_time = 0

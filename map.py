@@ -97,7 +97,7 @@ class Map():
                     new_item = [[BLANK]] # z-levels start at 1
                     new_row.append(new_item)
                 self.rend.append(new_row)
-        else:self.clear_rend()
+        else: self.clear_rend()
     def clear_rend(self):
         for y in range(self.height):
             for x in range(self.width):
