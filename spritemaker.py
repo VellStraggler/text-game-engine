@@ -17,7 +17,7 @@ class SpriteMaker:
         # Sprite Arrays
         self.sprite_width = 16
         self.sprite_height = 8
-        self.sprite_array = []
+        self.text_array = []
         self.color_array = []
         self.text_color_array = []
         for y in range(self.sprite_height):
@@ -28,7 +28,7 @@ class SpriteMaker:
                 sprite_row.append(" ")
                 color_row.append("black")
                 text_color_row.append("white")
-            self.sprite_array.append(sprite_row)
+            self.text_array.append(sprite_row)
             self.color_array.append(color_row)
             self.text_color_array.append(text_color_row)
 
@@ -61,7 +61,7 @@ class SpriteMaker:
         self.canvas.tag_raise(self.hover_outline)
 
         # Bind mouse events
-        self.canvas.bind("<Button-1>", self.activate)       # Left click
+        self.canvas.bind("<Button-1>", self.left_click)       # Left click
         self.canvas.bind("<B1-Motion>", self.draw)         # Drag while left-click held
         self.canvas.bind("<ButtonRelease-1>", self.release)  # Release mouse button
         self.canvas.bind("<Motion>", self.on_move)
@@ -142,6 +142,10 @@ class SpriteMaker:
         # Erase Button
         clear_b = Button(root, text='Erase All',command=self.clear_sprite)
 
+        # Color-only mode
+        self.is_bg_only = BooleanVar(value=False)
+        color_only = Checkbutton(root, text="Background-Only Mode", variable=self.is_bg_only)
+
         # Grid Item Placement
         self.canvas_width_scale.grid(row=0, column=0, rowspan=2)
         self.all_colors.grid(        row=0, column=4, rowspan=16)
@@ -150,6 +154,7 @@ class SpriteMaker:
         self.type_mode.grid(         row=3, column=0)
         self.replace_mode.grid(      row=4, column=0)
         clear_b.grid(                row=5, column=0)
+        color_only.grid(             row=6, column=0)
         self.char_preview.grid(      row=13, column=1, rowspan=3, columnspan=3)
         
         self.draw_preview()
@@ -190,7 +195,7 @@ class SpriteMaker:
         for y in range(self.sprite_height):
             for x in range(self.sprite_width):
                 self.color_array[y][x] = self.default_color
-                self.sprite_array[y][x] = " "
+                self.text_array[y][x] = " "
                 self.text_color_array[y][x] = self.default_text_color
         self.draw_canvas_from_memory()
 
@@ -207,7 +212,7 @@ class SpriteMaker:
         self.draw_preview()
 
     def copy(self):
-        text = "\n".join("".join(row) for row in self.sprite_array)
+        text = "\n".join("".join(row) for row in self.text_array)
         self.root.clipboard_clear()
         root.clipboard_append(text)
         root.update()
@@ -222,25 +227,35 @@ class SpriteMaker:
         self.draw_preview()
         # move cursor along if in type mode
         if self.is_type_mode.get():
-            self.last_x += self.pixel_width
-            if self.last_x >= self.pixel_width * self.sprite_width:
-                self.last_x = 1
-                self.last_y += self.pixel_height
-                if self.last_y >= self.pixel_height * self.sprite_height:
-                    self.last_y = 1
+            # outline moves with type mode
+            # this is to remove the previous outline
+
+            self.last_x, self.last_y = self.get_next_typing_coord_over(self.last_x, self.last_y)
+
+            # update where the outline draws from too
+            self.last_outline = (self.last_x, self.last_y)
+            self.press_x, self.press_y = self.get_next_typing_coord_over(self.last_x, self.last_y)
             self.key_draw(self.last_x, self.last_y)
         elif self.is_replace_mode.get():
             self.key_draw(self.last_x, self.last_y)
         self.draw_outline()
 
+    def get_next_typing_coord_over(self, x, y):
+        x += self.pixel_width
+        if x >= self.pixel_width * self.sprite_width:
+            x = 1
+            y += self.pixel_height
+            if y >= self.pixel_height * self.sprite_height:
+                y = 1
+        return x,y
+
     def deselect(self, event):
         self.press_x, self.press_y = -100, -100
         self.draw_outline()
 
-
     def draw_outline(self):
         """ should be called last as it overlays the canvas"""
-        # overwrite previous outline
+        # draw over previous outline
         old_text_x, old_text_y = self.get_text_coords(self.last_outline[0], self.last_outline[1])
         self.draw_canvas_from_memory(old_text_x, old_text_y, old_text_x+1, old_text_y+1)
 
@@ -278,7 +293,7 @@ class SpriteMaker:
         temp_last_pos = [self.last_x,self.last_y]
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
-                self.last_key = self.sprite_array[y][x]
+                self.last_key = self.text_array[y][x]
                 self.current_color = self.color_array[y][x]
                 self.text_color = self.text_color_array[y][x]
                 self.key_draw(x*self.pixel_width,y*self.pixel_height)
@@ -289,13 +304,14 @@ class SpriteMaker:
         self.last_y = temp_last_pos[1]
 
 
-    def activate(self, event):
+    def left_click(self, event):
         # Save the initial position
         self.last_x = event.x
         self.last_y = event.y
 
         self.last_outline = self.press_x, self.press_y
         self.press_x, self.press_y = event.x, event.y
+
         self.draw(event)
         self.draw_outline()
 
@@ -325,11 +341,13 @@ class SpriteMaker:
     def store_current_char(self,x,y):
         """Takes mouse coords, not array coords"""
         textx,texty = self.get_text_coords(x, y)
+        if self.is_bg_only.get():
+            self.last_key = self.text_array[texty][textx]
         char_used = self.last_key
         # store as space if you can't read the text (same color as background)
         if self.current_color == self.text_color:
             char_used = " "
-        self.sprite_array[texty][textx] = char_used
+        self.text_array[texty][textx] = char_used
         self.color_array[texty][textx] = self.current_color
         self.text_color_array[texty][textx] = self.text_color
 
@@ -351,15 +369,29 @@ class SpriteMaker:
 
     def on_move(self, event):
         x,y = self.get_rounded_coords(event.x, event.y)
+        if self.is_bg_only.get():
+            # get the character we're hovering over
+            tx,ty = self.get_text_coords(x,y)
+            hover_char = self.text_array[ty][tx]
+            if self.last_key != hover_char:
+                self.last_key = hover_char
+                self.draw_preview()
         self.canvas.coords(self.hover_outline,
                            x, y, x + self.pixel_width, y + self.pixel_height)
         self.canvas.tag_raise(self.hover_outline)
         
-        # self.draw_outline()
 
     def release(self, event):
         self.release_x, self.release_y = event.x, event.y
         self.draw_canvas_from_memory()
+
+        # move cursor along if in type mode
+        if self.is_type_mode.get():
+            # update where the outline draws from too
+            self.last_outline = self.get_next_typing_coord_over(self.last_x, self.last_y)
+            self.press_x, self.press_y = self.get_next_typing_coord_over(self.last_x, self.last_y)
+            self.key_draw(self.last_x, self.last_y)
+
         self.draw_outline()
 
     def entered(self, event):
