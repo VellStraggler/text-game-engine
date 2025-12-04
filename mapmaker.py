@@ -2,6 +2,7 @@ from time import time
 import keyboard as keys
 from tkinter import *
 from os.path import exists
+from textengine import *
 WID = 120
 HEI = 29
 BLANK = " "
@@ -23,6 +24,9 @@ class MapMaker():
 
         self.xcam = 0
         self.ycam = 0
+
+        # Imported only to steal nice functions
+        self.g = Game()
         #These refer to the coords of the top-left corner
         # of the map camera.
 
@@ -207,6 +211,7 @@ class MapMaker():
         self.update = True
 
     def update_win(self):
+
         save_loc = self.inp_win.index("insert")
         # clear screen
         self.inp_win.delete(START,'end')
@@ -245,7 +250,7 @@ class MapMaker():
         if self.file_name == "" or self.file_name != file_entry:
             # If stored file_name is blank or not the same as file_entry,
             # store file_entry as new file_name
-            self.file_name = file_entry
+            self.file_name = file_entry 
 
     def set_path(self):
         self.xcam = 0
@@ -273,11 +278,12 @@ class MapMaker():
 
         # Buttons Above:
         self.file_name_entry = Entry(self.win)
-        self.file_name_entry.grid(row = 1, column = 1,pady=10)
+        self.file_name_entry.grid(row = 1, column = 1)
 
         file_name_button = Button(self.win, text = 'Set Map File')
         file_name_button.configure(command=self.set_path)
         file_name_button.grid(row = 1, column = 2)
+
 
         save = Button(self.win, text='Save')
         save.configure(command=self.press_save)

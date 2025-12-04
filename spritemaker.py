@@ -1,13 +1,16 @@
 from tkinter import *
 import tkinter
-# import textengine as tx
+from textengine import *
 import PIL.Image as PImage
+
+START = '1.0'
 
 class SpriteMaker:
     def __init__(self, root:Tk):
         # Root
         self.root = root
         self.root.title("TXTEngine Sprite Editor (Ver: 0.2)")
+        self.g = Game()
         for r in range(16):
             root.grid_rowconfigure(r, weight=1, minsize=10)
         for c in range(22):
@@ -153,6 +156,16 @@ class SpriteMaker:
                                         variable=IntVar(value=self.sprite_height.get()), 
                                         command=self.resize_canvas_height,
                                         orient=VERTICAL)
+        
+        self.sprite_file_entry = Text(self.root, width=20,height=1)
+        self.sprite_file_entry.insert("1.0","mariokart/karts copy")
+        
+        sprite_file_name_button = Button(self.root, text = 'Set Sprite File', command=self.set_sprite_path)
+
+        self.sprite_name = Label(self.root, width=20, height=1, text="Example Sprite Name")
+
+        last_sprite = Button(self.root, text="< Last Sprite", command=self.last_sprite)
+        next_sprite = Button(self.root, text="Next Sprite >", command=self.next_sprite)
 
         # Grid Item Placement
         self.canvas_width_scale.grid(row=0, column=0, rowspan=2)
@@ -160,6 +173,12 @@ class SpriteMaker:
         self.canvas.grid(            row=1, column=6, rowspan=16, columnspan=16)
         sprite_height_slide.grid(    row=1, column=5, rowspan=3)
         sprite_width_slide.grid(     row=0, column=6)
+        self.sprite_file_entry.grid(      row=0, column=7)
+        sprite_file_name_button.grid(row=0, column=8)
+        self.sprite_name.grid(       row=0, column=9)
+        last_sprite.grid(            row=0, column=10)
+        next_sprite.grid(            row=0, column=11)
+
         self.copy_button.grid(       row=2, column=0)
         self.type_mode.grid(         row=3, column=0)
         self.replace_mode.grid(      row=4, column=0)
@@ -168,7 +187,7 @@ class SpriteMaker:
         self.char_preview.grid(      row=13, column=1, rowspan=3, columnspan=3)
         
         self.draw_preview()
-        self.resize_canvas_pixel_ratio(self.pixel_width)
+        self.re_ratio()
 
     def flip_colors(self,event):
         old_bg = self.current_color
@@ -193,7 +212,133 @@ class SpriteMaker:
         else:
             self.set_text_color(hex_code)
 
-    def re_ratio(self, val):
+    def last_sprite(self):
+        if self.sprite_index == 0:
+            self.sprite_index = len(self.sprite_names)
+        self.sprite_index = (self.sprite_index - 1)
+        self.set_sprite()
+        
+    def next_sprite(self):
+        self.sprite_index = (self.sprite_index + 1)%len(self.sprite_names)
+        self.sprite_name.config(text= self.sprite_names[self.sprite_index])
+        self.set_sprite()
+
+    def set_sprite(self):
+        self.current_sprite_name = self.sprite_names[self.sprite_index]
+        self.current_sprite = self.g.sprites[self.current_sprite_name]
+        self.sprite_name.config(text= self.current_sprite_name)
+        self.sprite_height.set(len(self.current_sprite))
+        min_wid = len(self.current_sprite[0])
+        for y in range(self.sprite_height.get()):
+            wid = len(self.current_sprite[y])
+            if wid < min_wid:
+                min_wid = wid
+        self.sprite_width.set(min_wid)
+        self.re_ratio()
+        for y in range(self.sprite_height.get()):
+            for x in range(self.sprite_width.get()):
+                c = self.current_sprite[y][x].replace("$", " ")
+                self.text_array[y][x] = c[-1]
+        self.draw_canvas_from_memory()
+
+    def set_sprite_file_name(self):
+        self.g.set_sprite_path(self.sprite_file_entry.get(START, END).replace("\n",""))
+
+    def set_sprite_path(self, path):
+        name = None
+        curr_sprite = []
+        height = 0
+        color_coded = False
+        where_coded = False
+        color_code = [""]
+        # Adds parent directory of running program
+        with open(path, 'r',encoding='utf-8') as file:
+            line = file.readline()[:-1] # Removes "\n".
+            while(line):
+                if line[0] == SKIP:
+                    # Add the previous sprite to the sprites dictionary.
+                    if name != None: # If this isn't the first img
+                        if len(curr_sprite[0]) > self.max_sprite_width:
+                            self.max_sprite_width = len(curr_sprite[0])
+                        if height > self.max_sprite_height:
+                            self.max_sprite_height = height
+                        if color_coded:
+                            if where_coded: # The second half of the sprite is actually the color code
+                                half_len = len(curr_sprite)//2
+                                for row in range(half_len):
+                                    colored_line = []
+                                    for i in range(len(curr_sprite[0])):
+                                        color_char = curr_sprite[half_len][i]
+                                        if color_char < "0" or color_char > "9":
+                                            color_char = 0
+                                        color = color_code[int(color_char)]
+                                        char = curr_sprite[row][i]
+                                        colored_line.append(color + char)
+                                    curr_sprite[row] = colored_line
+                                    curr_sprite.pop(half_len)
+                            else: # Each character has its color code before it. Difficult for artist to read.
+                                true_len = len(curr_sprite[0])//2
+                                # Assumes every line is the same length
+                                for row in range(len(curr_sprite)):
+                                    colors_only = []
+                                    chars_only = []
+                                    for half_i in range(true_len):
+                                        color = color_code[int(curr_sprite[row][(half_i*2)])]
+                                        char = curr_sprite[row][(half_i*2)+1]
+                                        # colors_only.append(color)
+                                        chars_only.append(char)
+                                    chars_only = replace_spaces(chars_only)
+                                    colored_line = []
+                                    for i in range(true_len):
+                                        colored_line.append(colors_only[i] + chars_only[i])
+                                    curr_sprite[row] = colored_line
+                        
+                        # Save to self.sprites
+                        self.sprites[name] = curr_sprite # If color coded and if not.
+
+                        curr_sprite = []
+                    skips = find_count(line,SKIP)
+                    # if skips == 1: end of file (do nothing)
+                    if skips == 2: # Regular Sprite
+                        color_coded = False
+                        name = line[1:-1] # Remove SKIPs
+                        height = 0
+                    elif skips >= 3: # Color-coded Sprite
+                        #$sprite-name$color0,color1$
+                        #1H0E1Y0 1T0H1E0R1E
+                        color_coded = True
+                        inds = find_indices(line,SKIP)
+                        name = line[1:inds[1]]
+                        where_coded = False
+                        if skips == 4:
+                            # $below$ at end of sprite name, this tells you that
+                            # the color code is below the text drawing rather than
+                            # in it.
+                            if line[inds[2]+1:inds[3]] == "below":  where_coded = True
+                        colors_raw = line[inds[1]+1:inds[2]]
+                        colors_raw = colors_raw.split(",")
+                        color_code = [""]
+                        for num in colors_raw:
+                            if num == " ":
+                                num = 0
+                            color_code.append(color_by_number(int(num)))
+                else: # Append to the current sprite image.
+                    line = replace_spaces(line)
+                    line = ms_gothic(line)
+                    curr_sprite.append(list(line))
+                    height +=1
+                line = file.readline()[:-1] # Removes the \n
+
+    def set_sprite_path(self):
+        self.set_sprite_file_name()
+        self.sprite_names = list(self.g.sprites.keys())
+        self.sprite_index = 0
+        self.sprite_name.config(text= self.sprite_names[self.sprite_index])
+        self.set_sprite()
+
+        self.draw_canvas_from_memory()
+
+    def re_ratio(self):
         value = self.pixel_width
         self.resize_canvas_pixel_ratio(value)
 
@@ -312,7 +457,7 @@ class SpriteMaker:
         self.sprite_height.set(new_height)
         self.sprite_width.set(new_width)
 
-        self.resize_canvas_pixel_ratio(self.pixel_width)
+        self.re_ratio()
         self.draw_canvas_from_memory()
 
 

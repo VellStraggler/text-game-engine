@@ -84,7 +84,7 @@ class Game():
     def set_map_path(self,path,directed_path=False):
         self.map.set_path(path,directed_path)
     def set_sprite_path(self,path):
-        """Take the sprite file path and store the sprites in
+        """Dtore the sprites from a text file to
         the sprites dictionary. Interpret the sprites for
         parts that are empty."""
         path = solidify_path(path)
@@ -135,7 +135,10 @@ class Game():
                                     for i in range(true_len):
                                         colored_line.append(colors_only[i] + chars_only[i])
                                     curr_sprite[row] = colored_line
+                        
+                        # Save to self.sprites
                         self.sprites[name] = curr_sprite # If color coded and if not.
+
                         curr_sprite = []
                     skips = find_count(line,SKIP)
                     # if skips == 1: end of file (do nothing)
@@ -219,7 +222,7 @@ class Game():
         self.end_game()
 
     def init_map(self,first=True):
-        """All that comes before the main game_loop"""
+        """All that comes before the main game loop"""
         if first:
             self.start_time = time()
             self.play_theme()
