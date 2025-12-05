@@ -4,6 +4,8 @@ from textengine import *
 import PIL.Image as PImage
 
 START = '1.0'
+TEXT_HEIGHT_MULT = 1.55
+HEIGHT_MULT = 2.4
 
 class SpriteMaker:
     def __init__(self, root:Tk):
@@ -16,7 +18,7 @@ class SpriteMaker:
         for c in range(22):
             root.grid_columnconfigure(c, weight=1, minsize=10)
 
-        self.height_multiplier = DoubleVar(value=1.41)
+        self.height_multiplier = DoubleVar(value=HEIGHT_MULT) #1.41 looks good in map, but 2 is realistic sizing
         # Sprite Arrays
         self.sprite_width = IntVar(value=16)
         self.sprite_height = IntVar(value=8)
@@ -224,33 +226,35 @@ class SpriteMaker:
         self.set_sprite()
 
     def set_sprite(self):
+        # self.resize_canvas_dimensions(self.sprite_width.get(), self.sprite_height.get())
         self.current_sprite_name = self.sprite_names[self.sprite_index]
-        self.current_sprite = self.g.sprites[self.current_sprite_name]
+        self.current_sprite = self.sprites[self.current_sprite_name]
         self.sprite_name.config(text= self.current_sprite_name)
         self.sprite_height.set(len(self.current_sprite))
-        min_wid = len(self.current_sprite[0])
-        for y in range(self.sprite_height.get()):
-            wid = len(self.current_sprite[y])
-            if wid < min_wid:
-                min_wid = wid
-        self.sprite_width.set(min_wid)
+        self.sprite_width.set(len(self.current_sprite[0]))
+        print("".join(self.current_sprite[0]))
+        print(self.sprite_height.get())
+        print(self.sprite_width.get())
         self.re_ratio()
-        for y in range(self.sprite_height.get()):
-            for x in range(self.sprite_width.get()):
-                c = self.current_sprite[y][x].replace("$", " ")
+        for y in range(len(self.current_sprite)):
+            for x in range(len(self.current_sprite[y])):
+                c = self.current_sprite[y][x][-1]
                 self.text_array[y][x] = c[-1]
         self.draw_canvas_from_memory()
 
     def set_sprite_file_name(self):
-        self.g.set_sprite_path(self.sprite_file_entry.get(START, END).replace("\n",""))
+        self.read_sprites(self.sprite_file_entry.get(START, END).replace("\n","") + ".txt")
 
-    def set_sprite_path(self, path):
+    def read_sprites(self, path):
         name = None
         curr_sprite = []
         height = 0
         color_coded = False
         where_coded = False
         color_code = [""]
+        self.max_sprite_width = 0
+        self.max_sprite_height = 0
+        self.sprites = dict()
         # Adds parent directory of running program
         with open(path, 'r',encoding='utf-8') as file:
             line = file.readline()[:-1] # Removes "\n".
@@ -283,7 +287,7 @@ class SpriteMaker:
                                     colors_only = []
                                     chars_only = []
                                     for half_i in range(true_len):
-                                        color = color_code[int(curr_sprite[row][(half_i*2)])]
+                                        # color = color_code[int(curr_sprite[row][(half_i*2)])]
                                         char = curr_sprite[row][(half_i*2)+1]
                                         # colors_only.append(color)
                                         chars_only.append(char)
@@ -331,7 +335,7 @@ class SpriteMaker:
 
     def set_sprite_path(self):
         self.set_sprite_file_name()
-        self.sprite_names = list(self.g.sprites.keys())
+        self.sprite_names = list(self.sprites.keys())
         self.sprite_index = 0
         self.sprite_name.config(text= self.sprite_names[self.sprite_index])
         self.set_sprite()
@@ -555,7 +559,7 @@ class SpriteMaker:
         self.canvas.create_rectangle(x, y, x+self.pixel_width, y+self.pixel_height, fill=self.current_color,outline=self.current_color)
         self.canvas.create_text(x+(self.pixel_width/2),
                                 y+(self.pixel_height/2),text=self.last_key,
-                                font=("Consolas", int(self.pixel_width), "normal"),
+                                font=("Consolas", int(self.pixel_width*TEXT_HEIGHT_MULT), "normal"),
                                 fill=self.text_color, anchor=CENTER)
         
         self.last_x = ex

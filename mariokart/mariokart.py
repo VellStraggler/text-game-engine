@@ -17,6 +17,7 @@ g.objs.sprites["right-block"] = g.objs.get_flipped_sprite(g.objs.sprites["block"
 g.new_object("right-block","b",geom="complex",color=tx.BROWN)
 g.new_object("finish-line","f",geom="background")
 g.new_object("tree","t",geom="skeleton")
+g.new_object("house-wide","h",geom="line")
 g.new_lap = True
 g.counter = 0
 g.timer = 0
