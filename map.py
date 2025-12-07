@@ -62,11 +62,13 @@ class Map():
         self.init_rend()
         self.init_geom()
 
-    def set_disp_msg(self,new_msg):
-        self.msg_timer = time() + len(new_msg)/15
-        self.disp_msg =[[self.background_color+BUBBLE[0][0]],
-                        [self.background_color+BUBBLE[1][0]],
-                        [self.background_color+BUBBLE[2][0]]]
+    def set_disp_msg(self,new_msg:str):
+        """Creates automatic timer based on number of words"""
+        words = 1 + new_msg.count(" ")
+        self.msg_timer = time() + words
+        self.disp_msg =[[BUBBLE[0][0]],
+                        [BUBBLE[1][0]],
+                        [BUBBLE[2][0]]]
         new_msg = BLANK + new_msg + BLANK
         for c in new_msg:
             self.disp_msg[0].append(BUBBLE[0][1])
@@ -109,16 +111,16 @@ class Map():
         than editing a screen list."""
         self.screen = []
         if self.setting == "color":
-            [[self.get_print_pixel(self.rend[row][x][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
+            [[self.get_print_pixel(self.rend[row][x][-1]) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
         elif self.setting == "geom":
-            [[self.get_print_pixel(str(int(self.geom[row][x])),x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
-        else:
-            [[self.get_print_pixel(self.rend[row][x][-1][-1],x) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
+            [[self.get_print_pixel(str(int(self.geom[row][x]))) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
+        else:              # black-n-white
+            [[self.get_print_pixel(self.rend[row][x][-1][-1]) for x in range(self.camera_x,self.end_camera_x)] for row in range(self.camera_y,self.end_camera_y)]
         self.add_message()
         self.add_data(data)
         self.print_map = RETURN + self.text_color + "".join(self.screen)
         print(self.print_map)
-    def get_print_pixel(self,color_char_pair,x):
+    def get_print_pixel(self,color_char_pair):
         """Filters a colored character to not call
         the same color escape code as has been most
         recently called."""
@@ -135,27 +137,52 @@ class Map():
         self.screen.append(char)
         return char
     def add_message(self):
-        if len(self.disp_msg) > 0:
-            start = int(len(self.screen)*((WINDOW_HEI-len(self.disp_msg)-.5)/WINDOW_HEI))
-            row_down = int(len(self.screen)*(1/WINDOW_HEI))
-            half_msg_len = len(self.disp_msg[0])//2-1
-            i = start
-            for row in self.disp_msg:
-                for c in row:
-                    self.screen[i-half_msg_len]=str(c)
-                    i += 1
-                start += row_down
-                i = start
+        if len(self.disp_msg) == 0:
+            return
+        
+        start = int(len(self.screen)*((WINDOW_HEI-len(self.disp_msg)-.5)/WINDOW_HEI))
+        row_down = int(len(self.screen)*(1/WINDOW_HEI))
+        half_msg_len = len(self.disp_msg[0])//2-1
+        # draw up the display message
+        i = start-half_msg_len
+        col_row = 0
+        for row in self.disp_msg:
+            color_before_msg = None
+            for j in range(1,100):
+                if len(self.screen[i-j]) > 1:
+                    color_before_msg = self.screen[i-j][:-1]
+                    break
+            new_color_found = False
+            for c in row:
+                if len(self.screen[i]) > 1:
+                    # current spot had a color
+                    new_color_found = True
+                    color_before_msg = self.screen[i][:-1]
+                    self.screen[i]=  self.background_color + str(c) + self.screen[i][:-1]
+                elif color_before_msg != None:
+                    # we'll use the color we found before the message-starting coordinates
+                    self.screen[i] = self.background_color + str(c) + color_before_msg
+                else:
+                    self.screen[i] = str(c)
+                i += 1
+            if not new_color_found and len(self.screen[i])==1:
+                if color_before_msg != None:
+                    self.screen[i] = color_before_msg + self.screen[i][-1] 
+            start += row_down
+            i = start-half_msg_len
+            col_row += 1
+            
     def add_data(self,data:str):
         if len(data) > WINDOW_WID - len(self.background_color):
             data = data[:WINDOW_WID -len(self.background_color)]
         if len(data)>0:
             i = int(len(self.screen)*((WINDOW_HEI-1)/WINDOW_HEI))
-            self.screen[i-1] += self.background_color
+            self.last_used_color = self.background_color
             for c in data:
-                self.screen[i]=c
+                if len(self.screen[i]) > 1:
+                    self.last_used_color = self.screen[i][:-1]
+                self.screen[i]= self.background_color + c + self.last_used_color
                 i +=1
-            self.screen[i] += self.background_color
     def display_timer(self):
         if len(self.disp_msg) > 0:
             if self.msg_timer < time():

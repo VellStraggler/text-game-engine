@@ -8,15 +8,21 @@ from linked import Linked
 import textengine as tx
 from time import time
 g = tx.Game()
-g.set_map_path("mariokart/test_map.txt")
+g.set_map_path("mariokart/map1.txt")
 g.set_sprite_path("mariokart/karts.txt")
 g.set_theme("mariokart/mariokart.wav")
-g.set_default_color(tx.DIRTY_GRAY)
+g.set_default_color(tx.GREEN)
 
 g.objs.sprites["right-block"] = g.objs.get_flipped_sprite(g.objs.sprites["block"])
 g.new_object("right-block","b",geom="complex",color=tx.BROWN)
+g.new_object("block-front","B",geom="complex",color=tx.BROWN)
 g.new_object("finish-line","f",geom="background")
+g.new_object("road","r",geom="background")
+g.new_object("road-up","R",geom="background")
+g.new_object("road-center","c",geom="background")
+
 g.new_object("tree","t",geom="skeleton")
+g.new_object("fence","F",geom="line")
 g.new_object("house-wide","h",geom="line")
 g.new_lap = True
 g.counter = 0

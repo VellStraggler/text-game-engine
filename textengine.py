@@ -256,7 +256,7 @@ class Game():
         self.run_frame_counter(True)
 
     def display_timer(self):
-        self.map.display_timer
+        self.map.display_timer()
 
     def print_all(self,display_data:str = ""):
         self.map.print_all(self.display_data)
@@ -653,6 +653,8 @@ class Game():
         self.map.print_from_black(mixer)
 
     def center_camera(self, actor_obj):
+        if actor_obj is None:
+            return
         x = 0
         y = 0
         if "x" in self.camera_follow:

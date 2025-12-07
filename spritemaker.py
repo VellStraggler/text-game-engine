@@ -226,7 +226,7 @@ class SpriteMaker:
             self.set_color(hex_code)
         else:
             self.set_text_color(hex_code)
-        # print(index, hex_code, self.hex_to_esc_color[hex_code], x,y)
+        print(index)
 
     def last_sprite(self):
         if self.sprite_index == 0:
