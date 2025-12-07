@@ -19,23 +19,28 @@ class SpriteMaker:
             root.grid_columnconfigure(c, weight=1, minsize=10)
 
         self.height_multiplier = DoubleVar(value=HEIGHT_MULT) #1.41 looks good in map, but 2 is realistic sizing
+
         # Sprite Arrays
         self.sprite_width = IntVar(value=16)
         self.sprite_height = IntVar(value=8)
         self.text_array = []
-        self.color_array = []
+        self.hex_color_array = []
         self.text_color_array = []
         for y in range(self.sprite_height.get()):
             sprite_row = []
-            color_row = []
+            hex_color_row = []
             text_color_row = []
             for x in range(self.sprite_width.get()):
                 sprite_row.append(" ")
-                color_row.append("black")
+                hex_color_row.append("black")
                 text_color_row.append("white")
             self.text_array.append(sprite_row)
-            self.color_array.append(color_row)
+            self.hex_color_array.append(hex_color_row)
             self.text_color_array.append(text_color_row)
+        # color index dictionary
+        self.reset_color_indices()
+
+
 
         # Canvas
         self.pixel_width = 36
@@ -80,7 +85,7 @@ class SpriteMaker:
         self.root.bind("<Key>", self.key_pressed)
         self.default_color = "black"
         self.default_text_color = "white"
-        self.current_color = self.default_color
+        self.curr_hex_color = self.default_color
         self.text_color = self.default_text_color
 
         # Type Mode
@@ -107,38 +112,18 @@ class SpriteMaker:
         self.preview_width = 60
         self.char_preview = Canvas(root,width=self.preview_width, height=self.preview_width*self.height_multiplier.get())
 
-        # Color Choices
-        image_file = PImage.open("chars_and_colors/colors_by_number.png")
-        image = image_file.load()
-        # FIXME: skip legacy colors for now
+        # Create Color Choices from Image Read
+        self.esc_to_rgb_color = dict()
+        """populated by Image Read"""
+        self.hex_to_esc_color = dict()
+        self.hex_to_esc_color['black'] = 0
         self.colors_start_num = 16
-        color_width = 200
-        color_height = 20
-        start_coord = [70,70] # midnight blue
-        self.color_dict = dict()
-        num = self.colors_start_num
-        for x in range(6):
-            for y in range(40):
-                color = image[start_coord[0] + (color_width*x), start_coord[1] +(color_height*y)]
-                self.color_dict[num] = (color[0], color[1], color[2])
-                num+=1
-        
         self.color_box_size = 10   # size of each square
-        self.color_columns = 40       # squares per row
-        self.all_colors = Canvas(root, height=self.color_box_size*self.color_columns, 
-                                 width=self.color_box_size*(200//self.color_columns))
-
-
-        for i, (num, rgb) in enumerate(self.color_dict.items()):
-            tk_color = "#%02x%02x%02x" % rgb   # convert RGB → "#RRGGBB"
-
-            y = (i % self.color_columns) * self.color_box_size
-            x = (i // self.color_columns) * self.color_box_size
-
-            self.all_colors.create_rectangle(
-                x, y, x + self.color_box_size, y + self.color_box_size,
-                fill=tk_color, outline=""
-            )
+        self.color_columns = 6     # squares per row
+        color_rows = 40
+        self.all_colors = Canvas(root, height=self.color_box_size*color_rows, 
+                                 width=self.color_box_size*self.color_columns)
+        self.read_colors_from_image()
 
         self.all_colors.bind("<ButtonRelease-1>", self.select_from_all_colors)
         self.all_colors.bind("<ButtonRelease-3>", self.select_from_all_text_colors)
@@ -164,7 +149,8 @@ class SpriteMaker:
         
         sprite_file_name_button = Button(self.root, text = 'Set Sprite File', command=self.set_sprite_path)
 
-        self.sprite_name = Label(self.root, width=20, height=1, text="Example Sprite Name")
+        self.current_sprite_name = "example-name"
+        self.sprite_name = Label(self.root, width=20, height=1, text=self.current_sprite_name)
 
         last_sprite = Button(self.root, text="< Last Sprite", command=self.last_sprite)
         next_sprite = Button(self.root, text="Next Sprite >", command=self.next_sprite)
@@ -191,13 +177,40 @@ class SpriteMaker:
         self.draw_preview()
         self.re_ratio()
 
+    def read_colors_from_image(self):
+        image_file = PImage.open("chars_and_colors/colors_by_number.png")
+        image = image_file.load()
+        # FIXME: skip legacy colors for now
+        color_width = 200
+        color_height = 20
+        start_coord = [70,70] # midnight blue
+        num = self.colors_start_num
+        for y in range(40):
+            for x in range(6):
+                xcoord, ycoord = color_width*x, color_height*y
+
+                raw_color = image[start_coord[0] + xcoord, start_coord[1] + ycoord]
+                rgb = (raw_color[0], raw_color[1], raw_color[2])
+                self.esc_to_rgb_color[num] = rgb
+                hex_color = self.get_rgb_to_hex(rgb)
+                self.hex_to_esc_color[hex_color] = num
+
+
+                xcoord2, ycoord2 = x * self.color_box_size, y * self.color_box_size
+                self.all_colors.create_rectangle(
+                    xcoord2, ycoord2, xcoord2 + self.color_box_size, ycoord2 + self.color_box_size,
+                    fill=hex_color, outline="")
+                num+=1
+
     def flip_colors(self,event):
-        old_bg = self.current_color
+        old_bg = self.curr_hex_color
         self.set_color(self.text_color)
         self.set_text_color(old_bg)
 
-    def rgb_to_hex(self, rgb):
-        return f'#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}'
+    def get_rgb_to_hex(self, rgb:list):
+        return "#%02x%02x%02x" % rgb   # convert RGB → "#RRGGBB"
+        # if isinstance(rgb,list):
+        # return f'#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}'
 
     def select_from_all_text_colors(self, event):
         self.select_color_bg_fg(event, False)
@@ -205,14 +218,15 @@ class SpriteMaker:
         self.select_color_bg_fg(event, True)
 
     def select_color_bg_fg(self, event, is_background):
-        y,x = event.x//self.color_box_size, event.y//self.color_box_size
+        x,y = event.x//self.color_box_size, event.y//self.color_box_size
         index = x + self.colors_start_num + (y * self.color_columns)
-        rgb_code = self.color_dict[index]
-        hex_code = self.rgb_to_hex(rgb_code)
+        rgb_code = self.esc_to_rgb_color[index]
+        hex_code = self.get_rgb_to_hex(rgb_code)
         if is_background:
             self.set_color(hex_code)
         else:
             self.set_text_color(hex_code)
+        # print(index, hex_code, self.hex_to_esc_color[hex_code], x,y)
 
     def last_sprite(self):
         if self.sprite_index == 0:
@@ -232,106 +246,53 @@ class SpriteMaker:
         self.sprite_name.config(text= self.current_sprite_name)
         self.sprite_height.set(len(self.current_sprite))
         self.sprite_width.set(len(self.current_sprite[0]))
-        print("".join(self.current_sprite[0]))
-        print(self.sprite_height.get())
-        print(self.sprite_width.get())
-        self.re_ratio()
-        for y in range(len(self.current_sprite)):
-            for x in range(len(self.current_sprite[y])):
-                c = self.current_sprite[y][x][-1]
-                self.text_array[y][x] = c[-1]
+        # print("".join(self.current_sprite[0]))
+        # print(self.sprite_height.get())
+        # print(self.sprite_width.get())
+        self.re_ratio(False)
+        self.text_array = []
+        self.hex_color_array = []
+        self.text_color_array = []
+        for y in self.current_sprite:
+            line = []
+            hline = []
+            tline = []
+            for x in y:
+                line.append(x)
+                hline.append("black")
+                tline.append("white")
+            self.text_array.append(line)
+            self.hex_color_array.append(hline)
+            self.text_color_array.append(tline)
         self.draw_canvas_from_memory()
 
     def set_sprite_file_name(self):
         self.read_sprites(self.sprite_file_entry.get(START, END).replace("\n","") + ".txt")
 
     def read_sprites(self, path):
-        name = None
-        curr_sprite = []
-        height = 0
-        color_coded = False
-        where_coded = False
-        color_code = [""]
-        self.max_sprite_width = 0
-        self.max_sprite_height = 0
+        """DOES NOT READ COLOR, SPRITE ONLY"""
         self.sprites = dict()
-        # Adds parent directory of running program
         with open(path, 'r',encoding='utf-8') as file:
-            line = file.readline()[:-1] # Removes "\n".
-            while(line):
-                if line[0] == SKIP:
-                    # Add the previous sprite to the sprites dictionary.
-                    if name != None: # If this isn't the first img
-                        if len(curr_sprite[0]) > self.max_sprite_width:
-                            self.max_sprite_width = len(curr_sprite[0])
-                        if height > self.max_sprite_height:
-                            self.max_sprite_height = height
-                        if color_coded:
-                            if where_coded: # The second half of the sprite is actually the color code
-                                half_len = len(curr_sprite)//2
-                                for row in range(half_len):
-                                    colored_line = []
-                                    for i in range(len(curr_sprite[0])):
-                                        color_char = curr_sprite[half_len][i]
-                                        if color_char < "0" or color_char > "9":
-                                            color_char = 0
-                                        color = color_code[int(color_char)]
-                                        char = curr_sprite[row][i]
-                                        colored_line.append(color + char)
-                                    curr_sprite[row] = colored_line
-                                    curr_sprite.pop(half_len)
-                            else: # Each character has its color code before it. Difficult for artist to read.
-                                true_len = len(curr_sprite[0])//2
-                                # Assumes every line is the same length
-                                for row in range(len(curr_sprite)):
-                                    colors_only = []
-                                    chars_only = []
-                                    for half_i in range(true_len):
-                                        # color = color_code[int(curr_sprite[row][(half_i*2)])]
-                                        char = curr_sprite[row][(half_i*2)+1]
-                                        # colors_only.append(color)
-                                        chars_only.append(char)
-                                    chars_only = replace_spaces(chars_only)
-                                    colored_line = []
-                                    for i in range(true_len):
-                                        colored_line.append(colors_only[i] + chars_only[i])
-                                    curr_sprite[row] = colored_line
-                        
-                        # Save to self.sprites
-                        self.sprites[name] = curr_sprite # If color coded and if not.
-
-                        curr_sprite = []
-                    skips = find_count(line,SKIP)
-                    # if skips == 1: end of file (do nothing)
-                    if skips == 2: # Regular Sprite
-                        color_coded = False
-                        name = line[1:-1] # Remove SKIPs
-                        height = 0
-                    elif skips >= 3: # Color-coded Sprite
-                        #$sprite-name$color0,color1$
-                        #1H0E1Y0 1T0H1E0R1E
-                        color_coded = True
-                        inds = find_indices(line,SKIP)
-                        name = line[1:inds[1]]
-                        where_coded = False
-                        if skips == 4:
-                            # $below$ at end of sprite name, this tells you that
-                            # the color code is below the text drawing rather than
-                            # in it.
-                            if line[inds[2]+1:inds[3]] == "below":  where_coded = True
-                        colors_raw = line[inds[1]+1:inds[2]]
-                        colors_raw = colors_raw.split(",")
-                        color_code = [""]
-                        for num in colors_raw:
-                            if num == " ":
-                                num = 0
-                            color_code.append(color_by_number(int(num)))
-                else: # Append to the current sprite image.
-                    line = replace_spaces(line)
-                    line = ms_gothic(line)
-                    curr_sprite.append(list(line))
-                    height +=1
-                line = file.readline()[:-1] # Removes the \n
+            lines = file.readlines()
+        header_lines = []
+        for i,line in enumerate(lines):
+            if "$" in line:
+                header_lines.append(i)
+                lines[i] = lines[i][1:]
+        for i in range(len(header_lines)-1):
+            header = str(lines[header_lines[i]])
+            name = header[:header.index("$")]
+            header = header[header.index("$") + 1:]
+            end = header_lines[i+1]
+            if len(header) > 2:
+                end = (header_lines[i] + header_lines[i+1])//2 + 1
+            sprite_array = []
+            for y in range(header_lines[i]+1, end):
+                sprite_array.append(lines[y][:-1])
+            self.sprites[name] = sprite_array
+        # for sname,sprite in self.sprites.items():
+        #     print(sname,"\n",sprite,"\n")
+        
 
     def set_sprite_path(self):
         self.set_sprite_file_name()
@@ -342,9 +303,9 @@ class SpriteMaker:
 
         self.draw_canvas_from_memory()
 
-    def re_ratio(self):
+    def re_ratio(self, redraw=True):
         value = self.pixel_width
-        self.resize_canvas_pixel_ratio(value)
+        self.resize_canvas_pixel_ratio(value, redraw)
 
     def set_char(self, c):
         self.last_key = c
@@ -353,17 +314,24 @@ class SpriteMaker:
     def clear_sprite(self):
         for y in range(self.sprite_height.get()):
             for x in range(self.sprite_width.get()):
-                self.color_array[y][x] = self.default_color
+                self.hex_color_array[y][x] = self.default_color
                 self.text_array[y][x] = " "
                 self.text_color_array[y][x] = self.default_text_color
+        self.reset_color_indices()
         self.draw_canvas_from_memory()
+
+    def reset_color_indices(self):
+        """Resets/creates esc_to_color_index.
+        0 ('black' in hex) is always at index 0"""
+        self.esc_to_color_index = dict()
+        self.esc_to_color_index[0] = 0
 
     def init_hover_outline(self):
         self.hover_outline = self.canvas.create_rectangle(0,0,self.pixel_width,self.pixel_height,
                                                           outline="gray")
 
     def set_color(self, value):
-        self.current_color = value
+        self.curr_hex_color = value
         self.draw_preview()
 
     def set_text_color(self,value):
@@ -371,9 +339,34 @@ class SpriteMaker:
         self.draw_preview()
 
     def copy(self):
-        text = "\n".join("".join(row) for row in self.text_array)
-        self.root.clipboard_clear()
-        root.clipboard_append(text)
+        # create an empty string array to be filled with escape colors
+        final_esc_colors = ["0"] * len(self.esc_to_color_index.keys())
+        # refer to the esc_to_color_index to populate final_esc_colors
+        for esc_color in self.esc_to_color_index.keys():
+            i = self.esc_to_color_index[esc_color]
+            final_esc_colors[i] = str(esc_color)
+        final_esc_colors_str = ",".join(final_esc_colors[1:]) # skip black
+        # create header sprite data
+        header = "$" + self.current_sprite_name + "$" + final_esc_colors_str + "$below$\n"
+        # FIXME: can be ignored if not last sprite
+        footer = "$$"
+
+        text = ""
+        colors = ""
+        for y in range(len(self.text_array)):
+            text_row = []
+            color_row = []
+            for x in range(len(self.text_array[y])):
+                text_row.append(self.text_array[y][x])
+                hex_color = self.hex_color_array[y][x]
+                esc_color = self.hex_to_esc_color[hex_color]
+                color_index = self.esc_to_color_index[esc_color]
+                color_row.append(str(color_index))
+            text += ("".join(text_row)) + "\n"
+            colors += ("".join(color_row)) + "\n"
+            
+        copy_text = header + text + colors + footer
+        root.clipboard_append(copy_text)
         root.update()
 
     def key_pressed(self, event):
@@ -420,7 +413,7 @@ class SpriteMaker:
 
         x,y = self.get_rounded_coords(self.press_x, self.press_y)
         bg_x,bg_y = self.get_text_coords(self.press_x, self.press_y)
-        bg_color = self.color_array[bg_y][bg_x]
+        bg_color = self.hex_color_array[bg_y][bg_x]
         outline_color = "white"
         if bg_color == "white":
             outline_color = "black"
@@ -450,22 +443,21 @@ class SpriteMaker:
         for y in range(copy_height):
             for x in range(copy_width):
                 new_text_array[y][x] = self.text_array[y][x]
-                new_bg_array[y][x] = self.color_array[y][x]
+                new_bg_array[y][x] = self.hex_color_array[y][x]
                 new_fg_array[y][x] = self.text_color_array[y][x]
 
         # reassign arrays to new arrays
         self.text_array = new_text_array
-        self.color_array = new_bg_array
+        self.hex_color_array = new_bg_array
         self.text_color_array = new_fg_array
 
         self.sprite_height.set(new_height)
         self.sprite_width.set(new_width)
 
         self.re_ratio()
-        self.draw_canvas_from_memory()
 
 
-    def resize_canvas_pixel_ratio(self, value):
+    def resize_canvas_pixel_ratio(self, value, redraw=True):
         """Ratio is based on pixel width for a single character"""
         self.pixel_width = int(value)
         self.pixel_height = int(self.pixel_width * self.height_multiplier.get())
@@ -473,7 +465,8 @@ class SpriteMaker:
         self.canvas_height = self.sprite_height.get() * self.pixel_height
         self.canvas.config(width=self.canvas_width, height=self.canvas_height)
 
-        self.draw_canvas_from_memory()
+        if redraw:
+            self.draw_canvas_from_memory()
     
     def draw_canvas_from_memory(self, start_x = 0, start_y = 0, end_x = None, end_y = None):
         """Redraws the whole canvas by default"""
@@ -486,17 +479,17 @@ class SpriteMaker:
             
 
         temp_key = self.last_key
-        temp_color = self.current_color
+        temp_color = self.curr_hex_color
         temp_text_color = self.text_color
         temp_last_pos = [self.last_x,self.last_y]
         for y in range(start_y, end_y):
             for x in range(start_x, end_x):
                 self.last_key = self.text_array[y][x]
-                self.current_color = self.color_array[y][x]
+                self.curr_hex_color = self.hex_color_array[y][x]
                 self.text_color = self.text_color_array[y][x]
                 self.key_draw(x*self.pixel_width,y*self.pixel_height)
         self.last_key = temp_key
-        self.current_color = temp_color
+        self.curr_hex_color = temp_color
         self.text_color = temp_text_color
         self.last_x = temp_last_pos[0]
         self.last_y = temp_last_pos[1]
@@ -525,7 +518,7 @@ class SpriteMaker:
 
     def draw_preview(self):
         self.char_preview.create_rectangle(0,0,self.preview_width,
-                                           self.preview_width*self.height_multiplier.get(),fill=self.current_color)
+                                           self.preview_width*self.height_multiplier.get(),fill=self.curr_hex_color)
         self.char_preview.create_text(self.preview_width/2,self.preview_width*self.height_multiplier.get()/2,text=self.last_key,fill=self.text_color,
                                       font=("Consolas", int(self.preview_width), "bold"))
     def draw(self,event):
@@ -543,11 +536,20 @@ class SpriteMaker:
             self.last_key = self.text_array[texty][textx]
         char_used = self.last_key
         # store as space if you can't read the text (same color as background)
-        if self.current_color == self.text_color:
+        if self.curr_hex_color == self.text_color:
             char_used = " "
         self.text_array[texty][textx] = char_used
-        self.color_array[texty][textx] = self.current_color
+        self.hex_color_array[texty][textx] = self.curr_hex_color
         self.text_color_array[texty][textx] = self.text_color
+
+    def record_color_as_used(self):
+        """'black' counts as a hex color"""
+        if self.curr_hex_color not in self.hex_to_esc_color.keys():
+            self.hex_to_esc_color[self.curr_hex_color] = self.hex_to_esc_color(self.curr_hex_color)
+        # don't overwrite any colors index after writing
+        esc_color = self.hex_to_esc_color[self.curr_hex_color]
+        if esc_color not in self.esc_to_color_index.keys():
+            self.esc_to_color_index[esc_color] = len(self.esc_to_color_index)
 
     def key_draw(self, ex,ey):
         # Draw a rectangle of a certain dimension at the given rounded coordinate
@@ -555,8 +557,9 @@ class SpriteMaker:
             return
         x,y = self.get_rounded_coords(ex, ey)
         self.store_current_char(x,y)
+        self.record_color_as_used()
 
-        self.canvas.create_rectangle(x, y, x+self.pixel_width, y+self.pixel_height, fill=self.current_color,outline=self.current_color)
+        self.canvas.create_rectangle(x, y, x+self.pixel_width, y+self.pixel_height, fill=self.curr_hex_color,outline=self.curr_hex_color)
         self.canvas.create_text(x+(self.pixel_width/2),
                                 y+(self.pixel_height/2),text=self.last_key,
                                 font=("Consolas", int(self.pixel_width*TEXT_HEIGHT_MULT), "normal"),
@@ -564,6 +567,9 @@ class SpriteMaker:
         
         self.last_x = ex
         self.last_y = ey
+
+        # print("\nescape to index:", self.esc_to_color_index.items())
+        # print("hex to escape:", self.hex_to_esc_color.items())
 
     def on_move(self, event):
         x,y = self.get_rounded_coords(event.x, event.y)
