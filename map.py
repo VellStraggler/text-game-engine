@@ -62,10 +62,16 @@ class Map():
         self.init_rend()
         self.init_geom()
 
+    def get_seconds_to_read(self,msg):
+        """Function that starts at 1 word per second and 
+        slims out to 3 words per second (at 60 words)"""
+        w = 1 + msg.count(" ")
+        s = (-1/(0.06*(w+3)))+(0.25*w)+5
+        return s
+
     def set_disp_msg(self,new_msg:str):
         """Creates automatic timer based on number of words"""
-        words = 1 + new_msg.count(" ")
-        self.msg_timer = time() + words
+        self.msg_timer = time() + self.get_seconds_to_read(new_msg)
         self.disp_msg =[[BUBBLE[0][0]],
                         [BUBBLE[1][0]],
                         [BUBBLE[2][0]]]
@@ -203,7 +209,7 @@ class Map():
         for row in range(self.camera_y,self.end_camera_y):
             line = []
             for x in range(self.camera_x,self.end_camera_x):
-                line.append(self.get_print_pixel(self.rend[row][x][-1],x))
+                line.append(self.get_print_pixel(self.rend[row][x][-1]))
             print("".join(line))
             volume += 1/WINDOW_HEI
             mixer.music.set_volume(volume)

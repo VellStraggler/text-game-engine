@@ -133,7 +133,12 @@ class SpriteMaker:
 
         # Color-only mode
         self.is_bg_only = BooleanVar(value=False)
-        color_only = Checkbutton(root, text="Background-Only Mode", variable=self.is_bg_only)
+        self.is_text_only = BooleanVar(value=False)
+        self.set_mode_text = "Text & Color"
+        self.set_mode_dict = {"Text & Color":"Color-Only",
+                              "Color-Only":"Text-Only",
+                              "Text-Only":"Text & Color"}
+        self.set_mode_button = Button(root, text=self.set_mode_text, command=self.set_mode)
 
         sprite_width_slide = Scale(self.root, from_=1, to=60, 
                                         variable=IntVar(value=self.sprite_width.get()), 
@@ -171,11 +176,24 @@ class SpriteMaker:
         self.type_mode.grid(         row=3, column=0)
         self.replace_mode.grid(      row=4, column=0)
         clear_b.grid(                row=5, column=0)
-        color_only.grid(             row=6, column=0)
+        self.set_mode_button.grid(   row=6, column=0)
         self.char_preview.grid(      row=13, column=1, rowspan=3, columnspan=3)
         
         self.draw_preview()
         self.re_ratio()
+
+    def set_mode(self):
+        self.set_mode_text = self.set_mode_dict[self.set_mode_text]
+        self.set_mode_button.config(text=self.set_mode_text)
+        if self.set_mode_text == "Color-Only":
+            self.is_bg_only.set(True)
+            self.is_text_only.set(False)
+        elif self.set_mode_text == "Text-Only":
+            self.is_bg_only.set(False)
+            self.is_text_only.set(True)
+        else:
+            self.is_bg_only.set(False)
+            self.is_text_only.set(False)
 
     def read_colors_from_image(self):
         image_file = PImage.open("chars_and_colors/colors_by_number.png")
@@ -534,6 +552,8 @@ class SpriteMaker:
         textx,texty = self.get_text_coords(x, y)
         if self.is_bg_only.get():
             self.last_key = self.text_array[texty][textx]
+        elif self.is_text_only.get():
+            self.curr_hex_color = self.hex_color_array[texty][textx]
         char_used = self.last_key
         # store as space if you can't read the text (same color as background)
         if self.curr_hex_color == self.text_color:
@@ -580,6 +600,14 @@ class SpriteMaker:
             if self.last_key != hover_char:
                 self.last_key = hover_char
                 self.draw_preview()
+        elif self.is_text_only.get():
+            tx,ty = self.get_text_coords(x,y)
+            hover_color = self.hex_color_array[ty][tx]
+            if self.curr_hex_color != hover_color:
+                self.curr_hex_color = hover_color
+                self.draw_preview()
+
+
         self.canvas.coords(self.hover_outline,
                            x, y, x + self.pixel_width, y + self.pixel_height)
         self.canvas.tag_raise(self.hover_outline)
